@@ -1,5 +1,5 @@
 {
-  //   "stm32-for-vscode.openOCDPath": "C:\\PROGRAM FILES (x86)\\OPENOCD-20240916-0.12.0\\BIN\\OPENOCD.EXE",
-  "stm32-for-vscode.makePath": "false"
-  // "cmake.useCMakePresets": "always"
+  "stm32-for-vscode.openOCDPath": "C:\\PROGRAM FILES (X86)\\OPENOCD-20240916-0.12.0\\BIN\\OPENOCD.EXE",
+  "stm32-for-vscode.makePath": "false",
+  "stm32-for-vscode.armToolchainPath": "C:\\ST\\STM32CUBECLT_1.16.0\\GNU-TOOLS-FOR-STM32\\BIN"
 }

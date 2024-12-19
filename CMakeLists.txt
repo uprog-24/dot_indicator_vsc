@@ -106,7 +106,7 @@ add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
     ${EXECUTABLE}.bin)
 
 
-# The command to flash the device using openocd
+# Flash the device using openocd (--targrt flash)
 set(OPENOCD_PATH "C:/Program Files (x86)/OpenOCD-20240916-0.12.0")
 set(OPENOCD_INTERFACE_PATH "${OPENOCD_PATH}/share/openocd/scripts/interface/stlink.cfg")
 set(OPENOCD_TARGET_PATH "${OPENOCD_PATH}/share/openocd/scripts/target/stm32f1x.cfg")
@@ -119,10 +119,9 @@ add_custom_target(flash
     COMMENT "Flashing STM32 device with ST-Link"
 )
 
-# Указываем путь к каталогу сборки
+# Clear build directory (--targrt clean-build)
 set(BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build")
 
-# Удалить все содержимое папки сборки, но не саму папку
 add_custom_target(clean-build
     # COMMAND ${CMAKE_COMMAND} -E remove ${BUILD_DIR}/* # Удаляем все файлы в каталоге
     # COMMAND ${CMAKE_COMMAND} -E remove ${BUILD_DIR}/.* # Удаляем все скрытые файлы (например, .ninja, .cmake)
