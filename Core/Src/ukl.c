@@ -8,20 +8,20 @@
 #include "drawing.h"
 #include "tim.h"
 
-#define PACKET_SIZE 13               ///< Number of data bits in received packet
-#define CODE_FLOOR_MASK 0x3F         ///< Mask for 0-5 bits
-#define DIRECTION_MASK 0xC0          ///< Mask for 6,7 bits
-#define CONTROL_BITS_MASK 0x1FC0     ///< Mask for 6-12 bits
-#define SPECIAL_SYMBOLS_BUFF_SIZE 7  ///< Number of special symbols
-#define DELAY_MS_DATA_RECEIVE \
-  200 - 1  ///< Delay after receiving 13 bytes before next reading pin
-#define GONG_BUZZER_FREQ 3000  ///< Frequency of bip for ARRIVAL gong
-#define BUZZER_FREQ_CABIN_OVERLOAD \
-  5000  ///< Frequency of bip for VOICE_CABIN_OVERLOAD
-#define BUZZER_FREQ_FIRE_DANGER \
-  BUZZER_FREQ_CABIN_OVERLOAD  ///< Frequency of bip for FIRE_DANGER
-#define FILTER_BUFF_SIZE \
-  5  ///< Size of buffer with received data (width of filter)
+#define PACKET_SIZE 13              ///< Number of data bits in received packet
+#define CODE_FLOOR_MASK 0x3F        ///< Mask for 0-5 bits
+#define DIRECTION_MASK 0xC0         ///< Mask for 6,7 bits
+#define CONTROL_BITS_MASK 0x1FC0    ///< Mask for 6-12 bits
+#define SPECIAL_SYMBOLS_BUFF_SIZE 7 ///< Number of special symbols
+#define DELAY_MS_DATA_RECEIVE                                                  \
+  200 - 1 ///< Delay after receiving 13 bytes before next reading pin
+#define GONG_BUZZER_FREQ 3000 ///< Frequency of bip for ARRIVAL gong
+#define BUZZER_FREQ_CABIN_OVERLOAD                                             \
+  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+#define BUZZER_FREQ_FIRE_DANGER                                                \
+  BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
+#define FILTER_BUFF_SIZE                                                       \
+  5 ///< Size of buffer with received data (width of filter)
 
 /**
  * Stores values of code location
@@ -116,7 +116,7 @@ static void setting_sound_ukl(char *matrix_string,
 
   if ((control_bits & SIGNAL_PRESS_ORDER_BUTTON) == SIGNAL_PRESS_ORDER_BUTTON) {
     order_button_cnt++;
-    if (order_button_cnt > 5U) {  // 1150 ms
+    if (order_button_cnt > 5U) { // 1150 ms
       stop_buzzer_sound();
       order_button_cnt = 0;
 #if 1
@@ -127,7 +127,7 @@ static void setting_sound_ukl(char *matrix_string,
 
     if (is_press_order_button) {
       button_disable_cnt++;
-      if (button_disable_cnt == 3) {  // 690 ms, STOP
+      if (button_disable_cnt == 3) { // 690 ms, STOP
         button_disable_cnt = 0;
         is_press_order_button = false;
       }
@@ -151,9 +151,9 @@ static void setting_sound_ukl(char *matrix_string,
     is_gong_play = false;
   }
 
-  if ((control_bits & CABIN_OVERLOAD) == CABIN_OVERLOAD) {  // ?
+  if ((control_bits & CABIN_OVERLOAD) == CABIN_OVERLOAD) { // ?
     cabin_overload_cnt++;
-    if (cabin_overload_cnt > 5U) {  // 1150 ms
+    if (cabin_overload_cnt > 5U) { // 1150 ms
       stop_buzzer_sound();
       cabin_overload_cnt = 0;
 #if 1
@@ -171,7 +171,7 @@ static void setting_sound_ukl(char *matrix_string,
     matrix_string[MSB] = 'F';
     matrix_string[LSB] = 'c';
     fire_danger_cnt++;
-    if (fire_danger_cnt > 5U) {  // 1150 ms, START
+    if (fire_danger_cnt > 5U) { // 1150 ms, START
       stop_buzzer_sound();
       fire_danger_cnt = 0;
 #if 1
@@ -182,7 +182,7 @@ static void setting_sound_ukl(char *matrix_string,
 
     if (is_fire_danger_sound) {
       fire_disable_cnt++;
-      if (fire_disable_cnt == 3) {  // 690 ms, STOP
+      if (fire_disable_cnt == 3) { // 690 ms, STOP
         fire_disable_cnt = 0;
         is_fire_danger_sound = false;
         stop_buzzer_sound();
@@ -208,19 +208,19 @@ static drawing_data_t drawing_data = {0, 0};
  */
 static void transform_direction_to_common(direction_ukl_t direction) {
   switch (direction) {
-    case UKL_MOVE_UP:
-      drawing_data.direction = DIRECTION_UP;
-      break;
-    case UKL_MOVE_DOWN:
-      drawing_data.direction = DIRECTION_DOWN;
-      break;
-    case UKL_NO_MOVE:
-      drawing_data.direction = NO_DIRECTION;
-      break;
+  case UKL_MOVE_UP:
+    drawing_data.direction = DIRECTION_UP;
+    break;
+  case UKL_MOVE_DOWN:
+    drawing_data.direction = DIRECTION_DOWN;
+    break;
+  case UKL_NO_MOVE:
+    drawing_data.direction = NO_DIRECTION;
+    break;
 
-    default:
-      drawing_data.direction = NO_DIRECTION;
-      break;
+  default:
+    drawing_data.direction = NO_DIRECTION;
+    break;
   }
 }
 
@@ -349,9 +349,6 @@ static void filter_data() {
 /// Received control bits
 static control_bits_states_t control_bits;
 
-/// String that will be displayed on matrix
-static char matrix_string[3];
-
 /// Flag to control is data completed
 volatile bool is_read_data_completed = false;
 
@@ -381,9 +378,8 @@ static void process_data_ukl() {
                     special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
     if (matrix_settings.volume != VOLUME_0) {
-    	setting_sound_ukl(matrix_string, control_bits);
+      setting_sound_ukl(matrix_string, control_bits);
     }
-
   }
 
 #endif

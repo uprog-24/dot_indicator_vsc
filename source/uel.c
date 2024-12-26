@@ -10,15 +10,15 @@
 
 #include "string.h"
 
-#define NINE_BITS_MASK 0x1FF     ///< Mask for 9 bits with data by UEL protocol
-#define CODE_LOCATION_MASK 0x3F  ///< Mask for code location bits
-#define CONTROL_BITS_MASK 0x1C0  ///< Mask for control bits
-#define SPECIAL_SYMBOLS_BUFF_SIZE 13  ///< Number of special symbols
-#define GONG_BUZZER_FREQ 3000         ///< Frequency of bip for ARRIVAL gong
-#define BUZZER_FREQ_CABIN_OVERLOAD \
-  5000  ///< Frequency of bip for VOICE_CABIN_OVERLOAD
-#define BUZZER_FREQ_FIRE_DANGER \
-  BUZZER_FREQ_CABIN_OVERLOAD  ///< Frequency of bip for FIRE_DANGER
+#define NINE_BITS_MASK 0x1FF    ///< Mask for 9 bits with data by UEL protocol
+#define CODE_LOCATION_MASK 0x3F ///< Mask for code location bits
+#define CONTROL_BITS_MASK 0x1C0 ///< Mask for control bits
+#define SPECIAL_SYMBOLS_BUFF_SIZE 13 ///< Number of special symbols
+#define GONG_BUZZER_FREQ 3000        ///< Frequency of bip for ARRIVAL gong
+#define BUZZER_FREQ_CABIN_OVERLOAD                                             \
+  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+#define BUZZER_FREQ_FIRE_DANGER                                                \
+  BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
 
 /**
  * Stores values of direction of the movement (UEL)
@@ -37,7 +37,7 @@ typedef enum CONTROL_BITS_STATES {
   MOVE_UP_AFTER_STOP = 0x40,
   MOVE_DOWN_AFTER_STOP = 0x80,
   MOVE_UP_OR_DOWN_AFTER_STOP = 0xC0,
-  SPECIAL_FORMAT = 0x0  //
+  SPECIAL_FORMAT = 0x0 //
 } control_bits_states_t;
 
 /**
@@ -123,19 +123,19 @@ static uint16_t data = 0;
 static void setting_sound_uel(char *matrix_string, uint8_t current_location,
                               control_bits_states_t control_bits) {
   switch (control_bits) {
-    case SPECIAL_FORMAT:
+  case SPECIAL_FORMAT:
 
-      if ((current_location & EVACUATION) == EVACUATION) {
-        matrix_string[MSB] = 'E';
-        matrix_string[LSB] = 'c';
-        stop_buzzer_sound();
-      }
+    if ((current_location & EVACUATION) == EVACUATION) {
+      matrix_string[MSB] = 'E';
+      matrix_string[LSB] = 'c';
+      stop_buzzer_sound();
+    }
 
-      if ((current_location & SEISMIC_DANGER) == SEISMIC_DANGER) {
-        matrix_string[MSB] = 'L';
-        matrix_string[LSB] = 'c';
-        stop_buzzer_sound();
-      }
+    if ((current_location & SEISMIC_DANGER) == SEISMIC_DANGER) {
+      matrix_string[MSB] = 'L';
+      matrix_string[LSB] = 'c';
+      stop_buzzer_sound();
+    }
 
 #if 0
       if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
@@ -145,20 +145,20 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       }
 #endif
 
-      if ((current_location & GONG_ARRIVAL) == GONG_ARRIVAL) {
-        if (!is_gong_play) {
-          stop_buzzer_sound();
+    if ((current_location & GONG_ARRIVAL) == GONG_ARRIVAL) {
+      if (!is_gong_play) {
+        stop_buzzer_sound();
 #if 1
-          if (matrix_settings.volume != VOLUME_0) {
-            play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
-          }
+        if (matrix_settings.volume != VOLUME_0) {
+          play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
+        }
 
 #endif
-          is_gong_play = true;
-        }
-      } else {
-        is_gong_play = false;
+        is_gong_play = true;
       }
+    } else {
+      is_gong_play = false;
+    }
 
 #if 0
       if ((code_msg_byte_w_1 & 0b00111111) == VOICE_CABIN_OVERLOAD) {
@@ -174,54 +174,54 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       }
 #endif
 
-      if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
+    if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
+#if 1
+      if (matrix_settings.volume != VOLUME_0 &&
+          matrix_settings.addr_id == MAIN_CABIN_ID) {
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+#endif
+      is_cabin_overload_sound = true;
+
+    } else if (is_cabin_overload_sound) {
+      TIM2_Stop_bip();
+      is_cabin_overload_sound = false;
+    }
+
+    if ((current_location & FARE_DANGER_SOUND) == FARE_DANGER_SOUND) {
+      fire_danger_cnt++;
+      if (fire_danger_cnt > 5U) {
+        stop_buzzer_sound();
+        fire_danger_cnt = 0;
 #if 1
         if (matrix_settings.volume != VOLUME_0 &&
             matrix_settings.addr_id == MAIN_CABIN_ID) {
-          TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+          TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
         }
-#endif
-        is_cabin_overload_sound = true;
-
-      } else if (is_cabin_overload_sound) {
-        TIM2_Stop_bip();
-        is_cabin_overload_sound = false;
-      }
-
-      if ((current_location & FARE_DANGER_SOUND) == FARE_DANGER_SOUND) {
-        fire_danger_cnt++;
-        if (fire_danger_cnt > 5U) {
-          stop_buzzer_sound();
-          fire_danger_cnt = 0;
-#if 1
-          if (matrix_settings.volume != VOLUME_0 &&
-              matrix_settings.addr_id == MAIN_CABIN_ID) {
-            TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
-          }
 //          play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
 #endif
-          is_fire_danger_sound = true;
-        }
-
-        if (is_fire_danger_sound) {
-          fire_disable_cnt++;
-          if (fire_disable_cnt == 3) {
-            fire_disable_cnt = 0;
-            is_fire_danger_sound = false;
-            stop_buzzer_sound();
-          }
-        }
-
-      } else {
-        is_fire_danger_sound = false;
-        fire_disable_cnt = 0;
-        fire_danger_cnt = 0;
+        is_fire_danger_sound = true;
       }
-      break;
 
-    default:
-      //      stop_buzzer_sound();
-      break;
+      if (is_fire_danger_sound) {
+        fire_disable_cnt++;
+        if (fire_disable_cnt == 3) {
+          fire_disable_cnt = 0;
+          is_fire_danger_sound = false;
+          stop_buzzer_sound();
+        }
+      }
+
+    } else {
+      is_fire_danger_sound = false;
+      fire_disable_cnt = 0;
+      fire_danger_cnt = 0;
+    }
+    break;
+
+  default:
+    //      stop_buzzer_sound();
+    break;
   }
 }
 
@@ -234,27 +234,24 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
  */
 static void transform_direction_to_common(direction_uel_t direction) {
   switch (direction) {
-    case UEL_MOVE_UP:
-      drawing_data.direction = DIRECTION_UP;
-      break;
-    case UEL_MOVE_DOWN:
-      drawing_data.direction = DIRECTION_DOWN;
-      break;
-    case UEL_NO_MOVE:
-      drawing_data.direction = NO_DIRECTION;
-      break;
+  case UEL_MOVE_UP:
+    drawing_data.direction = DIRECTION_UP;
+    break;
+  case UEL_MOVE_DOWN:
+    drawing_data.direction = DIRECTION_DOWN;
+    break;
+  case UEL_NO_MOVE:
+    drawing_data.direction = NO_DIRECTION;
+    break;
 
-    default:
-      drawing_data.direction = NO_DIRECTION;
-      break;
+  default:
+    drawing_data.direction = NO_DIRECTION;
+    break;
   }
 }
 
 /// Received control bits
 static control_bits_states_t control_bits;
-
-/// String that will be displayed on matrix
-static char matrix_string[3];
 
 /**
  * @brief  Process data using UEL protocol
@@ -283,7 +280,7 @@ void process_data_uel(uint16_t *received_data) {
   drawing_data.floor = data & CODE_LOCATION_MASK;
 
   if (control_bits !=
-      SPECIAL_FORMAT) {  // due to repeated values for SPECIAL_FORMAT and FLOORS
+      SPECIAL_FORMAT) { // due to repeated values for SPECIAL_FORMAT and FLOORS
 
     if (drawing_data.floor == LOCATION_DASH) {
       dash_error_cnt++;
@@ -298,7 +295,7 @@ void process_data_uel(uint16_t *received_data) {
     } else {
       if (is_dash_error_displayed) {
         dash_error_disable++;
-        if (dash_error_disable == TIME_DASH_DURING_DASH) {  // 690 ms, STOP
+        if (dash_error_disable == TIME_DASH_DURING_DASH) { // 690 ms, STOP
           dash_error_disable = 0;
           is_dash_error_displayed = false;
           setting_symbols(

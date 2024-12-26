@@ -10,17 +10,18 @@
 
 #include <stdbool.h>
 
-#define ARROW_MASK \
-  0x03  ///< Mask for direction of movement (0 and 1st bits of byte W3)
-#define ARRIVAL_MASK 0b100  ///< Mask for bit arrival (2nd bit of byte W3)
-#define ARRIVAL_VALUE 4     ///< Bit value of arrival (bits: 100)
+#define ARROW_MASK                                                             \
+  0x03 ///< Mask for direction of movement (0 and 1st bits of byte W3)
+#define ARRIVAL_MASK 0b100 ///< Mask for bit arrival (2nd bit of byte W3)
+#define ARRIVAL_VALUE 4    ///< Bit value of arrival (bits: 100)
+#define CODE_MESSAGE_W_1_MASK 0b00111111
 
-#define GONG_BUZZER_FREQ \
-  3000  ///< Frequency of bip for start UPWARD, DOWNWARD and ARRIVAL
-#define BUZZER_FREQ_CABIN_OVERLOAD \
-  5000  ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+#define GONG_BUZZER_FREQ                                                       \
+  3000 ///< Frequency of bip for start UPWARD, DOWNWARD and ARRIVAL
+#define BUZZER_FREQ_CABIN_OVERLOAD                                             \
+  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
 
-#define SPECIAL_SYMBOLS_BUFF_SIZE 19  ///< Number of special symbols
+#define SPECIAL_SYMBOLS_BUFF_SIZE 19 ///< Number of special symbols
 
 /**
  * Stores indexes of bytes of UIM6100 protocol
@@ -124,7 +125,7 @@ static bool is_fire_danger = false;
  * @retval None
  */
 static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
-  if ((code_msg_byte_w_1 & 0b00111111) == VOICE_CABIN_OVERLOAD) {
+  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
     is_cabin_overload = true;
 #if 1
     TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
@@ -136,7 +137,7 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     is_cabin_overload = false;
   }
 
-  if ((code_msg_byte_w_1 & 0b00111111) == 56) {
+  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_FIRE_DANGER) {
     is_fire_danger = true;
 #if 1
     TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
@@ -170,25 +171,25 @@ static void setting_gong(uint8_t direction_byte_w_3, uint8_t volume) {
   direction_uim_6100_t direction = direction_byte_w_3 & ARROW_MASK;
   uint8_t arrival = direction_byte_w_3 & ARRIVAL_MASK;
 
-  // если 0 на 1, то прибытие
+  // if signal 0 is changing to signal 1, then arrival on floor
   gong[0] = (arrival == ARRIVAL_VALUE) != 0 ? 1 : 0;
 
   if (gong[0] && !gong[1]) {
 
     switch (direction) {
-      case UIM_6100_MOVE_UP:
-        play_gong(1, GONG_BUZZER_FREQ, volume);
-        break;
-      case UIM_6100_MOVE_DOWN:
-        play_gong(2, GONG_BUZZER_FREQ, volume);
-        break;
-      case UIM_6100_NO_MOVE:
-        play_gong(3, GONG_BUZZER_FREQ, volume);
-        break;
-      default:
-        __NOP();
-        play_gong(3, GONG_BUZZER_FREQ, volume);
-        break;
+    case UIM_6100_MOVE_UP:
+      play_gong(1, GONG_BUZZER_FREQ, volume);
+      break;
+    case UIM_6100_MOVE_DOWN:
+      play_gong(2, GONG_BUZZER_FREQ, volume);
+      break;
+    case UIM_6100_NO_MOVE:
+      play_gong(3, GONG_BUZZER_FREQ, volume);
+      break;
+    default:
+      __NOP();
+      play_gong(3, GONG_BUZZER_FREQ, volume);
+      break;
     }
   }
   gong[1] = gong[0];
@@ -206,24 +207,21 @@ static drawing_data_t drawing_data = {0, 0};
  */
 static void transform_direction_to_common(direction_uim_6100_t direction) {
   switch (direction) {
-    case UIM_6100_MOVE_UP:
-      drawing_data.direction = DIRECTION_UP;
-      break;
-    case UIM_6100_MOVE_DOWN:
-      drawing_data.direction = DIRECTION_DOWN;
-      break;
-    case UIM_6100_NO_MOVE:
-      drawing_data.direction = NO_DIRECTION;
-      break;
+  case UIM_6100_MOVE_UP:
+    drawing_data.direction = DIRECTION_UP;
+    break;
+  case UIM_6100_MOVE_DOWN:
+    drawing_data.direction = DIRECTION_DOWN;
+    break;
+  case UIM_6100_NO_MOVE:
+    drawing_data.direction = NO_DIRECTION;
+    break;
 
-    default:
-      drawing_data.direction = NO_DIRECTION;
-      break;
+  default:
+    drawing_data.direction = NO_DIRECTION;
+    break;
   }
 }
-
-/// String that will be displayed on matrix
-static char matrix_string[3];
 
 /**
  * @brief  Process data using UIM6100 protocol

@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define FILTER_11_BIT_ID_OFFSET 5  ///< Offset for Standard frame ID filter
+#define FILTER_11_BIT_ID_OFFSET 5 ///< Offset for Standard frame ID filter
 
 /// Structure of Header for receiving data
 static CAN_RxHeaderTypeDef rx_header;
@@ -58,6 +58,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
       HAL_OK) {
+
 #if PROTOCOL_UIM_6100
     if (rx_header.DLC == UIM6100_DLC &&
         rx_data_can[byte_code_operation_0] == BYTE_CODE_OPERATION_0_VALUE &&
@@ -67,13 +68,15 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
       is_data_received = true;
     }
 #elif TEST_MODE
-    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
-        HAL_OK) {
-      if (rx_header.StdId == TEST_MODE_STD_ID) {
-        is_data_received = true;
-      }
+
+    if (rx_header.StdId == TEST_MODE_STD_ID) {
+      is_data_received = true;
     }
 
+#elif PROTOCOL_ALPACA
+    alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+    is_interface_connected = true;
+    is_data_received = true;
 #endif
   }
 }
@@ -104,11 +107,15 @@ void MX_CAN_Init(void) {
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN1;
-  hcan.Init.Prescaler = 10;
-#if TEST_MODE
-  hcan.Init.Mode = CAN_MODE_LOOPBACK;
-#else
+#if PROTOCOL_UIM_6100
+  hcan.Init.Prescaler = 10; // 200 kbit/s
   hcan.Init.Mode = CAN_MODE_NORMAL;
+#elif TEST_MODE
+  hcan.Init.Prescaler = 4;
+  hcan.Init.Mode = CAN_MODE_LOOPBACK;
+#elif PROTOCOL_ALPACA
+  hcan.Init.Prescaler = 16; // 125 kbit/s
+  hcan.Init.Mode = CAN_MODE_LOOPBACK;
 #endif
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
@@ -124,26 +131,23 @@ void MX_CAN_Init(void) {
     Error_Handler();
   }
 
-#if TEST_MODE
+#if TEST_MODE || PROTOCOL_ALPACA
   CAN_FilterTypeDef canFilterConfig;
 
   canFilterConfig.FilterBank = 0;
-  	canFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-  	canFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  	canFilterConfig.FilterIdHigh = 0x0000;
-  	canFilterConfig.FilterIdLow = 0x0000;
-  	canFilterConfig.FilterMaskIdHigh = 0x0000;
-  	canFilterConfig.FilterMaskIdLow = 0x0000;
-  	canFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-  	canFilterConfig.FilterActivation = ENABLE;
-  	canFilterConfig.SlaveStartFilterBank = 14;
-  	if (HAL_CAN_ConfigFilter(&hcan, &canFilterConfig) != HAL_OK) {
-  			Error_Handler();
-  		}
-
-
+  canFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  canFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  canFilterConfig.FilterIdHigh = 0x0000;
+  canFilterConfig.FilterIdLow = 0x0000;
+  canFilterConfig.FilterMaskIdHigh = 0x0000;
+  canFilterConfig.FilterMaskIdLow = 0x0000;
+  canFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  canFilterConfig.FilterActivation = ENABLE;
+  canFilterConfig.SlaveStartFilterBank = 14;
+  if (HAL_CAN_ConfigFilter(&hcan, &canFilterConfig) != HAL_OK) {
+    Error_Handler();
+  }
 #endif
-
 
   /* USER CODE BEGIN CAN_Init 2 */
 
@@ -273,7 +277,9 @@ void CAN_SetFilterId(uint8_t id) {
  * @retval None
  */
 void start_can(CAN_HandleTypeDef *hcan, uint32_t stdId) {
+#if PROTOCOL_UIM_6100
   CAN_SetFilterId(stdId);
+#endif
 
   HAL_CAN_Start(hcan);
   HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING |
@@ -295,8 +301,10 @@ void stop_can(CAN_HandleTypeDef *hcan) { HAL_CAN_Stop(hcan); }
  * @retval None
  */
 void CAN_TxData(uint32_t stdId) {
+
+#if TEST_MODE
   /// String OK
-  char *str_ok = "OK";
+  char *str_ok = "0K";
 
   /// Mailbox for transmitted data
   uint32_t tx_mailbox = 0;
@@ -310,8 +318,30 @@ void CAN_TxData(uint32_t stdId) {
     is_data_received = false;
     draw_string_on_matrix(str_ok);
   }
+
+#elif PROTOCOL_ALPACA
+
+  /// Mailbox for transmitted data
+  uint32_t tx_mailbox = 0;
+
+  tx_header.StdId = stdId;
+  tx_header.ExtId = 0;
+  tx_header.RTR = CAN_RTR_DATA;
+  tx_header.IDE = CAN_ID_STD;
+  tx_header.DLC = 2;
+  tx_header.TransmitGlobalTime = 0;
+
+  uint16_t number_to_send = stdId;
+  tx_data_can[0] = (number_to_send >> 8) & 0xFF;
+  tx_data_can[1] = number_to_send & 0xFF;
+
+  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
+    HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data_can, &tx_mailbox);
+  }
+#endif
 }
 
+uint8_t v = 0;
 /**
  * @brief  Process data received by CAN.
  * @note   If transmitted data by UIM6100 protocol is received then process data
@@ -319,10 +349,47 @@ void CAN_TxData(uint32_t stdId) {
  * @retval None
  */
 void process_data_from_can() {
+
+  // 63 этаж, движения нет
+  // CAN_TxData(10001);
+  CAN_TxData(10001);
+  CAN_TxData(10006); // 3 floor
+
+  // Перегрузка кабины
+  // CAN_TxData(10738);
+
+  // Погрузка
+  // CAN_TxData(10735);
+
+  // Гонг Прибытие
+  // if (v == 0) {
+  //   v++;
+  // CAN_TxData(10739);
+  // }
+
+  // Пожарная опасность
+  // CAN_TxData(10741);
+
+  // Открытие дверей
+  // if (v == 0) {
+  //   v++;
+  //   CAN_TxData(10742);
+  // }
+
+  // Неисправность лифта
+  // CAN_TxData(10745);
+
+  // Эвакуация
+  // CAN_TxData(10746);
+
   if (is_data_received) {
     is_data_received = false;
 
+#if PROTOCOL_UIM_6100
     process_data_uim(rx_data_can);
+#elif PROTOCOL_ALPACA
+    process_data_alpaca(rx_data_can);
+#endif
   }
 }
 /* USER CODE END 1 */

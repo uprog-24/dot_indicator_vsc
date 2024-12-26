@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define START_BIT_INDEX_FONT 6  ///< Start index for element of symbols[]
+#define START_BIT_INDEX_FONT 6 ///< Start index for element of symbols[]
 
 /**
  * Stores the parameters of the symbol: symbol and binary_symbol massive
@@ -63,17 +63,8 @@ static symbol_t symbols[] = {{'c',
                               {0b00000000, 0b00110000, 0b01001000, 0b01001000,
                                0b01001000, 0b01001000, 0b00110000, 0b00000000}},
                              {'K',
-//                              {0b00000000, 0b01001000, 0b01010000, 0b01100000,
-//                               0b01100000, 0b01010000, 0b01001000, 0b00000000}
-                            		 {0b01000100,
-                            		 0b01001000,
-                            		 0b01010000,
-                            		0b01100000,
-                            		 0b01100000,
-                            		 0b01010000,
-                            		 0b01001000,
-                            		 0b01000100}
-                             },
+                              {0b01000100, 0b01001000, 0b01010000, 0b01100000,
+                               0b01100000, 0b01010000, 0b01001000, 0b01000100}},
                              {'-',
                               {0b00000000, 0b00000000, 0b00000000, 0b01110000,
                                0b00000000, 0b00000000, 0b00000000, 0b00000000}},
@@ -104,7 +95,7 @@ static symbol_t symbols[] = {{'c',
                              {'U',
                               {0b01001000, 0b01001000, 0b01001000, 0b01001000,
                                0b01001000, 0b01001000, 0b01001000, 0b00110000}},
-                             {'p',  // П
+                             {'p', // П
                               {0b01111000, 0b01001000, 0b01001000, 0b01001000,
                                0b01001000, 0b01001000, 0b01001000, 0b01001000}},
                              {'I',
@@ -125,7 +116,10 @@ static symbol_t symbols[] = {{'c',
                                0b00010000, 0b00010000, 0b00000000, 0b00000000}},
                              {'V',
                               {0b01000100, 0b01000100, 0b01000100, 0b01000100,
-                               0b01000100, 0b01000100, 0b00101000, 0b00010000}}
+                               0b01000100, 0b01000100, 0b00101000, 0b00010000}},
+                             {'T',
+                              {0b01111100, 0b00010000, 0b00010000, 0b00010000,
+                               0b00010000, 0b00010000, 0b00010000, 0b00010000}}
 
 };
 
@@ -135,7 +129,7 @@ static symbol_t symbols[] = {{'c',
  * @param  binary_mas: Pointer to the binary representation of the symbol
  * @retval None
  */
-void convert_number_from_dec_to_bin(uint8_t number, uint8_t* binary_mas,
+void convert_number_from_dec_to_bin(uint8_t number, uint8_t *binary_mas,
                                     uint8_t bin_size) {
   int8_t font_index = bin_size;
   uint8_t bit_num = 0;
@@ -152,7 +146,7 @@ void convert_number_from_dec_to_bin(uint8_t number, uint8_t* binary_mas,
  * @param  symbol:               Symbol from buffer symbols[] (font.c)
  * @retval Pointer to buff_code: Code of symbol
  */
-uint8_t* get_symbol_code(char symbol) {
+uint8_t *get_symbol_code(char symbol) {
   for (uint8_t ind = 0; ind < sizeof(symbols) / sizeof(symbols[0]); ind++) {
     if (symbols[ind].symbol == symbol) {
       return symbols[ind].buff_code;

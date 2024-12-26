@@ -9,18 +9,18 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define BINARY_SYMBOL_CODE_SIZE 6  ///< Binary symbol code size (number of bits)
-#define MIN_POSITION_COLUMN \
-  0  ///< Minimum index of position of column for symbol
-#define MAX_POSITION_COLUMN \
-  11  ///< Maximum index of position of column for symbol
+#define BINARY_SYMBOL_CODE_SIZE 6 ///< Binary symbol code size (number of bits)
+#define MIN_POSITION_COLUMN                                                    \
+  0 ///< Minimum index of position of column for symbol
+#define MAX_POSITION_COLUMN                                                    \
+  11 ///< Maximum index of position of column for symbol
 
 /**
  * @brief  Convert integer number (0..9) to char ('0'..'9')
  * @param  number: Number that will be converted into char
  * @retval char:   Symbol 'number' if number is correct else symbol 'e'
  */
-static char convert_int_to_char(uint8_t number) {
+char convert_int_to_char(uint8_t number) {
   if (number <= 9) {
     return number + '0';
   }
@@ -48,17 +48,17 @@ void drawing_data_setter(drawing_data_t *drawing_data, uint8_t floor,
  *                        DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION
  * @retval None
  */
-static void set_direction_symbol(char *matrix_string, directionType direction) {
+void set_direction_symbol(char *matrix_string, directionType direction) {
   switch (direction) {
-    case DIRECTION_UP:
-      matrix_string[DIRECTION] = '>';
-      break;
-    case DIRECTION_DOWN:
-      matrix_string[DIRECTION] = '<';
-      break;
-    case NO_DIRECTION:
-      matrix_string[DIRECTION] = 'c';
-      break;
+  case DIRECTION_UP:
+    matrix_string[DIRECTION] = '>';
+    break;
+  case DIRECTION_DOWN:
+    matrix_string[DIRECTION] = '<';
+    break;
+  case NO_DIRECTION:
+    matrix_string[DIRECTION] = 'c';
+    break;
   }
 }
 
@@ -73,10 +73,10 @@ static void set_direction_symbol(char *matrix_string, directionType direction) {
  * @param  spec_symbols_buff_size:       Number of special symbols
  * @retval None
  */
-static void set_floor_symbols(
-    char *matrix_string, uint8_t floor, uint8_t max_positive_number_location,
-    const code_location_symbols_t *code_location_symbols,
-    uint8_t spec_symbols_buff_size) {
+void set_floor_symbols(char *matrix_string, uint16_t floor,
+                       uint8_t max_positive_number_location,
+                       const code_location_symbols_t *code_location_symbols,
+                       uint8_t spec_symbols_buff_size) {
   if (floor <= 9) {
     matrix_string[MSB] = convert_int_to_char(floor % 10);
     matrix_string[LSB] = 'c';
@@ -192,8 +192,9 @@ static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
  * @retval None
  */
 static bool is_start_symbol_special(char *matrix_string) {
-  return (matrix_string[0] == 'c' || matrix_string[0] == '>' ||
-          matrix_string[0] == '<' || matrix_string[0] == '+');
+  return (matrix_string[DIRECTION] == 'c' || matrix_string[DIRECTION] == '>' ||
+          matrix_string[DIRECTION] == '<' || matrix_string[DIRECTION] == '+' ||
+          matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p');
 }
 
 /**
@@ -204,34 +205,35 @@ static bool is_start_symbol_special(char *matrix_string) {
  * @retval None
  */
 static void draw_symbols(char *matrix_string) {
-  if (strlen(matrix_string) == 3) {  // 3 symbols, font_width = 4
+  if (strlen(matrix_string) == 3) { // 3 symbols, font_width = 4
 
-    if (matrix_string[0] == 'V' || matrix_string[1] == 'K') {  // font_width = 5
-      draw_symbol_on_matrix(matrix_string[0], 0, 0);
+    if (matrix_string[DIRECTION] == 'V' ||
+        matrix_string[MSB] == 'K') { // font_width = 5
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
     } else {
-      draw_symbol_on_matrix(matrix_string[0], 1, 0);
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
     }
 
-    if (matrix_string[0] == 'U' && matrix_string[1] == 'K') {
-    	draw_symbol_on_matrix(matrix_string[1], 5, 0);
+    if (matrix_string[DIRECTION] == 'U' && matrix_string[MSB] == 'K') {
+      draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
     } else {
-    	draw_symbol_on_matrix(matrix_string[1], 6, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
     }
 
-    draw_symbol_on_matrix(matrix_string[2], 11, 0);
-  } else if (strlen(matrix_string) == 2) {  // 2 symbols, font_width = 4
+    draw_symbol_on_matrix(matrix_string[LSB], 11, 0);
+  } else if (strlen(matrix_string) == 2) { // 2 symbols, font_width = 4
 
-    draw_symbol_on_matrix(matrix_string[0], 4, 0);
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 4, 0);
 
     // font_width = 3
-    if (matrix_string[0] == 'I') {
-      draw_symbol_on_matrix(matrix_string[1], 8, 0);
+    if (matrix_string[DIRECTION] == 'I') {
+      draw_symbol_on_matrix(matrix_string[MSB], 8, 0);
     } else {
-      draw_symbol_on_matrix(matrix_string[1], 9, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
     }
 
-  } else if (strlen(matrix_string) == 1) {  // 1 symbol, font_width = 4
-    draw_symbol_on_matrix(matrix_string[0], 6, 0);
+  } else if (strlen(matrix_string) == 1) { // 1 symbol, font_width = 4
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 6, 0);
   }
 }
 
@@ -244,33 +246,42 @@ static void draw_symbols(char *matrix_string) {
  */
 static void draw_special_symbols(char *matrix_string) {
   // stop floor 1..9: c1c
-  if (matrix_string[0] == 'c' && matrix_string[2] == 'c') {
-    draw_symbol_on_matrix(matrix_string[1], 6, 0);
-  } else if (matrix_string[0] == 'c') {  // stop floor c10..c99 and c-1..c-9
+  if (matrix_string[DIRECTION] == 'c' && matrix_string[LSB] == 'c') {
+    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+  } else if (matrix_string[DIRECTION] ==
+             'c') { // stop floor c10..c99 and c-1..c-9
 
-    if (matrix_string[1] == '1') {
-      draw_symbol_on_matrix(matrix_string[1], 5, 0);
-      draw_symbol_on_matrix(matrix_string[2], 9, 0);
-    } else if (matrix_string[1] != '-') {
-      draw_symbol_on_matrix(matrix_string[1], 4, 0);
-      draw_symbol_on_matrix(matrix_string[2], 9, 0);
+    if (matrix_string[MSB] == '1') {
+      draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
+      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+    } else if (matrix_string[MSB] != '-') {
+      draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
+      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
     }
 
-    if (matrix_string[1] == '-') {
-      draw_symbol_on_matrix(matrix_string[1], 4, 0);
-      draw_symbol_on_matrix(matrix_string[2], 8, 0);
+    if (matrix_string[MSB] == '-') {
+      draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
+      draw_symbol_on_matrix(matrix_string[LSB], 8, 0);
     }
-  } else if (matrix_string[0] == '>' || matrix_string[0] == '<' ||
-             matrix_string[0] == '+') {  // in moving up/down: >10 or >1c
+  } else if (matrix_string[DIRECTION] == '>' ||
+             matrix_string[DIRECTION] == '<' ||
+             matrix_string[DIRECTION] == '+' ||
+             matrix_string[DIRECTION] == '-' ||
+             matrix_string[DIRECTION] == 'p') { // in moving up/down: >10 or >1c
 
-    draw_symbol_on_matrix(matrix_string[0], 0, 0);
-    draw_symbol_on_matrix(matrix_string[1], 6, 0);
+    if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
+    } else {
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+    }
+
+    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
 
     // font_width = 3 for '1' and '-'
-    if (matrix_string[1] == '1' || matrix_string[1] == '-') {
-      draw_symbol_on_matrix(matrix_string[2], 10, 0);
-    } else if (matrix_string[1] != '-') {
-      draw_symbol_on_matrix(matrix_string[2], 11, 0);
+    if (matrix_string[MSB] == '1' || matrix_string[MSB] == '-') {
+      draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
+    } else if (matrix_string[MSB] != '-') {
+      draw_symbol_on_matrix(matrix_string[LSB], 11, 0);
     }
   }
 }

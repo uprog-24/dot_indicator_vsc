@@ -65,7 +65,7 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
 
 /// Settings of matrix: addr_id of matrix and level of volume for buzzer
 settings_t matrix_settings = {.addr_id = MAIN_CABIN_ID, .volume = VOLUME_1};
@@ -86,6 +86,9 @@ volatile matrix_state_t matrix_state = MATRIX_STATE_START;
 
 /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING, MENU_STATE_CLOSE
 menu_state_t menu_state = MENU_STATE_OPEN;
+
+/// String that will be displayed on matrix
+char matrix_string[3];
 
 /* USER CODE END 0 */
 
@@ -162,44 +165,45 @@ int main(void) {
 
 #else
 
-  display_protocol_name(PROTOCOL_NAME);
+  // display_protocol_name(PROTOCOL_NAME);
 
   read_settings(&matrix_settings);
   protocol_init();
 
   while (1) {
+    is_interface_connected = true;
     switch (matrix_state) {
-      case MATRIX_STATE_START:
-        protocol_start();
-        matrix_state = MATRIX_STATE_WORKING;
+    case MATRIX_STATE_START:
+      protocol_start();
+      matrix_state = MATRIX_STATE_WORKING;
+      break;
+
+    case MATRIX_STATE_WORKING:
+      protocol_process_data();
+      break;
+
+    case MATRIX_STATE_MENU:
+
+      switch (menu_state) {
+      case MENU_STATE_OPEN:
+        protocol_stop();
+        start_timer_menu();
+        menu_state = MENU_STATE_WORKING;
         break;
 
-      case MATRIX_STATE_WORKING:
-        protocol_process_data();
+      case MENU_STATE_WORKING:
+        press_button();
         break;
 
-      case MATRIX_STATE_MENU:
-
-        switch (menu_state) {
-          case MENU_STATE_OPEN:
-            protocol_stop();
-            start_timer_menu();
-            menu_state = MENU_STATE_WORKING;
-            break;
-
-          case MENU_STATE_WORKING:
-            press_button();
-            break;
-
-          case MENU_STATE_CLOSE:
-            stop_timer_menu();
-            overwrite_settings(&matrix_settings);
-            matrix_state = MATRIX_STATE_START;
-            menu_state = MENU_STATE_OPEN;
-            break;
-        }
-
+      case MENU_STATE_CLOSE:
+        stop_timer_menu();
+        overwrite_settings(&matrix_settings);
+        matrix_state = MATRIX_STATE_START;
+        menu_state = MENU_STATE_OPEN;
         break;
+      }
+
+      break;
     }
   }
 

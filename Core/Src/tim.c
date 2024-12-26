@@ -25,10 +25,10 @@
 #include "drawing.h"
 #include "ukl.h"
 
-#define TIM4_FREQ TIM2_FREQ   ///< Frequency of APB1 for TIM4
-#define TIM4_PERIOD 1000 - 1  ///< Period of TIM4 for 1 sec
-#define DISPLAY_STR_DURING_MS \
-  2000  ///< Time in ms to display string on matrix (TEST_MODE)
+#define TIM4_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM4
+#define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec
+#define DISPLAY_STR_DURING_MS                                                  \
+  2000 ///< Time in ms to display string on matrix (TEST_MODE)
 
 /**
  * @brief  Get prescaler for TIM2 (PWM) by current frequency.
@@ -37,7 +37,8 @@
  * @retval prescaler
  */
 static uint16_t TIM2_get_prescaler_frequency(uint16_t frequency) {
-  if (frequency == 0) return 0;
+  if (frequency == 0)
+    return 0;
   return ((TIM2_FREQ / (TIM2_PERIOD * frequency)) - 1);
 }
 
@@ -70,10 +71,10 @@ static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
  */
 void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
 #if 1
-	uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
-	__HAL_TIM_SET_PRESCALER(&htim2, prescaler);
-	TIM2_Set_volume(volume);
-	TIM2_Start_PWM();
+  uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
+  __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
+  TIM2_Set_volume(volume);
+  TIM2_Start_PWM();
 #endif
 }
 
@@ -173,7 +174,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM4) {
     is_tim4_period_elapsed = true;
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
 
     if (matrix_state == MATRIX_STATE_WORKING) {
       connection_sec_is_elapsed += 1;
@@ -235,7 +236,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM1) {
     tim1_elapsed_ms++;
 
-    if (tim1_elapsed_ms == _bip_duration_ms) {  // stop bip 1
+    if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
 
       TIM2_Stop_bip();
 
@@ -244,11 +245,11 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-    if (tim1_elapsed_ms == 2 * _bip_duration_ms) {  // start bip 2
+    if (tim1_elapsed_ms == 2 * _bip_duration_ms) { // start bip 2
       TIM2_Start_bip(_bip_freq, _bip_volume);
     }
 
-    if (tim1_elapsed_ms == 3 * _bip_duration_ms) {  // stop bip 2
+    if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 2
 
       TIM2_Stop_bip();
 
@@ -257,11 +258,11 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-    if (tim1_elapsed_ms == 4 * _bip_duration_ms) {  // start bip 3
+    if (tim1_elapsed_ms == 4 * _bip_duration_ms) { // start bip 3
       TIM2_Start_bip(_bip_freq, _bip_volume);
     }
 
-    if (tim1_elapsed_ms == 5 * _bip_duration_ms) {  // stop bip 3
+    if (tim1_elapsed_ms == 5 * _bip_duration_ms) { // stop bip 3
 
       TIM2_Stop_bip();
 
@@ -617,7 +618,6 @@ void TIM3_Delay_us(uint16_t delay) {
   HAL_TIM_Base_Stop_IT(&htim3);
 }
 
-
 /**
  * @brief  Start bip for gong.
  * @note   Set frequency, bip_counter, bip_duration_ms and volume
@@ -650,8 +650,8 @@ void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
 
   uint16_t tim4_ms_counter = 0;
 
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS);  // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);      // 1 s
+  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
+  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
 
   while (tim4_ms_counter < time_ms) {
     HAL_TIM_Base_Start_IT(&htim4);
@@ -670,8 +670,8 @@ void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
  * @retval None
  */
 void TIM1_Start() {
-  __HAL_TIM_SET_PRESCALER(&htim1, PRESCALER_FOR_MS);  // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim1, 1);                // 1 ms
+  __HAL_TIM_SET_PRESCALER(&htim1, PRESCALER_FOR_MS); // 1 ms
+  __HAL_TIM_SET_AUTORELOAD(&htim1, 1);               // 1 ms
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
 }
 
@@ -704,8 +704,8 @@ void TIM3_Stop() { HAL_TIM_Base_Stop_IT(&htim3); }
  * @retval None
  */
 void TIM4_Start() {
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS);  // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);      // 1 s
+  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
+  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
   HAL_TIM_Base_Start_IT(&htim4);
 }
 

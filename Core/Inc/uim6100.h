@@ -3,7 +3,7 @@
  * @brief   This file contains all the function prototypes for
  *          the uim6100.c file
  */
-#ifndef UIM100_H
+#ifndef UIM6100_H
 #define UIM6100_H
 
 #include "buzzer.h"

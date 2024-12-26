@@ -48,6 +48,9 @@ void protocol_init() {
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(DATA_GPIO_Port, &GPIO_InitStruct);
 
+  #elif PROTOCOL_ALPACA
+   MX_CAN_Init();
+
 #endif
 }
 
@@ -77,6 +80,10 @@ void protocol_start() {
   receive_data_uart();
 #elif PROTOCOL_UKL
 
+#elif PROTOCOL_ALPACA
+
+start_can(&hcan, 0);
+
 #endif
 }
 
@@ -94,6 +101,8 @@ void protocol_process_data() {
     process_data_from_uart();
 #elif PROTOCOL_UKL
     process_data_pin();
+    #elif PROTOCOL_ALPACA
+    process_data_from_can();
 #endif
   } else {
     draw_string_on_matrix("--");
