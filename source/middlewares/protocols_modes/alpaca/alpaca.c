@@ -8,6 +8,7 @@
 #include "drawing.h"
 #include "tim.h"
 
+
 #include <stdbool.h>
 //==============================================================================
 //                       ИНДИКАЦИЯ МЕСТОПОЛОЖЕНИЯ
@@ -112,7 +113,7 @@
   10746 // ММ посылает сигнал в IM сигнал о начале режима эвакуации
 //------------------------------------------------------------------------------
 
-#define SPECIAL_SYMBOLS_BUFF_SIZE 3 ///< Number of special symbols
+#define SPECIAL_SYMBOLS_BUFF_SIZE 4 ///< Number of special symbols
 #define GONG_BUZZER_FREQ 3000       ///< Frequency of bip for ARRIVAL gong
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
   5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
@@ -142,9 +143,7 @@ static const code_location_symbols_t
         {.code_location = PR_IM_LD_ON, .symbols = "pg"},
         {.code_location = PR_IM_ERR_PRESS, .symbols = "A"},
         {.code_location = PR_IM_EVQ_PRESS, .symbols = "E"},
-
-        {.code_location = PR_IM_EVQ_PRESS, .symbols = "E"},
-};
+        {.code_location = PR_IM_FL_NA, .symbols = "EFL"}};
 
 /// Structure for data that will be displayed on matrix
 static drawing_data_t drawing_data = {0, 0};
@@ -174,74 +173,9 @@ static void transform_direction_to_common(direction_alpaca_t direction) {
   }
 }
 
-static void process_code_location(char *matrix_string) {}
+static uint16_t data;
 
-/// Flag to control if cabin is overloaded
-static bool is_cabin_overload_sound = false;
-
-/// Counter for number received data (fire danger)
-static uint8_t fire_danger_cnt = 0;
-
-/// Flag to control fire danger
-static bool is_fire_danger_sound = false;
-
-/// Counter for number received data (fire danger is disable sound)
-static uint8_t fire_disable_cnt = 0;
-
-static void setting_sound_alpaca(char *matrix_string,
-                                 uint16_t current_location) {
-  if (current_location == PR_IM_OVL_1) {
-
-    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, matrix_settings.volume);
-  }
-
-  if (current_location == PR_IM_OVL_0 || current_location == PR_IM_GNG_0) {
-    TIM2_Stop_bip();
-  }
-
-  if (current_location == PR_IM_GNG_1) {
-    // play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
-    TIM2_Start_bip(GONG_BUZZER_FREQ, matrix_settings.volume);
-  }
-
-  if (current_location == PR_IM_FRA) {
-    matrix_string[MSB] = 'F';
-    matrix_string[LSB] = 'c';
-    fire_danger_cnt++;
-    if (fire_danger_cnt > 10U) { // START
-      stop_buzzer_sound();
-      fire_danger_cnt = 0;
-#if 1
-      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
-#endif
-      is_fire_danger_sound = true;
-    }
-
-    if (is_fire_danger_sound) {
-      fire_disable_cnt++;
-      if (fire_disable_cnt == 8) { // STOP
-        fire_disable_cnt = 0;
-        is_fire_danger_sound = false;
-        stop_buzzer_sound();
-      }
-    }
-  } else {
-    is_fire_danger_sound = false;
-    fire_disable_cnt = 0;
-    fire_danger_cnt = 0;
-  }
-
-  if (current_location == PR_IM_OPD) {
-    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
-  }
-
-  if (current_location == PR_IM_OPD || current_location == PR_IM_CLD ||
-      current_location == PR_IM_ABT_PRESS) {
-    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
-  }
-}
-
-static uint16_t current_floor = 0;
+// static uint16_t current_floor = 0;
 static direction_alpaca_t direction = ALPACA_NO_MOVE;
 
 static uint8_t dash_error_cnt = 0;
@@ -250,19 +184,17 @@ static const uint8_t TIME_FLOOR_DURING_DASH = 8;
 static const uint8_t TIME_DASH_DURING_DASH = 10;
 static bool is_dash_error_displayed = false;
 static uint8_t shifted_floor = 0;
+static bool is_drawing_data_floor_special = false;
 
-void process_data_alpaca(uint8_t *rx_data_can) {
-
-  /// Flag to control is data received by CAN
-  extern volatile bool is_data_received;
-
-  uint8_t first_byte = rx_data_can[BYTE_0];
-  uint8_t second_byte = rx_data_can[BYTE_1];
-
-  uint16_t data = (first_byte << 8) | second_byte;
+static void process_code_location() {
+  if (data == PR_IM_FL_NA) {
+    drawing_data.floor = PR_IM_FL_NA;
+    is_drawing_data_floor_special = true;
+  }
 
   if (data >= PR_IM_FL_01 && data <= PR_IM_FL_64) {
-    current_floor = data % 100 - 3;
+    drawing_data.floor = data % 100 - 3;
+    is_drawing_data_floor_special = false;
   }
 
   switch (data) {
@@ -280,15 +212,18 @@ void process_data_alpaca(uint8_t *rx_data_can) {
 
     // special symbols
   case PR_IM_LD_ON:
-    current_floor = PR_IM_LD_ON;
+    drawing_data.floor = PR_IM_LD_ON;
+    is_drawing_data_floor_special = true;
     break;
 
   case PR_IM_ERR_PRESS:
-    current_floor = PR_IM_ERR_PRESS;
+    drawing_data.floor = PR_IM_ERR_PRESS;
+    is_drawing_data_floor_special = true;
     break;
 
   case PR_IM_EVQ_PRESS:
-    current_floor = PR_IM_EVQ_PRESS;
+    drawing_data.floor = PR_IM_EVQ_PRESS;
+    is_drawing_data_floor_special = true;
     break;
 
   default:
@@ -296,58 +231,57 @@ void process_data_alpaca(uint8_t *rx_data_can) {
     break;
   }
 
-  if (matrix_settings.addr_id <= 10) {
+  if (is_drawing_data_floor_special) {
+    set_floor_symbols(matrix_string, drawing_data.floor,
+                      MAX_POSITIVE_NUMBER_LOCATION,
+                      special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+  } else {
+    if (matrix_settings.addr_id <= 10
+        // MAX_P_FLOOR_ID
+    ) {
 
-    if (current_floor > matrix_settings.addr_id) {
-      set_floor_symbols(matrix_string, current_floor - matrix_settings.addr_id,
-                        64, special_symbols_code_location,
-                        SPECIAL_SYMBOLS_BUFF_SIZE);
+      if (drawing_data.floor > matrix_settings.addr_id) {
+        set_floor_symbols(
+            matrix_string, drawing_data.floor - matrix_settings.addr_id,
+            MAX_POSITIVE_NUMBER_LOCATION, special_symbols_code_location,
+            SPECIAL_SYMBOLS_BUFF_SIZE);
 
-    } else {
-      if (matrix_settings.addr_id >= 1 && matrix_settings.addr_id <= 10) {
-        shifted_floor = matrix_settings.addr_id - current_floor + 1;
+      } else {
+
+        shifted_floor = matrix_settings.addr_id - drawing_data.floor + 1;
         if (shifted_floor <= 9) {
           matrix_string[DIRECTION] = 'c';
-          matrix_string[MSB] =
-              (matrix_settings.addr_id >= 1 && matrix_settings.addr_id <= 10)
-                  ? 'p'
-                  : '-';
+          matrix_string[MSB] = 'p';
           matrix_string[LSB] = convert_int_to_char(shifted_floor);
         } else {
-          matrix_string[DIRECTION] =
-              (matrix_settings.addr_id >= 1 && matrix_settings.addr_id <= 10)
-                  ? 'p'
-                  : '-';
+          matrix_string[DIRECTION] = 'p';
           matrix_string[MSB] = convert_int_to_char(shifted_floor / 10);
           matrix_string[LSB] = convert_int_to_char(shifted_floor % 10);
         }
       }
-    }
 
-  } else if (matrix_settings.addr_id >= 11 && matrix_settings.addr_id <= 73) {
+    } else if (matrix_settings.addr_id >= 11
+               // MIN_MINUS_FLOOR_ID
+               && matrix_settings.addr_id <= ADDR_ID_LIMIT) {
 
-    if (current_floor > matrix_settings.addr_id - 10) {
-      set_floor_symbols(
-          matrix_string, current_floor - (matrix_settings.addr_id - 10), 64,
-          special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-    } else {
-
-      shifted_floor = matrix_settings.addr_id - current_floor - 10 + 1;
-
-      if (shifted_floor <= 9) {
-        matrix_string[DIRECTION] = 'c';
-        matrix_string[MSB] = '-';
-        // (matrix_settings.addr_id >= 1 && matrix_settings.addr_id <= 10)
-        //     ? 'p'
-        //     : '-';
-        matrix_string[LSB] = convert_int_to_char(shifted_floor);
+      if (drawing_data.floor > matrix_settings.addr_id - 10) {
+        set_floor_symbols(
+            matrix_string, drawing_data.floor - (matrix_settings.addr_id - 10),
+            MAX_POSITIVE_NUMBER_LOCATION, special_symbols_code_location,
+            SPECIAL_SYMBOLS_BUFF_SIZE);
       } else {
-        matrix_string[DIRECTION] = '-';
-        // (matrix_settings.addr_id >= 1 && matrix_settings.addr_id <= 10)
-        //     ? 'p'
-        //     : '-';
-        matrix_string[MSB] = convert_int_to_char(shifted_floor / 10);
-        matrix_string[LSB] = convert_int_to_char(shifted_floor % 10);
+
+        shifted_floor = matrix_settings.addr_id - drawing_data.floor - 10 + 1;
+
+        if (shifted_floor <= 9) {
+          matrix_string[DIRECTION] = 'c';
+          matrix_string[MSB] = '-';
+          matrix_string[LSB] = convert_int_to_char(shifted_floor);
+        } else {
+          matrix_string[DIRECTION] = '-';
+          matrix_string[MSB] = convert_int_to_char(shifted_floor / 10);
+          matrix_string[LSB] = convert_int_to_char(shifted_floor % 10);
+        }
       }
     }
   }
@@ -390,10 +324,88 @@ void process_data_alpaca(uint8_t *rx_data_can) {
     set_direction_symbol(matrix_string, drawing_data.direction);
   } else { // periodic change direction and symbol "p"/"-"
   }
+}
 
-  if (matrix_settings.volume != VOLUME_0) {
-    setting_sound_alpaca(matrix_string, data);
+/// Flag to control if cabin is overloaded
+static bool is_cabin_overload_sound = false;
+
+/// Counter for number received data (fire danger)
+static uint8_t fire_danger_cnt = 0;
+
+/// Flag to control fire danger
+static bool is_fire_danger_sound = false;
+
+/// Counter for number received data (fire danger is disable sound)
+static uint8_t fire_disable_cnt = 0;
+
+static void setting_sound_alpaca(uint16_t current_location) {
+  if (current_location == PR_IM_OVL_1) {
+    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, matrix_settings.volume);
   }
+
+  if (current_location == PR_IM_OVL_0 || current_location == PR_IM_GNG_0) {
+    TIM2_Stop_bip();
+  }
+
+  if (current_location == PR_IM_GNG_1) {
+    // play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
+    TIM2_Start_bip(GONG_BUZZER_FREQ, matrix_settings.volume);
+  }
+
+  if (current_location == PR_IM_FRA) {
+    matrix_string[MSB] = 'F';
+    matrix_string[LSB] = 'c';
+    fire_danger_cnt++;
+    // if (fire_danger_cnt > 10U) { // START
+    // stop_buzzer_sound();
+    fire_danger_cnt = 0;
+#if 1
+    TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+#endif
+    is_fire_danger_sound = true;
+    // }
+
+#if 0
+    if (is_fire_danger_sound) {
+      fire_disable_cnt++;
+      if (fire_disable_cnt == 8) { // STOP
+        fire_disable_cnt = 0;
+        is_fire_danger_sound = false;
+        stop_buzzer_sound();
+      }
+    }
+#endif
+  } else {
+    is_fire_danger_sound = false;
+    fire_disable_cnt = 0;
+    fire_danger_cnt = 0;
+  }
+
+  if (current_location == PR_IM_OPD) {
+    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+  }
+
+  if (current_location == PR_IM_OPD || current_location == PR_IM_CLD ||
+      current_location == PR_IM_ABT_PRESS) {
+    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+  }
+}
+
+void process_data_alpaca(uint8_t *rx_data_can) {
+
+  /// Flag to control is data received by CAN
+  extern volatile bool is_data_received;
+
+  uint8_t first_byte = rx_data_can[BYTE_0];
+  uint8_t second_byte = rx_data_can[BYTE_1];
+
+  data = (first_byte << 8) | second_byte;
+
+  process_code_location();
+
+  // if (matrix_settings.volume != VOLUME_0) {
+  setting_sound_alpaca(data);
+  // }
 
   //  while (is_data_received == false && is_interface_connected == true) {
   draw_string_on_matrix(matrix_string);

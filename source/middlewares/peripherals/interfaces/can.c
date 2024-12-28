@@ -350,10 +350,12 @@ uint8_t v = 0;
  */
 void process_data_from_can() {
 
-  // 63 этаж, движения нет
-  // CAN_TxData(10001);
+  // движения нет
+  // CAN_TxData(10000);
+  // движение вверх
   CAN_TxData(10001);
-  CAN_TxData(10006); // 3 floor
+  // CAN_TxData(10006); // 3 floor
+  CAN_TxData(10003);
 
   // Перегрузка кабины
   // CAN_TxData(10738);

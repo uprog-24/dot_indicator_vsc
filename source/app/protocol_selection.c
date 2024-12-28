@@ -7,9 +7,9 @@
 #include "drawing.h"
 #include "tim.h"
 
-#define TIME_MS_FOR_PROTOCOL_NAME \
-  3000  ///< Time of TIM4 (ms) to display protocol's name when the power is
-        ///< applied
+#define TIME_MS_FOR_PROTOCOL_NAME                                              \
+  3000 ///< Time of TIM4 (ms) to display protocol's name when the power is
+       ///< applied
 
 /**
  * @brief  Display protocol name - UKL/SHK/UEL - on the matrix
@@ -48,8 +48,8 @@ void protocol_init() {
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(DATA_GPIO_Port, &GPIO_InitStruct);
 
-  #elif PROTOCOL_ALPACA
-   MX_CAN_Init();
+#elif PROTOCOL_ALPACA
+  MX_CAN_Init();
 
 #endif
 }
@@ -62,7 +62,7 @@ void protocol_init() {
 void protocol_start() {
 #if !TEST_MODE && !DEMO_MODE
   TIM4_Stop();
-  TIM4_Start();  // Timer for checking interface connection
+  TIM4_Start(); // Timer for checking interface connection
 #endif
 
 #if PROTOCOL_UIM_6100
@@ -82,7 +82,7 @@ void protocol_start() {
 
 #elif PROTOCOL_ALPACA
 
-start_can(&hcan, 0);
+  start_can(&hcan, 0);
 
 #endif
 }
@@ -101,7 +101,7 @@ void protocol_process_data() {
     process_data_from_uart();
 #elif PROTOCOL_UKL
     process_data_pin();
-    #elif PROTOCOL_ALPACA
+#elif PROTOCOL_ALPACA
     process_data_from_can();
 #endif
   } else {

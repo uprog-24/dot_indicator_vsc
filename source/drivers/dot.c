@@ -4,7 +4,6 @@
 #include "dot.h"
 
 #include "tim.h"
-
 /**
  * Stores the parameters of the LED: port and pin defined in main.h
  */
@@ -45,13 +44,13 @@ pin_config_t cols[] = {
 void set_row_state(uint8_t row, states_t state) {
   if (row < ROWS) {
     switch (state) {
-      case TURN_OFF:
-        HAL_GPIO_WritePin(rows[row].port, rows[row].pin, GPIO_PIN_RESET);
-        break;
+    case TURN_OFF:
+      HAL_GPIO_WritePin(rows[row].port, rows[row].pin, GPIO_PIN_RESET);
+      break;
 
-      case TURN_ON:
-        HAL_GPIO_WritePin(rows[row].port, rows[row].pin, GPIO_PIN_SET);
-        break;
+    case TURN_ON:
+      HAL_GPIO_WritePin(rows[row].port, rows[row].pin, GPIO_PIN_SET);
+      break;
     }
   }
 }
@@ -65,13 +64,13 @@ void set_row_state(uint8_t row, states_t state) {
 void set_col_state(uint8_t col, states_t state) {
   if (col < COLUMNS) {
     switch (state) {
-      case TURN_OFF:
-        HAL_GPIO_WritePin(cols[col].port, cols[col].pin, GPIO_PIN_RESET);
-        break;
+    case TURN_OFF:
+      HAL_GPIO_WritePin(cols[col].port, cols[col].pin, GPIO_PIN_RESET);
+      break;
 
-      case TURN_ON:
-        HAL_GPIO_WritePin(cols[col].port, cols[col].pin, GPIO_PIN_SET);
-        break;
+    case TURN_ON:
+      HAL_GPIO_WritePin(cols[col].port, cols[col].pin, GPIO_PIN_SET);
+      break;
     }
   }
 }

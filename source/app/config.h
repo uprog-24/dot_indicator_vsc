@@ -26,8 +26,9 @@
 /* Protocol UEL (UART) */
 #if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
     !DEMO_MODE && !TEST_MODE
-#include "../source/uel.h"
+
 #include "protocol_selection.h"
+#include "uel.h"
 #include "usart.h"
 
 #define PROTOCOL_NAME "UEL"
@@ -41,6 +42,7 @@
 /* Protocol UIM_6100 (CAN) */
 #elif PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&                   \
     !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE
+
 #include "can.h"
 #include "protocol_selection.h"
 #include "uim6100.h"
@@ -56,22 +58,29 @@
 /* DEMO_MODE */
 #elif DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&     \
     !PROTOCOL_ALPACA && !TEST_MODE
+
 #include "demo_mode.h"
+
 #define MAX_POSITIVE_NUMBER_LOCATION 14
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 14
 #define MAIN_CABIN_ID 1
+
 /* TEST_MODE */
 #elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&        \
     !PROTOCOL_UKL && !PROTOCOL_ALPACA
-#include "can.h"
+
+#include "test_mode.h"
+
 #define MAX_POSITIVE_NUMBER_LOCATION 1 /// <
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 14
 #define MAIN_CABIN_ID 1
+
 /* Protocol UKL (DATA_Pin) */
 #elif PROTOCOL_UKL && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&                   \
     !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE
+
 #include "protocol_selection.h"
 #include "ukl.h"
 
@@ -83,8 +92,10 @@
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   1 ///< Time in ms to check interface connection
 
+/* Protocol ALPACA (CAN) */
 #elif PROTOCOL_ALPACA && !PROTOCOL_UKL && !PROTOCOL_UIM_6100 &&                \
     !PROTOCOL_UEL && !DEMO_MODE && !TEST_MODE
+
 #include "alpaca.h"
 #include "can.h"
 #include "protocol_selection.h"
@@ -96,6 +107,9 @@
 #define MAIN_CABIN_ID 0
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   1 ///< Time in ms to check interface connection
+
+#define MAX_P_FLOOR_ID 10
+#define MIN_MINUS_FLOOR_ID 11
 
 #else
 #error "Wrong configurations!"

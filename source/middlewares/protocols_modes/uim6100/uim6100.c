@@ -8,6 +8,7 @@
 #include "drawing.h"
 #include "tim.h"
 
+
 #include <stdbool.h>
 
 #define ARROW_MASK                                                             \
@@ -140,7 +141,7 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_FIRE_DANGER) {
     is_fire_danger = true;
 #if 1
-    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
+    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
 #endif
   }
   // next received bytes by CAN
@@ -242,10 +243,12 @@ void process_data_uim(uint8_t *rx_data_can) {
   transform_direction_to_common(rx_data_can[BYTE_W_3] & ARROW_MASK);
 
   if (matrix_settings.volume != VOLUME_0) {
+    // cabin indicator
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
       process_code_msg(code_msg, matrix_settings.volume);
       setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
     } else {
+      // floor indicator
       if (matrix_settings.addr_id == drawing_data.floor) {
         setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
       }

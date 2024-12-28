@@ -20,7 +20,7 @@ typedef enum { NO_DIRECTION, DIRECTION_UP, DIRECTION_DOWN } directionType;
  * Stores floor and direction of the movement
  */
 typedef struct drawing_data {
-  uint8_t floor;
+  uint16_t floor;
   directionType direction;
 } drawing_data_t;
 

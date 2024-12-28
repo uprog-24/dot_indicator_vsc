@@ -6,16 +6,14 @@
 #ifndef UIM6100_H
 #define UIM6100_H
 
-#include "buzzer.h"
-
 #include <stdint.h>
 
-#define UIM6100_DLC 6                 ///< Length of data (6 bit)
-#define UIM6100_MAIN_CABIN_CAN_ID 46  ///< ID of the main cabin
-#define BYTE_CODE_OPERATION_0_VALUE \
-  0x81  ///< Value of BYTE_CODE_OPERATION_0 byte
-#define BYTE_CODE_OPERATION_1_VALUE \
-  0x00  ///< Value of BYTE_CODE_OPERATION_1 byte
+#define UIM6100_DLC 6                ///< Length of data (6 bit)
+#define UIM6100_MAIN_CABIN_CAN_ID 46 ///< ID of the main cabin
+#define BYTE_CODE_OPERATION_0_VALUE                                            \
+  0x81 ///< Value of BYTE_CODE_OPERATION_0 byte
+#define BYTE_CODE_OPERATION_1_VALUE                                            \
+  0x00 ///< Value of BYTE_CODE_OPERATION_1 byte
 
 /**
  * @brief  Process data using UIM6100 protocol
@@ -28,4 +26,4 @@
  */
 void process_data_uim(uint8_t *rx_data_can);
 
-#endif  // UIM6100_H
+#endif // UIM6100_H

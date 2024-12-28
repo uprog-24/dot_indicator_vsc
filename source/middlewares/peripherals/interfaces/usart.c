@@ -21,8 +21,8 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-#include "../source/uel.h"
 #include "config.h"
+#include "uel.h"
 
 #include <stdbool.h>
 
@@ -38,7 +38,7 @@ volatile bool is_rx_data_completed = false;
  * @retval None
  */
 void receive_data_uart() {
-  HAL_UART_Receive_IT(&huart1, (uint8_t*)&(received_data), 1);
+  HAL_UART_Receive_IT(&huart1, (uint8_t *)&(received_data), 1);
 }
 
 /**
@@ -50,7 +50,7 @@ void receive_data_uart() {
  * @param  huart: Pointer to a UART_HandleTypeDef structure
  * @retval None
  */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
     alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
 
@@ -90,7 +90,7 @@ void MX_USART1_UART_Init(void) {
   /* USER CODE END USART1_Init 2 */
 }
 
-void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle) {
+void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle) {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if (uartHandle->Instance == USART1) {
     /* USER CODE BEGIN USART1_MspInit 0 */
@@ -123,7 +123,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle) {
   }
 }
 
-void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle) {
+void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle) {
   if (uartHandle->Instance == USART1) {
     /* USER CODE BEGIN USART1_MspDeInit 0 */
 

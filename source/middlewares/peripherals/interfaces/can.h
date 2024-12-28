@@ -35,7 +35,7 @@ extern "C" {
 extern CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN Private defines */
-#define TEST_MODE_STD_ID 0x0378  ///< ID for CAN in TEST_MODE
+#define TEST_MODE_STD_ID 0x0378 ///< ID for CAN in TEST_MODE
 /* USER CODE END Private defines */
 
 void MX_CAN_Init(void);

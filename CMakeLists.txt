@@ -37,16 +37,31 @@ set(CUBEMX_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/${MCU_FAMILY}_HAL_Driver/Inc/Legacy
 )
 set(PROJECT_INCLUDE_DIRECTORIES
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_DIR})
+    ${PROJECT_DIR}/app
+    ${PROJECT_DIR}/drivers
+
+    ${PROJECT_DIR}/middlewares/display_symbols
+
+    ${PROJECT_DIR}/middlewares/peripherals
+    ${PROJECT_DIR}/middlewares/peripherals/interfaces
+    ${PROJECT_DIR}/middlewares/peripherals/menu
+
+    ${PROJECT_DIR}/middlewares/protocols_modes/alpaca
+    ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode
+    ${PROJECT_DIR}/middlewares/protocols_modes/test_mode
+    ${PROJECT_DIR}/middlewares/protocols_modes/uel
+    ${PROJECT_DIR}/middlewares/protocols_modes/uim6100
+    ${PROJECT_DIR}/middlewares/protocols_modes/ukl
+)
 
 # # List of source files to compile
 file(GLOB_RECURSE STM32CUBEMX_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/*.c)
 file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
-    ${PROJECT_DIR}/*.cpp
-    ${PROJECT_DIR}/*.c)
+    # ${PROJECT_DIR}/*.cpp
+    ${PROJECT_DIR}/*.c
+)
 
 # Executable files
 add_executable(${EXECUTABLE}
@@ -63,8 +78,10 @@ target_compile_definitions(${EXECUTABLE} PRIVATE
 
 # Add header directories (AFTER add_executable !!)
 target_include_directories(${EXECUTABLE} PRIVATE
+    ${PROJECT_INCLUDE_DIRECTORIES}
     ${CUBEMX_INCLUDE_DIRECTORIES}
-    ${PROJECT_INCLUDE_DIRECTORIES})
+    # ${PROJECT_INCLUDE_DIRECTORIES}
+)
 
 # Compiler and linker options
 target_compile_options(${EXECUTABLE} PRIVATE

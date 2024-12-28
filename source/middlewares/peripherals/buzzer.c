@@ -2,10 +2,11 @@
  * @file buzzer.c
  */
 #include "buzzer.h"
+
 #include "tim.h"
 
-#define BIP_DURATION_MS 200    ///< Duration of 1 bip for gong
-#define GONG_BUZZER_FREQ 3000  ///< Frequency for buzzer's sound
+#define BIP_DURATION_MS 200   ///< Duration of 1 bip for gong
+#define GONG_BUZZER_FREQ 3000 ///< Frequency for buzzer's sound
 
 /**
  * @brief Setting the state of an active buzzer.
@@ -15,13 +16,13 @@
  */
 void set_active_buzzer_state(states_t state) {
   switch (state) {
-    case TURN_OFF:
-      HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_RESET);
-      break;
+  case TURN_OFF:
+    HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_RESET);
+    break;
 
-    case TURN_ON:
-      HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
-      break;
+  case TURN_ON:
+    HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
+    break;
   }
 }
 

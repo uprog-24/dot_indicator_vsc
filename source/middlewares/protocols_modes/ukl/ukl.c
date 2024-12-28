@@ -8,6 +8,7 @@
 #include "drawing.h"
 #include "tim.h"
 
+
 #define PACKET_SIZE 13              ///< Number of data bits in received packet
 #define CODE_FLOOR_MASK 0x3F        ///< Mask for 0-5 bits
 #define DIRECTION_MASK 0xC0         ///< Mask for 6,7 bits

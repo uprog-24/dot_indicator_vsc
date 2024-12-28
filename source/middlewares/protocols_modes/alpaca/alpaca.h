@@ -6,11 +6,9 @@
 #ifndef ALPACA_H
 #define ALPACA_H
 
-// #include "buzzer.h"
-
 #include <stdint.h>
 
-#define ALPACA_DLC 2                 ///< Length of data (2 bit)
+#define ALPACA_DLC 2 ///< Length of data (2 bit)
 
 /**
  * @brief  Process data using Alpaca protocol
@@ -23,4 +21,4 @@
  */
 void process_data_alpaca(uint8_t *rx_data_can);
 
-#endif  // UIM6100_H
+#endif // UIM6100_H

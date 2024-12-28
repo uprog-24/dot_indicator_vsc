@@ -10,8 +10,8 @@
 
 #include <stdint.h>
 
-#define ROWS 8      ///< Number of rows in matrix
-#define COLUMNS 16  ///< Number of columns in matrix
+#define ROWS 8     ///< Number of rows in matrix
+#define COLUMNS 16 ///< Number of columns in matrix
 
 /**
  * @brief  Set row state, turn on/off

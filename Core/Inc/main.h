@@ -120,7 +120,7 @@ void Error_Handler(void);
 #define DATA_GPIO_Port GPIOA
 
 /**
- * Stores dot states
+ * Stores dot/active buzzer states
  */
 typedef enum { TURN_OFF, TURN_ON } states_t;
 

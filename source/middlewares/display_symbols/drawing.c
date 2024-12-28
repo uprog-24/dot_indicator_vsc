@@ -269,13 +269,19 @@ static void draw_special_symbols(char *matrix_string) {
              matrix_string[DIRECTION] == '-' ||
              matrix_string[DIRECTION] == 'p') { // in moving up/down: >10 or >1c
 
-    if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
+    // "--" interface is not connected
+    if (matrix_string[DIRECTION] == '-' && matrix_string[MSB] == '-') {
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 4, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
     } else {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
-    }
+      if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
+        draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
+      } else {
+        draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+      }
 
-    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+    }
 
     // font_width = 3 for '1' and '-'
     if (matrix_string[MSB] == '1' || matrix_string[MSB] == '-') {

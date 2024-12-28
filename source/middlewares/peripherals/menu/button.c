@@ -277,7 +277,6 @@ void press_button() {
         while (btn_1_settings_mode == ID && btn_1_set_mode_counter == 3 &&
                btn_2_set_value_counter == 1) {
           draw_string_on_matrix(SETTINGS_MODE_ID);
-          // draw_string_on_matrix("-1");
         }
 
         // return to choose mode ID
@@ -364,30 +363,30 @@ void press_button() {
           }
 #elif PROTOCOL_ALPACA
 
-          if (id == 0) {
+          if (id == ADDR_ID_MIN) {
             matrix_string[DIRECTION] = 'c';
             matrix_string[MSB] = '0';
             matrix_string[LSB] = 'c';
-          } else if (id >= 1 && id <= 10) {
-            matrix_string[DIRECTION] = 'c';
-            matrix_string[MSB] = 'p';
-            matrix_string[LSB] = convert_int_to_char(id);
-
-            if (id == 10) {
+          } else if (id <= MAX_P_FLOOR_ID) {
+            // id = 1...9
+            if (id < MAX_P_FLOOR_ID) {
+              matrix_string[DIRECTION] = 'c';
+              matrix_string[MSB] = 'p';
+              matrix_string[LSB] = convert_int_to_char(id);
+            } else {
+              // id = 10
               matrix_string[DIRECTION] = 'p';
               matrix_string[MSB] = convert_int_to_char(id / 10);
               matrix_string[LSB] = convert_int_to_char(id % 10);
-              ;
             }
-          } else if (id >= 11 && id <= 73) {
-
-            if (id >= 11 && id <= 19) {
+          } else if (id >= MIN_MINUS_FLOOR_ID && id <= ADDR_ID_LIMIT) {
+            // id = 11...19 -> -10 -> 1...9
+            if (id <= 19) {
               matrix_string[DIRECTION] = '-';
               matrix_string[MSB] = convert_int_to_char(id - 10);
               matrix_string[LSB] = 'c';
-            }
-
-            if (id >= 20) {
+            } else {
+              // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
               matrix_string[DIRECTION] = '-';
               matrix_string[MSB] = convert_int_to_char((id - 10) / 10);
               matrix_string[LSB] = convert_int_to_char((id - 10) % 10);
@@ -404,30 +403,6 @@ void press_button() {
           if (id > ADDR_ID_LIMIT) {
             id = ADDR_ID_MIN;
           }
-#if 0
-          while (btn_1_settings_mode == ID && btn_2_set_value_counter == 1 &&
-                 btn_1_set_mode_counter == 2) {
-
-            switch (shift_mode) {
-            case 1:
-              draw_string_on_matrix(SHIFT_P_FLOOR);
-              break;
-
-            case 2:
-              draw_string_on_matrix(SHIFT_MINUS_FLOOR);
-              break;
-
-            default:
-              break;
-            }
-          }
-
-          shift_mode++;
-
-          if (shift_mode == 3) {
-            shift_mode = 1;
-          }
-#endif
 
 #endif
           break;

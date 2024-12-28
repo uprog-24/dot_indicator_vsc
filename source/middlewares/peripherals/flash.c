@@ -3,8 +3,8 @@
  */
 #include "flash.h"
 
-#define LOW_HALF_WORD_MASK \
-  0xFF  ///< Mask for 16 bits of data: addr_id (8 bits) and volume (8 bits)
+#define LOW_HALF_WORD_MASK                                                     \
+  0xFF ///< Mask for 16 bits of data: addr_id (8 bits) and volume (8 bits)
 
 /// Structure for section SETTINGS
 static settings_t settings_flash

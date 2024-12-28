@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STOP_FLOORS_BUFF_SIZE 4  ///< Size of buff_stop_floors
-#define DISPLAY_STR_DURING_MS \
-  2000  ///< Time during which symbols are displayed on matrix
+#define STOP_FLOORS_BUFF_SIZE 4 ///< Size of buff_stop_floors
+#define DISPLAY_STR_DURING_MS                                                  \
+  2000 ///< Time during which symbols are displayed on matrix
 
 /// Buffer with stop floors
 static uint8_t buff_stop_floors[STOP_FLOORS_BUFF_SIZE] = {7, 8, 10, 11};

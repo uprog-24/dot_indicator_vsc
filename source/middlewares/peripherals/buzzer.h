@@ -11,15 +11,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define VOLUME_LEVEL_LIMIT 3  ///< Limit level of volume (volume_t)
+#define VOLUME_LEVEL_LIMIT 3 ///< Limit level of volume (volume_t)
 
 /**
  * Stores the values in % for level of buzzer volume
  */
 typedef enum {
-  //  VOLUME_1 = 55,
-  //  VOLUME_2 = 75,
-  //  VOLUME_3 = 80
   VOLUME_0 = 0,
   VOLUME_1 = 80,
   VOLUME_2 = 75,

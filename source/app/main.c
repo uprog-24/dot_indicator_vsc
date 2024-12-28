@@ -17,20 +17,14 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "can.h"
 #include "gpio.h"
 #include "main.h"
 #include "tim.h"
-//#include "usart.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "button.h"
-#include "buzzer.h"
 #include "config.h"
-#include "dot.h"
-#include "drawing.h"
-#include "font.h"
 
 #include <string.h>
 /* USER CODE END Includes */
@@ -133,30 +127,7 @@ int main(void) {
   /* USER CODE BEGIN 3 */
 
 #if TEST_MODE
-
-#define BUZZER_BUFF_SIZE 3
-
-  uint16_t buzzer_freq_buff[BUZZER_BUFF_SIZE] = {3000, 4000};
-
-  MX_CAN_Init();
-
-  set_matrix_by_rows();
-  TIM3_Delay_ms(500);
-
-  set_full_matrix_state(TURN_OFF);
-  TIM3_Delay_ms(500);
-  set_full_matrix_state(TURN_ON);
-
-  set_passive_buzzer_melody(buzzer_freq_buff, BUZZER_BUFF_SIZE);
-
-  set_full_matrix_state(TURN_OFF);
-
-  start_can(&hcan, TEST_MODE_STD_ID);
-
-  while (1) {
-    CAN_TxData(TEST_MODE_STD_ID);
-  }
-
+  test_mode_start();
 #elif DEMO_MODE
 
   while (1) {
@@ -165,13 +136,15 @@ int main(void) {
 
 #else
 
-  // display_protocol_name(PROTOCOL_NAME);
+  display_protocol_name(PROTOCOL_NAME);
 
   read_settings(&matrix_settings);
   protocol_init();
 
   while (1) {
+#if PROTOCOL_ALPACA
     is_interface_connected = true;
+#endif
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();

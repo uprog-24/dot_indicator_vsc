@@ -43,17 +43,17 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN Private defines */
-#define TIM2_FREQ 64000000   ///< Frequency of APB1 for TIM2
-#define TIM2_PERIOD 1200     ///< Period of TIM2 for buzzer
-#define TIM3_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM3
+#define TIM2_FREQ 64000000  ///< Frequency of APB1 for TIM2
+#define TIM2_PERIOD 1200    ///< Period of TIM2 for buzzer
+#define TIM3_FREQ TIM2_FREQ ///< Frequency of APB1 for TIM3
 
-#define FREQ_FOR_MS 1000     ///< Frequency for ms
-#define FREQ_FOR_US 1000000  ///< Frequency for us
+#define FREQ_FOR_MS 1000    ///< Frequency for ms
+#define FREQ_FOR_US 1000000 ///< Frequency for us
 
-#define PRESCALER_FOR_MS TIM3_FREQ / FREQ_FOR_MS - 1  ///< Prescaler for ms
-#define PRESCALER_FOR_US TIM3_FREQ / FREQ_FOR_US - 1  ///< Prescaler for us
+#define PRESCALER_FOR_MS TIM3_FREQ / FREQ_FOR_MS - 1 ///< Prescaler for ms
+#define PRESCALER_FOR_US TIM3_FREQ / FREQ_FOR_US - 1 ///< Prescaler for us
 
-#define TIM4_PERIOD 1000 - 1  ///< Period of TIM4 for 1 sec
+#define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec
 /* USER CODE END Private defines */
 
 void MX_TIM1_Init(void);
