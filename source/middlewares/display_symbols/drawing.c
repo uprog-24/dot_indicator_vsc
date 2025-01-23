@@ -180,8 +180,10 @@ static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
         num_bit--;
       }
     }
-    set_all_cols_state(TURN_OFF);
-    set_all_rows_state(TURN_OFF);
+    // set_all_cols_state(TURN_OFF);
+    // set_all_rows_state(TURN_OFF);
+    // set_all_cols_state(TURN_OFF);
+    set_full_matrix_state(TURN_OFF);
   }
 }
 
@@ -221,19 +223,6 @@ static void draw_symbols(char *matrix_string) {
     }
 
     draw_symbol_on_matrix(matrix_string[LSB], 11, 0);
-  } else if (strlen(matrix_string) == 2) { // 2 symbols, font_width = 4
-
-    draw_symbol_on_matrix(matrix_string[DIRECTION], 4, 0);
-
-    // font_width = 3
-    if (matrix_string[DIRECTION] == 'I') {
-      draw_symbol_on_matrix(matrix_string[MSB], 8, 0);
-    } else {
-      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
-    }
-
-  } else if (strlen(matrix_string) == 1) { // 1 symbol, font_width = 4
-    draw_symbol_on_matrix(matrix_string[DIRECTION], 6, 0);
   }
 }
 
@@ -247,11 +236,15 @@ static void draw_symbols(char *matrix_string) {
 static void draw_special_symbols(char *matrix_string) {
   // stop floor 1..9: c1c
   if (matrix_string[DIRECTION] == 'c' && matrix_string[LSB] == 'c') {
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+    draw_symbol_on_matrix(matrix_string[LSB], 0, 0);
     draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+
   } else if (matrix_string[DIRECTION] ==
              'c') { // stop floor c10..c99 and c-1..c-9
 
-    if (matrix_string[MSB] == '1') {
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+    if (matrix_string[MSB] == '1' || matrix_string[MSB] == 'I') {
       draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
       draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
     } else if (matrix_string[MSB] != '-') {
@@ -259,9 +252,15 @@ static void draw_special_symbols(char *matrix_string) {
       draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
     }
 
-    if (matrix_string[MSB] == '-') {
+    if (matrix_string[MSB] == '-' && matrix_string[LSB] != '-') {
       draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
       draw_symbol_on_matrix(matrix_string[LSB], 8, 0);
+    }
+
+    // "c--" interface is not connected
+    if (matrix_string[MSB] == '-' && matrix_string[LSB] == '-') {
+      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
+      draw_symbol_on_matrix(matrix_string[LSB], 4, 0);
     }
   } else if (matrix_string[DIRECTION] == '>' ||
              matrix_string[DIRECTION] == '<' ||
@@ -269,19 +268,13 @@ static void draw_special_symbols(char *matrix_string) {
              matrix_string[DIRECTION] == '-' ||
              matrix_string[DIRECTION] == 'p') { // in moving up/down: >10 or >1c
 
-    // "--" interface is not connected
-    if (matrix_string[DIRECTION] == '-' && matrix_string[MSB] == '-') {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 4, 0);
-      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
+    if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
     } else {
-      if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
-        draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
-      } else {
-        draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
-      }
-
-      draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
     }
+
+    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
 
     // font_width = 3 for '1' and '-'
     if (matrix_string[MSB] == '1' || matrix_string[MSB] == '-') {
@@ -299,6 +292,7 @@ static void draw_special_symbols(char *matrix_string) {
  * @retval None
  */
 void draw_string_on_matrix(char *matrix_string) {
+
   if (is_start_symbol_special(matrix_string)) {
     draw_special_symbols(matrix_string);
   } else {

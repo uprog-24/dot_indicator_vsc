@@ -8,7 +8,6 @@
 #include "drawing.h"
 #include "tim.h"
 
-
 #define PACKET_SIZE 13              ///< Number of data bits in received packet
 #define CODE_FLOOR_MASK 0x3F        ///< Mask for 0-5 bits
 #define DIRECTION_MASK 0xC0         ///< Mask for 6,7 bits
@@ -477,6 +476,7 @@ void read_data_bit() {
     received_data_ukl_copy = received_data_ukl;
 
     // filter "+-4"
+    // 0x7FF and 0x1FFF
     if ((received_data_ukl_copy & 0xFFF) != 0xFFF) {
       is_read_data_completed = true;
     }

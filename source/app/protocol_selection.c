@@ -105,7 +105,7 @@ void protocol_process_data() {
     process_data_from_can();
 #endif
   } else {
-    draw_string_on_matrix("--");
+    draw_string_on_matrix("c--");
   }
 }
 

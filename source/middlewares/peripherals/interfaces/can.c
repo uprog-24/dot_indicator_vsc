@@ -41,6 +41,8 @@ static uint8_t rx_data_can[6] = {
 /// Flag to control is data received by CAN
 volatile bool is_data_received = false;
 
+msg_t msg = {0, 0, 0, 0};
+
 /**
  * @brief  Handle Interrupt by receiving data after transmitting by CAN,
  *         setting is_data_received flag when data with StdId is received.
@@ -60,13 +62,49 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
       HAL_OK) {
 
 #if PROTOCOL_UIM_6100
-    if (rx_header.DLC == UIM6100_DLC &&
-        rx_data_can[byte_code_operation_0] == BYTE_CODE_OPERATION_0_VALUE &&
-        rx_data_can[byte_code_operation_1] == BYTE_CODE_OPERATION_1_VALUE) {
+
+#if 1
+    if ((matrix_settings.addr_id == rx_header.StdId) &&
+        (rx_header.StdId >= 46) && (rx_header.StdId != 49)) {
+      if (rx_header.DLC == 2) {
+        if ((rx_data_can[0] == 0x00) && (rx_data_can[1] == 0x00)) {
+          uint8_t buf2[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+          can_send_answer((uint32_t)(matrix_settings.addr_id + 0x80), 6, buf2);
+        }
+
+      } else if (rx_header.DLC == 6) {
+        if ((rx_data_can[0] == 0x81) && (rx_data_can[1] == 0x00) &&
+            ((rx_data_can[5] & 0x80) != 0x80)) {
+          uint8_t buf2[2] = {0x81, 0x00};
+
+          can_send_answer((uint32_t)(matrix_settings.addr_id + 0x80), 2, buf2);
+
+        } else if ((rx_data_can[0] == 0x82) && (rx_data_can[1] == 0x00) &&
+                   ((rx_data_can[5] & 0x80) != 0x80)) {
+          uint8_t buf2[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+          can_send_answer((uint32_t)(matrix_settings.addr_id + 0x80), 6, buf2);
+        }
+      }
+    }
+#endif
+
+    if (rx_header.DLC == 6 && rx_data_can[0] == 0x81 && rx_data_can[1] == 0x00
+        // &&
+        // (rx_data_can[3] != 0 || rx_data_can[4] != 0 || rx_data_can[5] !=
+        // 0)
+    ) {
+
       alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
       is_interface_connected = true;
       is_data_received = true;
+      msg.w0 = rx_data_can[2];
+      msg.w1 = rx_data_can[3];
+      msg.w2 = rx_data_can[4];
+      msg.w3 = rx_data_can[5];
     }
+
 #elif TEST_MODE
 
     if (rx_header.StdId == TEST_MODE_STD_ID) {
@@ -243,6 +281,22 @@ static void set_frame(uint32_t stdId) {
   }
 }
 
+void can_send_answer(uint32_t stdId, uint8_t dlc, uint8_t *buffer) {
+  tx_header.StdId = stdId;
+  tx_header.ExtId = 0;
+  tx_header.RTR = CAN_RTR_DATA;
+  tx_header.IDE = CAN_ID_STD;
+  tx_header.DLC = dlc;
+  tx_header.TransmitGlobalTime = 0;
+
+  /// Mailbox for transmitted data
+  uint32_t tx_mailbox = 0;
+
+  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
+    HAL_CAN_AddTxMessage(&hcan, &tx_header, buffer, &tx_mailbox);
+  }
+}
+
 /**
  * @brief  Set filter for frame ID
  * @param  id: Standard ID of frame
@@ -344,51 +398,58 @@ void CAN_TxData(uint32_t stdId) {
 uint8_t v = 0;
 /**
  * @brief  Process data received by CAN.
- * @note   If transmitted data by UIM6100 protocol is received then process data
+ * @note   If transmitted data by UIM6100 protocol is received then process
+ * data
  * @param  None
  * @retval None
  */
 void process_data_from_can() {
 
-  // движения нет
-  // CAN_TxData(10000);
-  // движение вверх
-  CAN_TxData(10001);
-  // CAN_TxData(10006); // 3 floor
-  CAN_TxData(10003);
+#if PROTOCOL_ALPACA
+// движения нет
+// CAN_TxData(10000);
+// движение вверх
+// CAN_TxData(10001);
+// CAN_TxData(10006); // 3 floor
+// CAN_TxData(10003);
 
-  // Перегрузка кабины
-  // CAN_TxData(10738);
+// Перегрузка кабины
+// CAN_TxData(10738);
 
-  // Погрузка
-  // CAN_TxData(10735);
+// Погрузка
+// CAN_TxData(10735);
 
-  // Гонг Прибытие
-  // if (v == 0) {
-  //   v++;
-  // CAN_TxData(10739);
-  // }
+// Гонг Прибытие
+// if (v == 0) {
+//   v++;
+// CAN_TxData(10739);
+// }
 
-  // Пожарная опасность
-  // CAN_TxData(10741);
+// Пожарная опасность
+// CAN_TxData(10741);
 
-  // Открытие дверей
-  // if (v == 0) {
-  //   v++;
-  //   CAN_TxData(10742);
-  // }
+// Открытие дверей
+// if (v == 0) {
+//   v++;
+//   CAN_TxData(10742);
+// }
 
-  // Неисправность лифта
-  // CAN_TxData(10745);
+// Неисправность лифта
+// CAN_TxData(10745);
 
-  // Эвакуация
-  // CAN_TxData(10746);
+// Эвакуация
+// CAN_TxData(10746);
+#endif
 
   if (is_data_received) {
     is_data_received = false;
 
 #if PROTOCOL_UIM_6100
-    process_data_uim(rx_data_can);
+    // if ((rx_data_can[3] != 0 || rx_data_can[4] != 0 || rx_data_can[5] !=
+    // 0)) { process_data_uim(rx_data_can);
+    process_data_uim(&msg);
+    // }
+
 #elif PROTOCOL_ALPACA
     process_data_alpaca(rx_data_can);
 #endif

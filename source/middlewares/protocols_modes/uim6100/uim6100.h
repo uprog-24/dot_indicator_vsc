@@ -15,6 +15,13 @@
 #define BYTE_CODE_OPERATION_1_VALUE                                            \
   0x00 ///< Value of BYTE_CODE_OPERATION_1 byte
 
+typedef struct {
+  uint8_t w0;
+  uint8_t w1;
+  uint8_t w2;
+  uint8_t w3;
+} msg_t;
+
 /**
  * @brief  Process data using UIM6100 protocol
  * @note   1. Set drawing_data structure, process code message, setting gong
@@ -24,6 +31,6 @@
  * @param  rx_data_can: Pointer to the buffer with received data by CAN
  * @retval None
  */
-void process_data_uim(uint8_t *rx_data_can);
+void process_data_uim(msg_t *msg);
 
 #endif // UIM6100_H

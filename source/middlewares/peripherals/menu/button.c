@@ -12,17 +12,18 @@
 
 #define SETTINGS_MODE_VOLUME                                                   \
   "V0L" ///< String that displayed in settings_mode_t = VOL
-#define SETTINGS_MODE_ID "ID" ///< String that displayed in settings_mode_t = ID
+#define SETTINGS_MODE_ID                                                       \
+  "cID" ///< String that displayed in settings_mode_t = ID
 #define SETTINGS_MODE_SFT                                                      \
   "SHF" ///< String that displayed in mode ID when shift for floor location
         ///< (Alpaca)
 #define SETTINGS_MODE_ESC                                                      \
   "ESC" ///< String that displayed in settings_mode_t = ESC
 
-#define LEVEL_VOLUME_0 "L0" ///< String that displayed when level_volume = 0
-#define LEVEL_VOLUME_1 "L1" ///< String that displayed when level_volume = 1
-#define LEVEL_VOLUME_2 "L2" ///< String that displayed when level_volume = 2
-#define LEVEL_VOLUME_3 "L3" ///< String that displayed when level_volume = 3
+#define LEVEL_VOLUME_0 "cL0" ///< String that displayed when level_volume = 0
+#define LEVEL_VOLUME_1 "cL1" ///< String that displayed when level_volume = 1
+#define LEVEL_VOLUME_2 "cL2" ///< String that displayed when level_volume = 2
+#define LEVEL_VOLUME_3 "cL3" ///< String that displayed when level_volume = 3
 
 #define SHIFT_P_FLOOR "pFL"
 #define SHIFT_MINUS_FLOOR "-FL"

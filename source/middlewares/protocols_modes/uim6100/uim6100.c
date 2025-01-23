@@ -8,7 +8,6 @@
 #include "drawing.h"
 #include "tim.h"
 
-
 #include <stdbool.h>
 
 #define ARROW_MASK                                                             \
@@ -16,6 +15,8 @@
 #define ARRIVAL_MASK 0b100 ///< Mask for bit arrival (2nd bit of byte W3)
 #define ARRIVAL_VALUE 4    ///< Bit value of arrival (bits: 100)
 #define CODE_MESSAGE_W_1_MASK 0b00111111
+
+#define CODE_FLOOR_W_2_MASK 0x3F
 
 #define GONG_BUZZER_FREQ                                                       \
   3000 ///< Frequency of bip for start UPWARD, DOWNWARD and ARRIVAL
@@ -129,7 +130,7 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
     is_cabin_overload = true;
 #if 1
-    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
+    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
 #endif
   }
   // next received bytes by CAN
@@ -224,6 +225,8 @@ static void transform_direction_to_common(direction_uim_6100_t direction) {
   }
 }
 
+// msg_t msg = {0, 0, 0, 0};
+
 /**
  * @brief  Process data using UIM6100 protocol
  * @note   1. Set drawing_data structure, process code message, setting gong
@@ -233,24 +236,32 @@ static void transform_direction_to_common(direction_uim_6100_t direction) {
  * @param  rx_data_can: Pointer to the buffer with received data by CAN
  * @retval None
  */
-void process_data_uim(uint8_t *rx_data_can) {
+// void process_data_uim(uint8_t *rx_data_can) {
+void process_data_uim(msg_t *msg) {
   /// Flag to control is data received by CAN
   extern volatile bool is_data_received;
 
-  uint8_t code_msg = rx_data_can[BYTE_W_1];
-  drawing_data.floor = rx_data_can[BYTE_W_2];
+  // uint8_t code_msg = rx_data_can[BYTE_W_1];
+  // drawing_data.floor = rx_data_can[BYTE_W_2];
 
-  transform_direction_to_common(rx_data_can[BYTE_W_3] & ARROW_MASK);
+  uint8_t code_msg = msg->w1;
+  drawing_data.floor = msg->w2 & CODE_FLOOR_W_2_MASK;
+
+  // transform_direction_to_common(rx_data_can[BYTE_W_3] & ARROW_MASK);
+  transform_direction_to_common(msg->w3 & ARROW_MASK);
 
   if (matrix_settings.volume != VOLUME_0) {
     // cabin indicator
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
       process_code_msg(code_msg, matrix_settings.volume);
-      setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
+      // setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
+      setting_gong(msg->w3, matrix_settings.volume);
     } else {
       // floor indicator
-      if (matrix_settings.addr_id == drawing_data.floor) {
-        setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
+      if (matrix_settings.addr_id == drawing_data.floor ||
+          matrix_settings.addr_id == 47) {
+        // setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
+        setting_gong(msg->w3, matrix_settings.volume);
       }
     }
   }

@@ -132,6 +132,14 @@ int main(void) {
 
   while (1) {
     demo_mode_start();
+    // draw_string_on_matrix(">10");
+    // draw_string_on_matrix("10>");
+    // draw_string_on_matrix("UKL");
+    // draw_string_on_matrix("cID");
+    // draw_string_on_matrix("cKc");
+    // draw_string_on_matrix("cUc");
+    // draw_string_on_matrix(">24");
+    // draw_string_on_matrix("1");
   }
 
 #else

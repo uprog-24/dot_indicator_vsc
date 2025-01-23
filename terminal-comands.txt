@@ -4,4 +4,5 @@ $ cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=C:/STM32_Projects/VSC/dot_indicator_vs
 2. Сборка исполняемого файла: cmake --build ./build
 3. Загрузка .elf через STLink (openocd): cmake --build ./build --target flash
 4. Очистка папки сборки build: cmake --build ./build --target clean-build
+   Или удаление папки: rm -rf build.    
 5. Rebuild вместо п. 4:  cmake --build ./build --clean-first -v -j 8
