@@ -349,8 +349,15 @@ void press_button() {
         case ID:
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
 
-          drawing_data.floor = id;
-          setting_symbols(matrix_string, &drawing_data, ADDR_ID_LIMIT, NULL, 0);
+          if (id == MAIN_CABIN_ID) {
+            matrix_string[DIRECTION] = 'c';
+            matrix_string[MSB] = 'K';
+            matrix_string[LSB] = 'c';
+          } else {
+            drawing_data.floor = id;
+            setting_symbols(matrix_string, &drawing_data, ADDR_ID_LIMIT, NULL,
+                            0);
+          }
 
           selected_id = id;
           while (btn_1_settings_mode == ID && btn_2_set_value_counter == 1 &&
@@ -358,7 +365,17 @@ void press_button() {
             draw_string_on_matrix(matrix_string);
           }
 
+#if PROTOCOL_UIM_6100
+          if (id == 47) {
+            id = 1;
+          } else if (id == 40) {
+            id = MAIN_CABIN_ID;
+          } else {
+            id++;
+          }
+#else
           id++;
+#endif
           if (id > ADDR_ID_LIMIT) {
             id = ADDR_ID_MIN;
           }

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 
+set(PROJECT_VERSION "0.1")
+configure_file(config.h.in conf.h)
+
 # Core project settings
 project(dot_indicator_copy)
 enable_language(C CXX ASM)
@@ -35,6 +38,7 @@ set(CUBEMX_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/${MCU_FAMILY}_HAL_Driver/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/${MCU_FAMILY}_HAL_Driver/Inc/Legacy
+    ${CMAKE_CURRENT_SOURCE_DIR}/build
 )
 set(PROJECT_INCLUDE_DIRECTORIES
     ${PROJECT_DIR}/app

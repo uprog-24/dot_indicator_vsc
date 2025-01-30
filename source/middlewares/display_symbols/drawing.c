@@ -181,9 +181,9 @@ static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
       }
     }
     // set_all_cols_state(TURN_OFF);
-    // set_all_rows_state(TURN_OFF);
-    // set_all_cols_state(TURN_OFF);
-    set_full_matrix_state(TURN_OFF);
+    set_all_rows_state(TURN_OFF);
+    set_all_cols_state(TURN_OFF);
+    // set_full_matrix_state(TURN_OFF);
   }
 }
 
@@ -209,20 +209,34 @@ static bool is_start_symbol_special(char *matrix_string) {
 static void draw_symbols(char *matrix_string) {
   if (strlen(matrix_string) == 3) { // 3 symbols, font_width = 4
 
-    if (matrix_string[DIRECTION] == 'V' ||
+    // draw DIRECTION symbol
+    if (matrix_string[DIRECTION] == 'V' || matrix_string[DIRECTION] == 'K' ||
         matrix_string[MSB] == 'K') { // font_width = 5
       draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
     } else {
       draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
     }
 
+    // draw MSB symbol
     if (matrix_string[DIRECTION] == 'U' && matrix_string[MSB] == 'K') {
       draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
     } else {
       draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
     }
 
-    draw_symbol_on_matrix(matrix_string[LSB], 11, 0);
+    // draw LSB symbol
+    if (matrix_string[MSB] == '.') { // version
+      draw_symbol_on_matrix(matrix_string[LSB], 8, 0);
+    } else {
+      draw_symbol_on_matrix(matrix_string[LSB], 11, 0);
+    }
+  }
+
+  if (strlen(matrix_string) == 4) {
+    draw_symbol_on_matrix(matrix_string[0], 0, 0);
+    draw_symbol_on_matrix(matrix_string[1], 5, 0);
+    draw_symbol_on_matrix(matrix_string[2], 8, 0);
+    draw_symbol_on_matrix(matrix_string[3], 11, 0);
   }
 }
 

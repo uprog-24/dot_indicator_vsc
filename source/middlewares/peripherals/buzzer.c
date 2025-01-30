@@ -5,8 +5,8 @@
 
 #include "tim.h"
 
-#define BIP_DURATION_MS 200   ///< Duration of 1 bip for gong
-#define GONG_BUZZER_FREQ 3000 ///< Frequency for buzzer's sound
+#define BIP_DURATION_MS 500   ///< Duration of 1 bip for gong
+#define GONG_BUZZER_FREQ 2500 ///< Frequency for buzzer's sound
 
 /**
  * @brief Setting the state of an active buzzer.
@@ -61,6 +61,9 @@ void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume) {
 void play_bip_for_menu(bool *is_volume_displayed, volume_t volume) {
   if (*is_volume_displayed == false) {
     *is_volume_displayed = true;
-    play_gong(1, GONG_BUZZER_FREQ, volume);
+    // play_gong(3, GONG_BUZZER_FREQ, volume);
+    if (volume != VOLUME_0) {
+      play_gong(3, 1000, volume);
+    }
   }
 }

@@ -52,10 +52,11 @@ static void TIM2_Set_volume(uint8_t volume) {
     volume = 90;
   }
 
-  uint32_t pulse = (volume * TIM2_PERIOD) / 100;
+  // uint32_t pulse = (volume * TIM2_PERIOD) / 100;
+  uint32_t pulse = (volume * TIM2->ARR) / 100;
 
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pulse);
-  //    TIM2->CCR2 = pulse;
+  // TIM2->CCR2 = pulse;
 }
 
 /**
@@ -71,10 +72,130 @@ static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
  */
 void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
 #if 1
-  uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
-  __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
-  TIM2_Set_volume(volume);
   TIM2_Start_PWM();
+  // uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
+  // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
+  // TIM2_Set_volume(volume);
+  // __HAL_TIM_SET_PRESCALER(&htim2, 64 - 1);
+  TIM2->ARR = (1000000UL / frequency) - 1;
+
+  float k = 1.0;
+
+  switch (volume) {
+  case VOLUME_3:
+    switch (frequency) {
+    case 3000:
+      k = 1.0;
+      break;
+
+    case 1000:
+      k = 1.0; // 0.85;
+      break;
+
+    case 900:
+      k = 1.25;
+      break;
+
+    case 800:
+      k = 1.2;
+      break;
+
+    default:
+      break;
+    }
+
+    break;
+
+  case VOLUME_2:
+    switch (frequency) {
+    case 1000:
+      k = 1.0;
+      break;
+
+    case 900:
+      k = 0.9;
+      break;
+
+    case 800:
+      k = 0.8;
+      break;
+
+    default:
+      break;
+    }
+    // switch (frequency) {
+    // case 1000:
+    //   k = 1.0;
+    //   break;
+
+    // case 900:
+    //   k = 1.0;
+    //   break;
+
+    // case 800:
+    //   k = 0.8;
+    //   break;
+
+    // default:
+    //   break;
+    // }
+
+    break;
+
+  case VOLUME_1:
+    switch (frequency) {
+    case 1000:
+      k = 1.0;
+      break;
+
+    case 900:
+      k = 0.76;
+      break;
+
+    case 800:
+      k = 0.8;
+      break;
+
+    default:
+      break;
+    }
+    // switch (frequency) {
+    // case 1000:
+    //   k = 1.0;
+    //   break;
+
+    // case 900:
+    //   k = 1.3;
+    //   break;
+
+    // case 800:
+    //   k = 1.9;
+    //   break;
+
+    // default:
+    //   break;
+    // }
+
+    break;
+
+  default:
+    k = 1.0;
+    break;
+  }
+
+#if 0
+  if (frequency == 1319) {
+    TIM2->CCR2 = ((TIM2->ARR / 100) * volume * 1.7);
+  } else if (frequency == 900) {
+    TIM2->CCR2 = ((TIM2->ARR / 100) * volume * 1.7);
+  } else {
+    TIM2->CCR2 = ((TIM2->ARR / 100) * volume); // 75 73 70 3
+                                               // TIM2_Set_volume(volume);
+  }
+
+#endif
+  TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
+  // TIM2_Start_PWM();
 #endif
 }
 
@@ -92,7 +213,7 @@ static void TIM2_Stop_PWM() { HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2); }
  */
 void TIM2_Stop_bip() {
   uint16_t prescaler = 0;
-  __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
+  // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
   TIM2_Stop_PWM();
 }
 
@@ -211,7 +332,7 @@ static uint16_t _bip_freq = 0;
 static uint8_t _bip_counter = 0;
 
 /// Value of bip duration for HAL_TIM_OC_DelayElapsedCallback
-static uint8_t _bip_duration_ms = 0;
+static uint32_t _bip_duration_ms = 0;
 
 /// Value of bip volume for HAL_TIM_OC_DelayElapsedCallback
 static uint16_t _bip_volume = 0;
@@ -236,34 +357,41 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM1) {
     tim1_elapsed_ms++;
 
+    // if (tim1_elapsed_ms == 1056 / 2) { // stop bip 1
     if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
 
       TIM2_Stop_bip();
+      TIM2_Start_bip(900, _bip_volume);
 
       if (_bip_counter == 1) {
         stop_buzzer_sound();
       }
     }
 
-    if (tim1_elapsed_ms == 2 * _bip_duration_ms) { // start bip 2
-      TIM2_Start_bip(_bip_freq, _bip_volume);
-    }
+    // if (tim1_elapsed_ms == 100 + _bip_duration_ms) { // start bip 2
+    //   TIM2_Start_bip(1200, _bip_volume);             // 1200      // 1319
+    // }
 
-    if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 2
+    //  if (tim1_elapsed_ms == 100 + 2 * _bip_duration_ms) { // stop bip 2
+    // if (tim1_elapsed_ms == (1048 + 1056) / 2) { // stop bip 2
+    if (tim1_elapsed_ms == 2 * _bip_duration_ms) { // stop bip 2
 
       TIM2_Stop_bip();
+      TIM2_Start_bip(800, _bip_volume);
 
       if (_bip_counter == 2) {
         stop_buzzer_sound();
       }
     }
 
-    if (tim1_elapsed_ms == 4 * _bip_duration_ms) { // start bip 3
-      TIM2_Start_bip(_bip_freq, _bip_volume);
-    }
+    // if (tim1_elapsed_ms == 200 + 2 * _bip_duration_ms) { // start bip 3
+    //   TIM2_Start_bip(1300, _bip_volume);                 // 1200       //
+    //   1568
+    // }
 
-    if (tim1_elapsed_ms == 5 * _bip_duration_ms) { // stop bip 3
-
+    //  if (tim1_elapsed_ms == 200 + 3 * _bip_duration_ms) { // stop bip 3
+    // if (tim1_elapsed_ms == (1048 + 1056 + 882) / 2) { // stop bip 3
+    if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
       TIM2_Stop_bip();
 
       if (_bip_counter == 3) {
@@ -627,7 +755,7 @@ void TIM3_Delay_us(uint16_t delay) {
  * @retval None
  */
 void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
-                        uint8_t bip_duration_ms, uint8_t volume) {
+                        uint16_t bip_duration_ms, uint8_t volume) {
   _bip_freq = frequency;
   _bip_counter = bip_counter;
   _bip_duration_ms = bip_duration_ms;
@@ -636,7 +764,7 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
   // start bip 1
   //	is_gong_play = true;
   TIM2_Start_PWM();
-  TIM2_Start_bip(frequency, volume);
+  TIM2_Start_bip(_bip_freq, volume);
 }
 
 /**

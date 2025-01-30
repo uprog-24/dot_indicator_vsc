@@ -106,6 +106,13 @@ void protocol_process_data() {
 #endif
   } else {
     draw_string_on_matrix("c--");
+#if 0
+    // TIM2_Start_bip(700, 80);
+    // TIM2_Start_bip(750, 55);
+    TIM2_Start_bip(4000, 55);
+#endif
+    //  draw_string_on_matrix("Kgc");
+    // draw_string_on_matrix("%110");
   }
 }
 

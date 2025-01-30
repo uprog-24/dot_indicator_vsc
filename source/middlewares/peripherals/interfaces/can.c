@@ -90,11 +90,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
     }
 #endif
 
-    if (rx_header.DLC == 6 && rx_data_can[0] == 0x81 && rx_data_can[1] == 0x00
-        // &&
-        // (rx_data_can[3] != 0 || rx_data_can[4] != 0 || rx_data_can[5] !=
-        // 0)
-    ) {
+    if (rx_header.DLC == 6 && rx_data_can[0] == 0x81 &&
+        rx_data_can[1] == 0x00) {
 
       alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
       is_interface_connected = true;
@@ -445,11 +442,7 @@ void process_data_from_can() {
     is_data_received = false;
 
 #if PROTOCOL_UIM_6100
-    // if ((rx_data_can[3] != 0 || rx_data_can[4] != 0 || rx_data_can[5] !=
-    // 0)) { process_data_uim(rx_data_can);
     process_data_uim(&msg);
-    // }
-
 #elif PROTOCOL_ALPACA
     process_data_alpaca(rx_data_can);
 #endif

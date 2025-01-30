@@ -135,7 +135,7 @@ void TIM4_Stop();
  * @retval None
  */
 void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
-                        uint8_t bip_duration_ms, uint8_t volume);
+                        uint16_t bip_duration_ms, uint8_t volume);
 
 /**
  * @brief  Start TIM3 with CH1 for reading data bit in UKL protocol

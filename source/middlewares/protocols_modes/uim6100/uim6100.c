@@ -19,9 +19,9 @@
 #define CODE_FLOOR_W_2_MASK 0x3F
 
 #define GONG_BUZZER_FREQ                                                       \
-  3000 ///< Frequency of bip for start UPWARD, DOWNWARD and ARRIVAL
+  1000 ///< Frequency of bip for start UPWARD, DOWNWARD and ARRIVAL
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
-  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+  3000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
 
 #define SPECIAL_SYMBOLS_BUFF_SIZE 19 ///< Number of special symbols
 
@@ -131,6 +131,9 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     is_cabin_overload = true;
 #if 1
     TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    matrix_string[DIRECTION] = 'K';
+    matrix_string[MSB] = 'g';
+    matrix_string[LSB] = 'c';
 #endif
   }
   // next received bytes by CAN
@@ -250,6 +253,9 @@ void process_data_uim(msg_t *msg) {
   // transform_direction_to_common(rx_data_can[BYTE_W_3] & ARROW_MASK);
   transform_direction_to_common(msg->w3 & ARROW_MASK);
 
+  setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
+                  special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+
   if (matrix_settings.volume != VOLUME_0) {
     // cabin indicator
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
@@ -266,8 +272,11 @@ void process_data_uim(msg_t *msg) {
     }
   }
 
-  setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
-                  special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+  // if (is_cabin_overload) {
+  //   draw_string_on_matrix("%Kg");
+  // } else {
+
+  // }
 
   // while new 6 data bytes are not received, draw str
   while (is_data_received == false && is_interface_connected == true) {

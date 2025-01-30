@@ -18,9 +18,13 @@
  */
 typedef enum {
   VOLUME_0 = 0,
-  VOLUME_1 = 80,
-  VOLUME_2 = 75,
-  VOLUME_3 = 55
+  // VOLUME_1 = 3,  // 80
+  // VOLUME_2 = 50, // 75
+  // VOLUME_3 = 55  // 55
+
+  VOLUME_1 = 1, // 80
+  VOLUME_2 = 3, // 75
+  VOLUME_3 = 55 // 55
 } volume_t;
 
 /* 10 - 77
