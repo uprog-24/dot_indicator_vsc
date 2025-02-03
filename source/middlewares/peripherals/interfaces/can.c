@@ -25,6 +25,8 @@
 #include "drawing.h"
 #include "uim6100.h"
 
+msg_t msg = {0, 0, 0, 0};
+
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -41,7 +43,7 @@ static uint8_t rx_data_can[6] = {
 /// Flag to control is data received by CAN
 volatile bool is_data_received = false;
 
-msg_t msg = {0, 0, 0, 0};
+// msg_t msg = {0, 0, 0, 0};
 
 /**
  * @brief  Handle Interrupt by receiving data after transmitting by CAN,

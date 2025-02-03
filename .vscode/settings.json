@@ -6,6 +6,7 @@
   "files.associations": {
     "test_buzzer.h": "c",
     "*.in": "cpp",
-    "config.h": "c"
+    "config.h": "c",
+    "demo_mode.h": "c"
   }
 }

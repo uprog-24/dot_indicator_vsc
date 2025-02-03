@@ -19,8 +19,8 @@
 
 /* Select protocol, demo/test mode */
 #define TEST_MODE 0
-#define DEMO_MODE 0
-#define PROTOCOL_UIM_6100 1
+#define DEMO_MODE 1
+#define PROTOCOL_UIM_6100 0
 #define PROTOCOL_UEL 0
 #define PROTOCOL_UKL 0
 #define PROTOCOL_ALPACA 0

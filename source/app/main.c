@@ -133,57 +133,8 @@ int main(void) {
 #elif DEMO_MODE
 #include "test_Buzzer.h"
 
-#if 1
-  MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
-
-  // play_gong(3, 1000, VOLUME_3);
-  TIM2_Start_bip(3000, VOLUME_3);
-#if 0
-  MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
-
-  TIM2->ARR = (1000000UL / 3322) - 1;
-  TIM2->CCR2 = ((TIM2->ARR / 100) * 30);
-#endif
-  // MX_TIM2_Init_1uS();
-  // TIM2_Start_bip(4000, 55);
-
-  // TIM2->CCR2 = (TIM2->ARR >> 1); // 50%
-
-#else
-
-  MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
-
-  Tone(1109, 600);
-  noTone();
-#endif
-  // MX_TIM2_Init_1uS();
-  // Test_BuzzerStart();
   while (1) {
-    // demo_mode_start();
-
-    // draw_string_on_matrix(">10");
-    // draw_string_on_matrix("10>");
-    // draw_string_on_matrix("UKL");
-    // draw_string_on_matrix("cID");
-    // draw_string_on_matrix("cKc");
-    // draw_string_on_matrix("cUc");
-    // draw_string_on_matrix(">24");
-    // draw_string_on_matrix("1");
-
-    // Test_BuzzerArray(); // -
-    // Test_BuzzerCounst(); // -
-    // Test_BuzzerNotes();
-    // Test_CCR_Gdiese();
-    // Test_For_Elise();
-    // Test_Cosmic_music();
-    // Test_Sorcerers_doll();
-
-    // Test_Forester();
-
-    // TIM2_Start_bip(4000, 55);
+    demo_mode_start();
   }
 
 #else
