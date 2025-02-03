@@ -104,18 +104,7 @@ file(GLOB_RECURSE STM32CUBEMX_SOURCES
 
 # )
 
-set(PROJECT_SOURCES
-    ${PROJECT_DIR}/app/main.c
-    ${PROJECT_DIR}/drivers/dot.c
-    ${PROJECT_DIR}/middlewares/display_symbols/drawing.c
-    ${PROJECT_DIR}/middlewares/display_symbols/font.c
-    ${PROJECT_DIR}/middlewares/peripherals/interfaces/usart.c
-    ${PROJECT_DIR}/middlewares/peripherals/interfaces/can.c
-    ${PROJECT_DIR}/middlewares/peripherals/tim.c
-    ${PROJECT_DIR}/middlewares/peripherals/gpio.c
-    ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
-    ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
-)
+
 
 
 # Include protocol-specific configurations
@@ -129,16 +118,25 @@ elseif(USE_PROTOCOL_ALPACA)
     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/alpaca)
 elseif(USE_DEMO_MODE)
     message(STATUS "Demo mode is enabled")
-    # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/middlewares/protocols_modes/demo_mode)
 
-    add_library(demo_lib ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c)
-    target_include_directories(demo_lib PUBLIC
-        ${CUBEMX_INCLUDE_DIRECTORIES}
-        ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode)
+    set(PROJECT_SOURCES
+        ${PROJECT_DIR}/app/main.c
+        ${PROJECT_DIR}/drivers/dot.c
 
-    target_compile_definitions(demo_lib PUBLIC
-        ${MCU_MODEL}
-        DEMO_MODE=1 USE_HAL_DRIVER)
+        ${PROJECT_DIR}/middlewares/display_symbols/drawing.c
+        ${PROJECT_DIR}/middlewares/display_symbols/font.c
+
+        ${PROJECT_DIR}/middlewares/peripherals/interfaces/usart.c
+        ${PROJECT_DIR}/middlewares/peripherals/interfaces/can.c
+        ${PROJECT_DIR}/middlewares/peripherals/tim.c
+        ${PROJECT_DIR}/middlewares/peripherals/gpio.c
+
+        ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
+
+        ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
+    )
+
+    set(PROTOCOL_MODE DEMO_MODE=1)
 
 elseif(USE_TEST_MODE)
     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/test_mode)
@@ -152,12 +150,13 @@ add_executable(${EXECUTABLE}
     ${STARTUP_SCRIPT})
 
 # target_link_libraries(${EXECUTABLE} demo_mode)
-target_link_libraries(${EXECUTABLE} PUBLIC demo_lib)
+# target_link_libraries(${EXECUTABLE} PUBLIC demo_lib)
 
 
 target_compile_definitions(${EXECUTABLE} PRIVATE
     ${MCU_MODEL}
-    USE_HAL_DRIVER)
+    USE_HAL_DRIVER
+    ${PROTOCOL_MODE})
 
 # Add header directories (AFTER add_executable !!)
 target_include_directories(${EXECUTABLE} PRIVATE
