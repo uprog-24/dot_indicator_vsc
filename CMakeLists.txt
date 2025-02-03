@@ -13,24 +13,24 @@ option(USE_PROTOCOL_ALPACA "Use protocol ALPACA (CAN)" OFF)
 option(USE_DEMO_MODE "Use DEMO mode" OFF)
 option(USE_TEST_MODE "Use TEST mode" OFF)
 
-# Include protocol-specific configurations
+# # Include protocol-specific configurations
 
-if(USE_PROTOCOL_UIM6100)
-    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uim6100)
-elseif(USE_PROTOCOL_UEL)
-    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uel)
-elseif(USE_PROTOCOL_UKL)
-    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/ukl)
-elseif(USE_PROTOCOL_ALPACA)
-    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/alpaca)
-elseif(USE_DEMO_MODE)
-    message(STATUS "Demo mode is enabled")
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/middlewares/protocols_modes/demo_mode)
-elseif(USE_TEST_MODE)
-    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/test_mode)
-else()
-    message(FATAL_ERROR "No valid protocol selected!")
-endif()
+# if(USE_PROTOCOL_UIM6100)
+#     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uim6100)
+# elseif(USE_PROTOCOL_UEL)
+#     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uel)
+# elseif(USE_PROTOCOL_UKL)
+#     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/ukl)
+# elseif(USE_PROTOCOL_ALPACA)
+#     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/alpaca)
+# elseif(USE_DEMO_MODE)
+#     message(STATUS "Demo mode is enabled")
+#     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/middlewares/protocols_modes/demo_mode)
+# elseif(USE_TEST_MODE)
+#     add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/test_mode)
+# else()
+#     message(FATAL_ERROR "No valid protocol selected!")
+# endif()
 
 # Core project settings
 project(dot_indicator_copy)
@@ -93,48 +93,66 @@ set(PROJECT_INCLUDE_DIRECTORIES
 file(GLOB_RECURSE STM32CUBEMX_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/*.c)
-file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
-    # ${PROJECT_DIR}/*.cpp
-    # ${PROJECT_DIR}/*.c
-    ${PROJECT_DIR}/app/main.c
-    ${PROJECT_DIR}/drivers/*.c
-    ${PROJECT_DIR}/middlewares/display_symbols/*.c
-    ${PROJECT_DIR}/middlewares/peripherals/*.c
+# file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
+#     # ${PROJECT_DIR}/*.cpp
+#     ${PROJECT_DIR}/*.c
 
+#     # ${PROJECT_DIR}/app/main.c
+#     # ${PROJECT_DIR}/drivers/*.c
+#     # ${PROJECT_DIR}/middlewares/display_symbols/*.c
+#     # ${PROJECT_DIR}/middlewares/peripherals/*.c
+
+# )
+
+set(PROJECT_SOURCES
+    ${PROJECT_DIR}/app/main.c
+    ${PROJECT_DIR}/drivers/dot.c
+    ${PROJECT_DIR}/middlewares/display_symbols/drawing.c
+    ${PROJECT_DIR}/middlewares/display_symbols/font.c
+    ${PROJECT_DIR}/middlewares/peripherals/interfaces/usart.c
+    ${PROJECT_DIR}/middlewares/peripherals/interfaces/can.c
+    ${PROJECT_DIR}/middlewares/peripherals/tim.c
+    ${PROJECT_DIR}/middlewares/peripherals/gpio.c
+    ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
+    ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
 )
 
-# Полные пути к файлам, которые нужно исключить
-# list(REMOVE_ITEM PROJECT_SOURCES
-#     ${PROJECT_DIR}/middlewares/protocols_modes/alpaca/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/uel/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/ukl/*.c
-# )
 
+# Include protocol-specific configurations
+if(USE_PROTOCOL_UIM6100)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uim6100)
+elseif(USE_PROTOCOL_UEL)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uel)
+elseif(USE_PROTOCOL_UKL)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/ukl)
+elseif(USE_PROTOCOL_ALPACA)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/alpaca)
+elseif(USE_DEMO_MODE)
+    message(STATUS "Demo mode is enabled")
+    # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/middlewares/protocols_modes/demo_mode)
 
-# Удаляем ненужные файлы
-# set_source_files_properties(
-#     ${PROJECT_DIR}/middlewares/protocols_modes/alpaca/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/uel/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/*.c
-#     ${PROJECT_DIR}/middlewares/protocols_modes/ukl/*.c
-#     PROPERTIES HEADER_FILE_ONLY TRUE
-# )
+    add_library(demo_lib ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c)
+    target_include_directories(demo_lib PUBLIC
+        ${CUBEMX_INCLUDE_DIRECTORIES}
+        ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode)
 
-# Executable files
+    target_compile_definitions(demo_lib PUBLIC
+        ${MCU_MODEL}
+        DEMO_MODE=1 USE_HAL_DRIVER)
+
+elseif(USE_TEST_MODE)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/test_mode)
+else()
+    message(FATAL_ERROR "No valid protocol selected!")
+endif()
+
 add_executable(${EXECUTABLE}
     ${STM32CUBEMX_SOURCES}
     ${PROJECT_SOURCES}
     ${STARTUP_SCRIPT})
 
-# Embedded macros(defines)
-# add_definitions(-DSTM32F103xB)
-
-target_link_libraries(${EXECUTABLE} PUBLIC demo_mode)
+# target_link_libraries(${EXECUTABLE} demo_mode)
+target_link_libraries(${EXECUTABLE} PUBLIC demo_lib)
 
 
 target_compile_definitions(${EXECUTABLE} PRIVATE
@@ -145,6 +163,7 @@ target_compile_definitions(${EXECUTABLE} PRIVATE
 target_include_directories(${EXECUTABLE} PRIVATE
     ${PROJECT_INCLUDE_DIRECTORIES}
     ${CUBEMX_INCLUDE_DIRECTORIES}
+    ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode
     # ${PROJECT_INCLUDE_DIRECTORIES}
 )
 

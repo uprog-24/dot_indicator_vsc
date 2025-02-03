@@ -69,7 +69,7 @@
 #define MAX_POSITIVE_NUMBER_LOCATION 14
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 14
-// #define MAIN_CABIN_ID 1
+#define MAIN_CABIN_ID 1
 
 /* TEST_MODE */
 #elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&        \

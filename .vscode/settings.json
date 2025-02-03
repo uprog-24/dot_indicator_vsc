@@ -8,6 +8,9 @@
     "*.in": "cpp",
     "config.h": "c",
     "demo_mode.h": "c",
-    "stdlib.h": "c"
+    "stdlib.h": "c",
+    "tim.h": "c",
+    "drawing.h": "c",
+    "main.h": "c"
   }
 }
