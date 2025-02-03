@@ -23,9 +23,12 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
+
+#if PROTOCOL_UIM6100
 #include "uim6100.h"
 
 msg_t msg = {0, 0, 0, 0};
+#endif
 
 #include <stdbool.h>
 #include <stdio.h>

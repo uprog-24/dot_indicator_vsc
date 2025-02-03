@@ -3,11 +3,42 @@ cmake_minimum_required(VERSION 3.22)
 set(PROJECT_VERSION "0.1")
 configure_file(config.h.in conf.h)
 
+set(PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
+
+# Supported protocols
+option(USE_PROTOCOL_UIM6100 "Use protocol UIM_6100 (CAN)" OFF)
+option(USE_PROTOCOL_UEL "Use protocol UEL (UART)" OFF)
+option(USE_PROTOCOL_UKL "Use protocol UKL (DATA_PIN)" OFF)
+option(USE_PROTOCOL_ALPACA "Use protocol ALPACA (CAN)" OFF)
+option(USE_DEMO_MODE "Use DEMO mode" OFF)
+option(USE_TEST_MODE "Use TEST mode" OFF)
+
+# Include protocol-specific configurations
+
+if(USE_PROTOCOL_UIM6100)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uim6100)
+elseif(USE_PROTOCOL_UEL)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/uel)
+elseif(USE_PROTOCOL_UKL)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/ukl)
+elseif(USE_PROTOCOL_ALPACA)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/alpaca)
+elseif(USE_DEMO_MODE)
+    message(STATUS "Demo mode is enabled")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/middlewares/protocols_modes/demo_mode)
+elseif(USE_TEST_MODE)
+    add_subdirectory(${PROJECT_DIR}/middlewares/protocols_modes/test_mode)
+else()
+    message(FATAL_ERROR "No valid protocol selected!")
+endif()
+
 # Core project settings
 project(dot_indicator_copy)
 enable_language(C CXX ASM)
 
-set(PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
+
+
+# set(PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 
 set(MCU_FAMILY STM32F1xx)
 # set(MCU_MODEL STM32F103xx)
@@ -50,12 +81,12 @@ set(PROJECT_INCLUDE_DIRECTORIES
     ${PROJECT_DIR}/middlewares/peripherals/interfaces
     ${PROJECT_DIR}/middlewares/peripherals/menu
 
-    ${PROJECT_DIR}/middlewares/protocols_modes/alpaca
-    ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode
-    ${PROJECT_DIR}/middlewares/protocols_modes/test_mode
-    ${PROJECT_DIR}/middlewares/protocols_modes/uel
-    ${PROJECT_DIR}/middlewares/protocols_modes/uim6100
-    ${PROJECT_DIR}/middlewares/protocols_modes/ukl
+    # ${PROJECT_DIR}/middlewares/protocols_modes/alpaca
+    # ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode
+    # ${PROJECT_DIR}/middlewares/protocols_modes/test_mode
+    # ${PROJECT_DIR}/middlewares/protocols_modes/uel
+    # ${PROJECT_DIR}/middlewares/protocols_modes/uim6100
+    # ${PROJECT_DIR}/middlewares/protocols_modes/ukl
 )
 
 # # List of source files to compile
@@ -64,8 +95,35 @@ file(GLOB_RECURSE STM32CUBEMX_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/*.c)
 file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
     # ${PROJECT_DIR}/*.cpp
-    ${PROJECT_DIR}/*.c
+    # ${PROJECT_DIR}/*.c
+    ${PROJECT_DIR}/app/main.c
+    ${PROJECT_DIR}/drivers/*.c
+    ${PROJECT_DIR}/middlewares/display_symbols/*.c
+    ${PROJECT_DIR}/middlewares/peripherals/*.c
+
 )
+
+# Полные пути к файлам, которые нужно исключить
+# list(REMOVE_ITEM PROJECT_SOURCES
+#     ${PROJECT_DIR}/middlewares/protocols_modes/alpaca/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/uel/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/ukl/*.c
+# )
+
+
+# Удаляем ненужные файлы
+# set_source_files_properties(
+#     ${PROJECT_DIR}/middlewares/protocols_modes/alpaca/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/uel/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/*.c
+#     ${PROJECT_DIR}/middlewares/protocols_modes/ukl/*.c
+#     PROPERTIES HEADER_FILE_ONLY TRUE
+# )
 
 # Executable files
 add_executable(${EXECUTABLE}
@@ -75,6 +133,9 @@ add_executable(${EXECUTABLE}
 
 # Embedded macros(defines)
 # add_definitions(-DSTM32F103xB)
+
+target_link_libraries(${EXECUTABLE} PUBLIC demo_mode)
+
 
 target_compile_definitions(${EXECUTABLE} PRIVATE
     ${MCU_MODEL}
@@ -87,12 +148,17 @@ target_include_directories(${EXECUTABLE} PRIVATE
     # ${PROJECT_INCLUDE_DIRECTORIES}
 )
 
+
+# message(STATUS "STM32CUBEMX Sources: ${STM32CUBEMX_SOURCES}")
+# message(STATUS "Project Sources: ${PROJECT_SOURCES}")
+
+
 # Compiler and linker options
 target_compile_options(${EXECUTABLE} PRIVATE
     ${CPU_PARAMETERS}
-    -Wall
-    -Wextra
-    -Wno-unused-parameter
+    # -Wall
+    # -Wextra
+    # -Wno-unused-parameter
     $<$<COMPILE_LANGUAGE:CXX>:
     -Wno-volatile
     -Wold-style-cast

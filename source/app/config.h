@@ -18,20 +18,19 @@
      ///< SETTINGS mode of matrix
 
 /* Select protocol, demo/test mode */
-#define TEST_MODE 0
-#define DEMO_MODE 1
-#define PROTOCOL_UIM_6100 0
-#define PROTOCOL_UEL 0
-#define PROTOCOL_UKL 0
-#define PROTOCOL_ALPACA 0
+// #define TEST_MODE 0
+// #define DEMO_MODE 0
+// #define PROTOCOL_UIM_6100 1
+// #define PROTOCOL_UEL 0
+// #define PROTOCOL_UKL 0
+// #define PROTOCOL_ALPACA 0
 
 #define PERIOD_SEC_FOR_SETTINGS                                                \
   20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
      ///< SETTINGS mode of matrix
 
 /* Protocol UEL (UART) */
-#if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
-    !DEMO_MODE && !TEST_MODE
+#if PROTOCOL_UEL
 
 #include "protocol_selection.h"
 #include "uel.h"
@@ -70,12 +69,11 @@
 #define MAX_POSITIVE_NUMBER_LOCATION 14
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 14
-#define MAIN_CABIN_ID 1
+// #define MAIN_CABIN_ID 1
 
 /* TEST_MODE */
 #elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&        \
     !PROTOCOL_UKL && !PROTOCOL_ALPACA
-
 #include "test_mode.h"
 
 #define MAX_POSITIVE_NUMBER_LOCATION 1 /// <

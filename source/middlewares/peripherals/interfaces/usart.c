@@ -22,7 +22,10 @@
 
 /* USER CODE BEGIN 0 */
 #include "config.h"
+
+#if PROTOCOL_UEL
 #include "uel.h"
+#endif
 
 #include <stdbool.h>
 
@@ -157,7 +160,9 @@ void process_data_from_uart() {
   if (is_rx_data_completed) {
     is_rx_data_completed = false;
 
+#if PROTOCOL_UEL
     process_data_uel(&received_data);
+#endif
   }
 }
 /* USER CODE END 1 */

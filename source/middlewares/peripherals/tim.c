@@ -23,7 +23,10 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
+
+#if PROTOCOL_UKL
 #include "ukl.h"
+#endif
 
 #define TIM4_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM4
 #define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec

@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "button.h"
 #include "config.h"
+#include "test_Buzzer.h"
 
 #include <string.h>
 /* USER CODE END Includes */

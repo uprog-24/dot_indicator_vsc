@@ -3,8 +3,8 @@
  */
 #include "demo_mode.h"
 
-#include "drawing.h"
-#include "tim.h"
+#include "../../display_symbols/drawing.h"
+#include "../../peripherals/tim.h"
 
 #include <stdlib.h>
 #include <string.h>
