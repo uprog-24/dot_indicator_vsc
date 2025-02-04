@@ -4,20 +4,22 @@
     {
       "name": "STM32 F1",
       "configurationProvider": "ms-vscode.cmake-tools",
-      // "intelliSenseMode": "${default}",
-      // "intelliSenseMode": "gcc-arm",
-      "compilerPath": "C:\\ST\\STM32CubeCLT_1.16.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe",
-      "includePath": [
-        // "${default}",
-        // "${workspaceFolder}/source/app",
-        "${workspaceFolder}/Core/Inc",
-        "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc",
-        "${workspaceFolder}/Drivers/CMSIS/Include",
-        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F1xx/Include"
 
-        // "${workspaceFolder}/source/middlewares/protocols_modes/demo_mode",
-        // "${workspaceFolder}/source/middlewares/display_symbols"
-      ]
+      // property to generate compile_commands.json in build directory
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json"
     }
+    // {
+    //   "name": "STM32 F1",
+    //   "configurationProvider": "ms-vscode.cmake-tools",
+    //   "compilerPath": "C:\\ST\\STM32CubeCLT_1.16.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe",
+    //   "includePath": [
+    //     "${workspaceFolder}/Core/Inc",
+    //     "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc",
+    //     "${workspaceFolder}/Drivers/CMSIS/Include",
+    //     "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F1xx/Include",
+
+    //     "${workspaceFolder}/source/middlewares/display_symbols"
+    //   ]
+    // }
   ]
 }

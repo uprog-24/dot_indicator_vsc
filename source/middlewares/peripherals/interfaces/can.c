@@ -24,7 +24,7 @@
 #include "config.h"
 #include "drawing.h"
 
-#if PROTOCOL_UIM6100
+#if PROTOCOL_UIM_6100
 #include "uim6100.h"
 
 msg_t msg = {0, 0, 0, 0};
@@ -360,7 +360,7 @@ void CAN_TxData(uint32_t stdId) {
 
 #if TEST_MODE
   /// String OK
-  char *str_ok = "0K";
+  char *str_ok = "c0K";
 
   /// Mailbox for transmitted data
   uint32_t tx_mailbox = 0;

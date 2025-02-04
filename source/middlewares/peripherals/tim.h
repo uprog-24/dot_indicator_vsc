@@ -27,7 +27,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 // #include "main.h"
-#include "../../../Core/Inc/main.h"
+#include "main.h"
 
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>

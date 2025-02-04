@@ -25,7 +25,6 @@
 /* USER CODE BEGIN Includes */
 #include "button.h"
 #include "config.h"
-#include "test_Buzzer.h"
 
 #include <string.h>
 /* USER CODE END Includes */
@@ -115,9 +114,14 @@ int main(void) {
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+
+#if !DEMO_MODE
+#include "test_Buzzer.h"
+
   // MX_TIM2_Init();
   MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
+  // Test_BuzzerStart();
+#endif
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM1_Init();
