@@ -222,7 +222,7 @@ void press_button() {
     case 1:
 
       while (btn_1_set_mode_counter == 1 && btn_2_set_value_counter == 0) {
-        draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+        // draw_string_on_matrix(SETTINGS_MODE_VOLUME);
         btn_1_settings_mode = LEVEL_VOLUME;
       }
 
@@ -231,7 +231,7 @@ void press_button() {
 
       while (btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 0) {
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
-        draw_string_on_matrix(SETTINGS_MODE_ID);
+        // draw_string_on_matrix(SETTINGS_MODE_ID);
 #elif PROTOCOL_ALPACA
         draw_string_on_matrix(SETTINGS_MODE_SFT);
 #endif
@@ -242,7 +242,7 @@ void press_button() {
       // state after selection of value for LEVEL_VOLUME
       while (btn_1_settings_mode == LEVEL_VOLUME &&
              btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 1) {
-        draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+        // draw_string_on_matrix(SETTINGS_MODE_VOLUME);
       }
 
       // return to choose value LEVEL_VOLUME
@@ -267,7 +267,7 @@ void press_button() {
       }
 
       while (btn_1_set_mode_counter == 3 && btn_2_set_value_counter == 0) {
-        draw_string_on_matrix(SETTINGS_MODE_ESC);
+        // draw_string_on_matrix(SETTINGS_MODE_ESC);
         btn_1_settings_mode = ESC;
       }
 
@@ -277,7 +277,7 @@ void press_button() {
         // state after selection of value for ID
         while (btn_1_settings_mode == ID && btn_1_set_mode_counter == 3 &&
                btn_2_set_value_counter == 1) {
-          draw_string_on_matrix(SETTINGS_MODE_ID);
+          // draw_string_on_matrix(SETTINGS_MODE_ID);
         }
 
         // return to choose mode ID
@@ -314,27 +314,27 @@ void press_button() {
           while (btn_1_settings_mode == LEVEL_VOLUME &&
                  btn_2_set_value_counter == 1 && btn_1_set_mode_counter == 1) {
             if (level_volume == 0) {
-              draw_string_on_matrix(LEVEL_VOLUME_0);
-              play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
+              // draw_string_on_matrix(LEVEL_VOLUME_0);
+              // play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
 
               is_level_volume_3_displayed = false;
             }
 
             if (level_volume == 1) {
-              draw_string_on_matrix(LEVEL_VOLUME_1);
-              play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
+              // draw_string_on_matrix(LEVEL_VOLUME_1);
+              // play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
 
               is_level_volume_0_displayed = false;
             }
             if (level_volume == 2) {
-              draw_string_on_matrix(LEVEL_VOLUME_2);
-              play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
+              // draw_string_on_matrix(LEVEL_VOLUME_2);
+              // play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
 
               is_level_volume_1_displayed = false;
             }
             if (level_volume == 3) {
-              draw_string_on_matrix(LEVEL_VOLUME_3);
-              play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
+              // draw_string_on_matrix(LEVEL_VOLUME_3);
+              // play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
 
               is_level_volume_2_displayed = false;
             }
@@ -362,7 +362,7 @@ void press_button() {
           selected_id = id;
           while (btn_1_settings_mode == ID && btn_2_set_value_counter == 1 &&
                  btn_1_set_mode_counter == 2) {
-            draw_string_on_matrix(matrix_string);
+            // draw_string_on_matrix(matrix_string);
           }
 
 #if PROTOCOL_UIM_6100

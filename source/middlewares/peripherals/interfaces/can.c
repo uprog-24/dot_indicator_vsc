@@ -205,15 +205,38 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle) {
      PA11     ------> CAN_RX
      PA12     ------> CAN_TX
      */
+
+#if DOT_PIN
     GPIO_InitStruct.Pin = GPIO_PIN_11;
+#elif DOT_SPI
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+#endif
+    // GPIO_InitStruct.Pin = GPIO_PIN_11;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+#if DOT_PIN
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#elif DOT_SPI
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+#endif
+    // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+#if DOT_PIN
     GPIO_InitStruct.Pin = GPIO_PIN_12;
+#elif DOT_SPI
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+#endif
+    // GPIO_InitStruct.Pin = GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+#if DOT_PIN
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#elif DOT_SPI
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+#endif
 
     /* CAN1 interrupt Init */
     HAL_NVIC_SetPriority(USB_HP_CAN1_TX_IRQn, 0, 0);
@@ -240,7 +263,13 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *canHandle) {
      PA11     ------> CAN_RX
      PA12     ------> CAN_TX
      */
+
+#if DOT_PIN
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
+#elif DOT_SPI
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8 | GPIO_PIN_9);
+#endif
+    // HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
 
     /* CAN1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USB_HP_CAN1_TX_IRQn);

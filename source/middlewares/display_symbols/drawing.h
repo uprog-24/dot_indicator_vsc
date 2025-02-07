@@ -78,4 +78,6 @@ void setting_symbols(char *matrix_string,
  */
 void draw_string_on_matrix(char *str_symbols);
 
+void Display_123(char *matrix_string);
+
 #endif /*__ DRAWING_H__ */

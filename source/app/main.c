@@ -113,13 +113,26 @@ int main(void) {
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+
+#if DOT_PIN
   MX_GPIO_Init();
+#endif
+  // MX_GPIO_Init();
   // MX_TIM2_Init();
   MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
+  // Test_BuzzerStart();
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM1_Init();
+
+#if DOT_SPI
+  MX_GPIO_Init_SPI();
+
+  software_SPI_addPins(MBI5026_MOSI_PIN_GPIO_Port, MBI5026_MOSI_PIN_Pin,
+                       MBI5026_SCK_PIN_GPIO_Port, MBI5026_SCK_PIN_Pin);
+  LED_driver_set_pins(MBI5026_LE_PIN_GPIO_Port, MBI5026_LE_PIN_Pin,
+                      MBI5026_NOE_PIN_GPIO_Port, MBI5026_NOE_PIN_Pin);
+#endif
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -134,7 +147,17 @@ int main(void) {
 #include "test_Buzzer.h"
 
   while (1) {
+#if DOT_PIN
     demo_mode_start();
+#elif DOT_SPI
+    demo_mode_start();
+    // set_active_buzzer_state(TURN_ON);
+    // HAL_GPIO_TogglePin(BUZZ_GPIO_Port, BUZZ_Pin);
+    // HAL_Delay(1000);
+    // HAL_GPIO_TogglePin(BUZZ_GPIO_Port, BUZZ_Pin);
+    // HAL_Delay(1000);
+    // Test_BuzzerNotes();
+#endif
   }
 
 #else
@@ -189,6 +212,47 @@ int main(void) {
 
   /* USER CODE END 3 */
 }
+
+#if DOT_SPI
+void MX_GPIO_Init_SPI(void) {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA,
+                    MBI5026_SCK_PIN_Pin | MBI5026_NOE_PIN_Pin |
+                        MBI5026_LE_PIN_Pin | BUZZ_Pin,
+                    GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(MBI5026_MOSI_PIN_GPIO_Port, MBI5026_MOSI_PIN_Pin,
+                    GPIO_PIN_SET);
+
+  /*Configure GPIO pins : MBI5026_SCK_PIN_Pin MBI5026_MOSI_PIN_Pin
+     MBI5026_NOE_PIN_Pin MBI5026_LE_PIN_Pin BUZ_3_Pin */
+  GPIO_InitStruct.Pin = MBI5026_SCK_PIN_Pin | MBI5026_MOSI_PIN_Pin |
+                        MBI5026_NOE_PIN_Pin | MBI5026_LE_PIN_Pin | BUZZ_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SW_IN_3_Pin */
+  GPIO_InitStruct.Pin = SW_IN_3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SW_IN_3_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+#endif
 
 /**
  * @brief System Clock Configuration

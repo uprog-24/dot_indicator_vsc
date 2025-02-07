@@ -121,6 +121,86 @@ void setting_symbols(
                     spec_symbols_buff_size);
 }
 
+#if DOT_SPI
+#include "LED_driver.h"
+
+void STP16_SendData(uint16_t chip1, uint16_t chip2, uint16_t chip3) {
+  uint8_t spi_tx_buffer[6];
+
+  spi_tx_buffer[0] = (chip3 >> 8) & 0xFF; // 3-й чип (старший байт)
+  spi_tx_buffer[1] = chip3 & 0xFF; // 3-й чип (младший байт)
+
+  spi_tx_buffer[2] = (chip2 >> 8) & 0xFF; // 2-й чип (старший байт)
+  spi_tx_buffer[3] = chip2 & 0xFF; // 2-й чип (младший байт)
+
+  spi_tx_buffer[4] = (chip1 >> 8) & 0xFF; // 1-й чип (старший байт)
+  spi_tx_buffer[5] = chip1 & 0xFF; // 1-й чип (младший байт)
+
+  software_SPI_sendByte(spi_tx_buffer[0]);
+  software_SPI_sendByte(spi_tx_buffer[1]);
+
+  software_SPI_sendByte(spi_tx_buffer[2]);
+  software_SPI_sendByte(spi_tx_buffer[3]);
+
+  software_SPI_sendByte(spi_tx_buffer[4]);
+  software_SPI_sendByte(spi_tx_buffer[5]);
+
+  //    HAL_SPI_Transmit(&hspi1, spi_tx_buffer, 6, HAL_MAX_DELAY);
+
+  // Импульс LE (защелкивание данных)
+  LED_driver_impulse_to_latch();
+  // включаем светодиоды
+  LED_driver_start_indication();
+}
+
+#include "font.h"
+void Display_123(char *matrix_string) {
+  // extern const uint8_t bitmap[NUMBER_OF_SYMBOLS + 1]
+  //                            [ELEMENTS_IN_BITMAP]; // bitmap
+
+  extern const uint8_t bitmap[28 + 1][6]; // bitmap
+  // extern symbol_t symbols[];
+
+  for (int row = 0; row < 6; row++) // Перебираем строки
+  {
+    uint16_t chip1 = 0, chip2 = 0, chip3 = 0;
+
+    // Символ 1 на чипе 1
+    for (int col = 0; col < 7; col++) {
+      if (get_symbol_code(matrix_string[LSB])[row] & (1 << (7 - col))) {
+        chip1 |= (1 << (7 - col));
+      }
+    }
+
+    // Символ 2 на чипе 2
+    for (int col = 0; col < 7; col++) {
+      if (get_symbol_code(matrix_string[MSB])[row] & (1 << (7 - col))) {
+        chip2 |= (1 << (7 - col));
+      }
+    }
+
+    // Символ 3 на чипе 3
+    for (int col = 0; col < 7; col++) {
+      if (get_symbol_code(matrix_string[DIRECTION])[row] & (1 << (7 - col))) {
+        chip3 |= (1 << (7 - col));
+      }
+    }
+
+    // Включаем строку (OUT8 - OUT12 или OUT8 - OUT13)
+    uint16_t row_mask = (1 << (10 + row));
+
+    chip1 |= row_mask; // Включаем строку на 1-м чипе
+    chip2 |= row_mask; // Включаем строку на 2-м чипе
+    chip3 |= row_mask; // Включаем строку на 3-м чипе
+
+    // Отправляем данные
+    STP16_SendData(chip1, chip2, chip3);
+    //    HAL_Delay(5);
+  }
+}
+
+#else
+
 /**
  * @brief  Draw the symbol on matrix starting with start_pos in range
  *         [MIN_POSITION_COLUMN, MAX_POSITION_COLUMN]
@@ -313,3 +393,4 @@ void draw_string_on_matrix(char *matrix_string) {
     draw_symbols(matrix_string);
   }
 }
+#endif

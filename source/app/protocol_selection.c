@@ -105,7 +105,13 @@ void protocol_process_data() {
     process_data_from_can();
 #endif
   } else {
+
+#if DOT_PIN
     draw_string_on_matrix("c--");
+#elif DOT_SPI
+    Display_123("c--");
+#endif
+    // draw_string_on_matrix("c--");
   }
 }
 

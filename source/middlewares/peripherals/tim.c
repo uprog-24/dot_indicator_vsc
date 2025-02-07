@@ -649,10 +649,13 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *timHandle) {
     /**TIM2 GPIO Configuration
      PA1     ------> TIM2_CH2
      */
+
+    // #if DOT_PIN
     GPIO_InitStruct.Pin = BUZZ_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(BUZZ_GPIO_Port, &GPIO_InitStruct);
+    // #endif
 
     /* USER CODE BEGIN TIM2_MspPostInit 1 */
 
@@ -785,7 +788,11 @@ void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
     HAL_TIM_Base_Start_IT(&htim4);
     is_tim4_period_elapsed = false;
     while (!is_tim4_period_elapsed) {
+#if DOT_PIN
       draw_string_on_matrix(str_symbols);
+#elif DOT_SPI
+      Display_123(str_symbols);
+#endif
     }
     HAL_TIM_Base_Stop_IT(&htim4);
     tim4_ms_counter += TIM4_PERIOD;

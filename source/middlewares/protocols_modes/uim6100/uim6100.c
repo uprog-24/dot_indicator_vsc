@@ -261,13 +261,13 @@ void process_data_uim(msg_t *msg) {
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
       process_code_msg(code_msg, matrix_settings.volume);
       // setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
-      setting_gong(msg->w3, matrix_settings.volume);
+      // setting_gong(msg->w3, matrix_settings.volume);
     } else {
       // floor indicator
       if (matrix_settings.addr_id == drawing_data.floor ||
           matrix_settings.addr_id == 47) {
         // setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
-        setting_gong(msg->w3, matrix_settings.volume);
+        // setting_gong(msg->w3, matrix_settings.volume);
       }
     }
   }
@@ -280,6 +280,12 @@ void process_data_uim(msg_t *msg) {
 
   // while new 6 data bytes are not received, draw str
   while (is_data_received == false && is_interface_connected == true) {
+    // draw_string_on_matrix(matrix_string);
+
+#if DOT_PIN
     draw_string_on_matrix(matrix_string);
+#elif DOT_SPI
+    Display_123(matrix_string);
+#endif
   }
 }

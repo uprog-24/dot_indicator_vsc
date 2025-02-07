@@ -67,10 +67,54 @@
 
 #include "demo_mode.h"
 
+#if DOT_PIN
 #define MAX_POSITIVE_NUMBER_LOCATION 14
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 14
 #define MAIN_CABIN_ID 1
+#elif DOT_SPI
+
+#define MAX_POSITIVE_NUMBER_LOCATION 14
+#define ADDR_ID_MIN 1
+#define ADDR_ID_LIMIT 14
+#define MAIN_CABIN_ID 1
+
+#define config_MU_IT_04_10
+//#define config_MU_IT_05_10
+//#define config_MU_IT_06_10
+/*###################### выбор станции ######################*/
+//#define SHK6000
+//#define DEMO
+#define DEMO
+
+#if defined(SHK6000)
+#include "SHK6000_config.h"
+#include "SHK6000_menu.h"
+#include "SHK6000_protocol.h"
+#define MAX_FLOOR 40
+#define CAN_USED
+#elif defined(UEL)
+#include "UEL_config.h"
+#include "UEL_menu.h"
+#include "UEL_protocol.h"
+#define MAX_FLOOR 39
+#define MAX_FLOOR_CODE 50
+
+#elif defined(DEMO)
+#define MAX_FLOOR 40
+#define NUM_OF_P_UNDERFLOORS
+#define NUM_OF_MINUS_UNDERFLOORS
+#endif
+
+#if defined(config_MU_IT_04_10) || defined(config_MU_IT_05_10)
+#define config_SPLIT_SYMBOL
+#endif
+
+#define __BITMAP_STANDART // стандартный bitmap
+// выбор стрелки (направление движения при остановке)
+//#define __ARROW_ORDINAR
+#define __ARROW_DOUBLE
+#endif
 
 /* TEST_MODE */
 #elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&        \

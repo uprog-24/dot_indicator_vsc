@@ -94,7 +94,16 @@ static void demo_start_finish_floors_movement(uint8_t start_floor,
  * @retval None
  */
 void demo_mode_start(void) {
+#if DOT_PIN
   demo_start_finish_floors_movement(1, 14, buff_stop_floors,
                                     STOP_FLOORS_BUFF_SIZE);
   demo_start_finish_floors_movement(14, 1, NULL, 0);
+#elif DOT_SPI
+
+  demo_start_finish_floors_movement(1, 14, buff_stop_floors,
+                                    STOP_FLOORS_BUFF_SIZE);
+  demo_start_finish_floors_movement(14, 1, NULL, 0);
+
+  // Display_123(">9c");
+#endif
 }
