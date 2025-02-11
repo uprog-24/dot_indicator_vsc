@@ -236,6 +236,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle) {
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 #elif DOT_SPI
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    __HAL_AFIO_REMAP_CAN1_2();
 #endif
 
     /* CAN1 interrupt Init */
@@ -243,6 +245,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle) {
     HAL_NVIC_EnableIRQ(USB_HP_CAN1_TX_IRQn);
     HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
+    HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
     HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
     /* USER CODE BEGIN CAN1_MspInit 1 */
@@ -274,6 +278,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *canHandle) {
     /* CAN1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USB_HP_CAN1_TX_IRQn);
     HAL_NVIC_DisableIRQ(USB_LP_CAN1_RX0_IRQn);
+    HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
     HAL_NVIC_DisableIRQ(CAN1_SCE_IRQn);
     /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
@@ -360,7 +365,9 @@ void CAN_SetFilterId(uint8_t id) {
  */
 void start_can(CAN_HandleTypeDef *hcan, uint32_t stdId) {
 #if PROTOCOL_UIM_6100
+  // #if DOT_PIN
   CAN_SetFilterId(stdId);
+// #endif
 #endif
 
   HAL_CAN_Start(hcan);
@@ -398,7 +405,11 @@ void CAN_TxData(uint32_t stdId) {
 
   if (is_data_received) {
     is_data_received = false;
+#if DOT_PIN
     draw_string_on_matrix(str_ok);
+#elif DOT_SPI
+    Display_123("c0K");
+#endif
   }
 
 #elif PROTOCOL_ALPACA

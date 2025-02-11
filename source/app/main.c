@@ -84,6 +84,8 @@ menu_state_t menu_state = MENU_STATE_OPEN;
 /// String that will be displayed on matrix
 char matrix_string[3];
 
+volatile bool is_saved_settings = 0;
+
 /* USER CODE END 0 */
 
 /**
@@ -116,10 +118,12 @@ int main(void) {
 
 #if DOT_PIN
   MX_GPIO_Init();
+  // Passive buzzer
+  MX_TIM2_Init_1uS();
 #endif
   // MX_GPIO_Init();
   // MX_TIM2_Init();
-  MX_TIM2_Init_1uS();
+  // MX_TIM2_Init_1uS();
   // Test_BuzzerStart();
   MX_TIM3_Init();
   MX_TIM4_Init();
@@ -151,20 +155,16 @@ int main(void) {
     demo_mode_start();
 #elif DOT_SPI
     demo_mode_start();
-    // set_active_buzzer_state(TURN_ON);
-    // HAL_GPIO_TogglePin(BUZZ_GPIO_Port, BUZZ_Pin);
-    // HAL_Delay(1000);
-    // HAL_GPIO_TogglePin(BUZZ_GPIO_Port, BUZZ_Pin);
-    // HAL_Delay(1000);
-    // Test_BuzzerNotes();
 #endif
   }
 
 #else
 #include "conf.h"
 
+#if 0
   display_protocol_name(PROTOCOL_NAME);
   display_protocol_name(PROJECT_VER);
+#endif
 
   read_settings(&matrix_settings);
   protocol_init();
@@ -175,6 +175,15 @@ int main(void) {
 #endif
     switch (matrix_state) {
     case MATRIX_STATE_START:
+      // #if DOT_SPI
+      //       if (is_saved_settings) {
+      //         is_saved_settings = 0;
+      //         stop_timer_menu();
+      //         update_structure(&matrix_settings, VOLUME_3, 47);
+      //         overwrite_settings(&matrix_settings);
+      //       }
+      // #endif
+
       protocol_start();
       matrix_state = MATRIX_STATE_WORKING;
       break;
@@ -198,6 +207,9 @@ int main(void) {
 
       case MENU_STATE_CLOSE:
         stop_timer_menu();
+#if DOT_SPI
+        // update_structure(&matrix_settings, VOLUME_3, 47);
+#endif
         overwrite_settings(&matrix_settings);
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;
@@ -246,10 +258,13 @@ void MX_GPIO_Init_SPI(void) {
   /*Configure GPIO pin : SW_IN_3_Pin */
   GPIO_InitStruct.Pin = SW_IN_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SW_IN_3_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END MX_GPIO_Init_2 */
 }
 #endif

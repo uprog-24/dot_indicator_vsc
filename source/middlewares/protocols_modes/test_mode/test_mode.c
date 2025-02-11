@@ -9,7 +9,6 @@
 #include "main.h"
 #include "tim.h"
 
-
 #define BUZZER_BUFF_SIZE 3
 
 /**
@@ -22,6 +21,7 @@ void test_mode_start() {
 
   MX_CAN_Init();
 
+#if DOT_PIN
   set_matrix_by_rows();
   TIM3_Delay_ms(500);
 
@@ -32,6 +32,7 @@ void test_mode_start() {
   set_passive_buzzer_melody(buzzer_freq_buff, BUZZER_BUFF_SIZE);
 
   set_full_matrix_state(TURN_OFF);
+#endif
 
   start_can(&hcan, TEST_MODE_STD_ID);
 

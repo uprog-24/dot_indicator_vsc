@@ -13,22 +13,28 @@
 
 /* Select protocol, demo/test mode */
 
-#define PERIOD_SEC_FOR_SETTINGS                                                \
-  20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
-     ///< SETTINGS mode of matrix
+// #define PERIOD_SEC_FOR_SETTINGS                                                \
+//   20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
+//      ///< SETTINGS mode of matrix
 
 /* Select protocol, demo/test mode */
 #define TEST_MODE 0
-#define DEMO_MODE 1
-#define PROTOCOL_UIM_6100 0
+#define DEMO_MODE 0
+#define PROTOCOL_UIM_6100 1
 #define PROTOCOL_UEL 0
 #define PROTOCOL_UKL 0
 #define PROTOCOL_ALPACA 0
-
+#if DOT_PIN
 #define PERIOD_SEC_FOR_SETTINGS                                                \
   20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
      ///< SETTINGS mode of matrix
 
+#elif DOT_SPI
+#define PERIOD_SEC_FOR_SETTINGS                                                \
+  5 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
+///< SETTINGS mode of matrix
+
+#endif
 /* Protocol UEL (UART) */
 #if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
     !DEMO_MODE && !TEST_MODE
@@ -60,6 +66,44 @@
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3 ///< Time in ms to check interface connection
+
+#if DOT_SPI
+#define config_MU_IT_04_10
+//#define config_MU_IT_05_10
+//#define config_MU_IT_06_10
+/*###################### выбор станции ######################*/
+//#define SHK6000
+//#define DEMO
+// #define DEMO
+
+// #if defined(SHK6000)
+// #include "SHK6000_config.h"
+// #include "SHK6000_menu.h"
+// #include "SHK6000_protocol.h"
+// #define MAX_FLOOR 40
+// #define CAN_USED
+// #elif defined(UEL)
+// #include "UEL_config.h"
+// #include "UEL_menu.h"
+// #include "UEL_protocol.h"
+// #define MAX_FLOOR 39
+// #define MAX_FLOOR_CODE 50
+
+// #elif defined(DEMO)
+// #define MAX_FLOOR 40
+// #define NUM_OF_P_UNDERFLOORS
+// #define NUM_OF_MINUS_UNDERFLOORS
+// #endif
+
+#if defined(config_MU_IT_04_10) || defined(config_MU_IT_05_10)
+#define config_SPLIT_SYMBOL
+#endif
+
+#define __BITMAP_STANDART // стандартный bitmap
+// выбор стрелки (направление движения при остановке)
+//#define __ARROW_ORDINAR
+#define __ARROW_DOUBLE
+#endif
 
 /* DEMO_MODE */
 #elif DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&     \

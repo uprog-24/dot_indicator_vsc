@@ -77,6 +77,17 @@ static void reset_volume_flags() {
  * @param  GPIO_Pin: Button's pins connected EXTI line
  * @retval None
  */
+
+// volatile bool is_first_btn_clicked = true;
+#include "tim.h"
+#define SHORT_PRESS_THRESHOLD 500
+uint32_t button_pressed_time = 0;
+
+#define DEBOUNCE_DELAY 600 // Задержка в миллисекундах для фильтрации дребезга
+
+uint32_t last_time = 0; // Время последнего изменения состояния
+uint8_t button_state = 0; // Состояние кнопки
+volatile bool is_btn_state_changed = false;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /* Current matrix state: MATRIX_STATE_INIT, MATRIX_STATE_START,
    MATRIX_STATE_WORKING, MATRIX_STATE_MENU */
@@ -85,11 +96,75 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /// Counter for elapsed time in seconds between pressing of buttons
   extern uint32_t time_since_last_press_sec;
 
-  if (GPIO_Pin == BUTTON_1_Pin) {
+  extern volatile uint32_t tim1_elapsed_ms;
+
+#if 0
+  if (HAL_GPIO_ReadPin(SW_IN_3_GPIO_Port, SW_IN_3_Pin) == GPIO_PIN_SET &&
+      (matrix_state == MATRIX_STATE_MENU)) {
+    // Запуск таймера для измерения времени нажатия
+    // HAL_TIM_Base_Start_IT(&htimX); // Запуск таймера
+    // button_pressed_time = HAL_GetTick(); // Сохраняем время нажатия
+    TIM1_Start();
+  } else {
+    TIM1_Stop();
+
+    if (tim1_elapsed_ms > 500) {
+
+      tim1_elapsed_ms = 0;
+    }
+    // Кнопка отпущена, остановить таймер
+    // HAL_TIM_Base_Stop_IT(&htimX);
+
+    // Проверяем, сколько времени кнопка была нажата
+    // uint32_t pressed_duration = HAL_GetTick() - button_pressed_time;
+    // if (pressed_duration < SHORT_PRESS_THRESHOLD) {
+    //   // Короткое нажатие
+    //   // handle_short_press();
+    //   // Display_123("cID");
+    //   is_button_1_pressed = true;
+    //   matrix_state = MATRIX_STATE_MENU;
+    //   btn_1_set_mode_counter++;
+    //   is_interface_connected = false;
+    // } else {
+    // Длинное нажатие
+    // handle_long_press();
+    // Display_123("c46");
+    // }
+  }
+#endif
+
+  if (GPIO_Pin == BUTTON_1_Pin
+#if DOT_SPI
+      || GPIO_Pin == SW_IN_3_Pin
+#endif
+  ) {
+
+#if DOT_SPI
+    uint32_t current_time = HAL_GetTick();
+    if (current_time - last_time > DEBOUNCE_DELAY) {
+      uint8_t current_button_state =
+          HAL_GPIO_ReadPin(SW_IN_3_GPIO_Port, SW_IN_3_Pin);
+
+      // if (current_button_state != button_state) {
+      button_state = current_button_state;
+      last_time = current_time;
+
+      if (current_button_state == GPIO_PIN_RESET) {
+        is_button_1_pressed = true;
+        matrix_state = MATRIX_STATE_MENU;
+        btn_1_set_mode_counter++;
+        is_interface_connected = false;
+      } else {
+        is_button_1_pressed = false;
+      }
+      // }
+    }
+#elif DOT_PIN
     is_button_1_pressed = true;
     matrix_state = MATRIX_STATE_MENU;
     btn_1_set_mode_counter++;
     is_interface_connected = false;
+#endif
   }
 
   if (GPIO_Pin == BUTTON_2_Pin) {
@@ -102,7 +177,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
   }
 
-  if (GPIO_Pin == BUTTON_1_Pin || GPIO_Pin == BUTTON_2_Pin) {
+  if (GPIO_Pin == BUTTON_1_Pin || GPIO_Pin == BUTTON_2_Pin
+#if DOT_SPI
+      || GPIO_Pin == SW_IN_3_Pin
+#endif
+  ) {
     time_since_last_press_sec = 0;
   }
 
@@ -165,14 +244,15 @@ uint8_t shift_mode = 1;
 
 /**
  * @brief  Handle pressing BUTTON_1 and BUTTON_2.
- * @note   When BUTTON_1 is pressed 1st time - matrix_state = MATRIX_STATE_MENU,
- *         BUTTON_1 allows to select settings_mode_t: ID, VOLUME, ESCAPE
- *         BUTTON_2 allows to select value for ID, VOLUME
+ * @note   When BUTTON_1 is pressed 1st time - matrix_state =
+ * MATRIX_STATE_MENU, BUTTON_1 allows to select settings_mode_t: ID, VOLUME,
+ * ESCAPE BUTTON_2 allows to select value for ID, VOLUME
  * @param  None
  * @retval None
  */
 void press_button() {
-  /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING, MENU_STATE_CLOSE
+  /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING,
+  /// MENU_STATE_CLOSE
   extern menu_state_t menu_state;
 
 #if !DEMO_MODE && !TEST_MODE
@@ -218,11 +298,18 @@ void press_button() {
   if (is_button_1_pressed) {
     is_button_1_pressed = false;
 
+#if DOT_PIN
     switch (btn_1_set_mode_counter) {
     case 1:
 
       while (btn_1_set_mode_counter == 1 && btn_2_set_value_counter == 0) {
-        // draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+#if DOT_PIN
+        draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+#elif DOT_SPI
+
+        Display_123("c46");
+        update_structure(&matrix_settings, VOLUME_1, 46);
+#endif
         btn_1_settings_mode = LEVEL_VOLUME;
       }
 
@@ -231,7 +318,13 @@ void press_button() {
 
       while (btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 0) {
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
-        // draw_string_on_matrix(SETTINGS_MODE_ID);
+
+#if DOT_PIN
+        draw_string_on_matrix(SETTINGS_MODE_ID);
+#elif DOT_SPI
+        Display_123("c47");
+        update_structure(&matrix_settings, VOLUME_1, 47);
+#endif
 #elif PROTOCOL_ALPACA
         draw_string_on_matrix(SETTINGS_MODE_SFT);
 #endif
@@ -242,7 +335,9 @@ void press_button() {
       // state after selection of value for LEVEL_VOLUME
       while (btn_1_settings_mode == LEVEL_VOLUME &&
              btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 1) {
-        // draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+#if DOT_PIN
+        draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+#endif
       }
 
       // return to choose value LEVEL_VOLUME
@@ -267,7 +362,7 @@ void press_button() {
       }
 
       while (btn_1_set_mode_counter == 3 && btn_2_set_value_counter == 0) {
-        // draw_string_on_matrix(SETTINGS_MODE_ESC);
+        draw_string_on_matrix(SETTINGS_MODE_ESC);
         btn_1_settings_mode = ESC;
       }
 
@@ -277,7 +372,9 @@ void press_button() {
         // state after selection of value for ID
         while (btn_1_settings_mode == ID && btn_1_set_mode_counter == 3 &&
                btn_2_set_value_counter == 1) {
-          // draw_string_on_matrix(SETTINGS_MODE_ID);
+#if DOT_PIN
+          draw_string_on_matrix(SETTINGS_MODE_ID);
+#endif
         }
 
         // return to choose mode ID
@@ -297,6 +394,61 @@ void press_button() {
 
       break;
     }
+#elif DOT_SPI
+    extern bool is_time_sec_for_settings_elapsed;
+    if (id == MAIN_CABIN_ID) {
+      matrix_string[DIRECTION] = 'c';
+      matrix_string[MSB] = 'K';
+      matrix_string[LSB] = 'c';
+    } else {
+      drawing_data.floor = id;
+      setting_symbols(matrix_string, &drawing_data, ADDR_ID_LIMIT, NULL, 0);
+    }
+
+    selected_id = id;
+
+    // extern volatile bool is_time_sec_for_settings_elapsed;
+    // while (menu_state == MENU_STATE_WORKING && is_button_1_pressed ==
+    // false)
+    // {
+    while (is_time_sec_for_settings_elapsed != true &&
+           is_button_1_pressed == false) {
+#if DOT_PIN
+      draw_string_on_matrix(matrix_string);
+#elif DOT_SPI
+      Display_123(matrix_string);
+#endif
+    }
+
+    // exit from menu
+    if (is_time_sec_for_settings_elapsed) {
+      is_time_sec_for_settings_elapsed = false;
+
+      update_structure(&matrix_settings, VOLUME_3, selected_id);
+
+      extern uint32_t time_since_last_press_sec;
+      time_since_last_press_sec = 0;
+      menu_state = MENU_STATE_CLOSE;
+      btn_1_set_mode_counter = 0;
+      btn_2_set_value_counter = 0;
+      is_first_btn_clicked = true;
+    }
+
+#if PROTOCOL_UIM_6100
+    if (id == 47) {
+      id = 1;
+    } else if (id == 40) {
+      id = MAIN_CABIN_ID;
+    } else {
+      id++;
+    }
+#else
+    id++;
+#endif
+    if (id > ADDR_ID_LIMIT) {
+      id = ADDR_ID_MIN;
+    }
+#endif
   }
 
   if (is_button_2_pressed) {
@@ -314,27 +466,32 @@ void press_button() {
           while (btn_1_settings_mode == LEVEL_VOLUME &&
                  btn_2_set_value_counter == 1 && btn_1_set_mode_counter == 1) {
             if (level_volume == 0) {
-              // draw_string_on_matrix(LEVEL_VOLUME_0);
-              // play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
-
+#if DOT_PIN
+              draw_string_on_matrix(LEVEL_VOLUME_0);
+              play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
+#endif
               is_level_volume_3_displayed = false;
             }
 
             if (level_volume == 1) {
-              // draw_string_on_matrix(LEVEL_VOLUME_1);
-              // play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
-
+#if DOT_PIN
+              draw_string_on_matrix(LEVEL_VOLUME_1);
+              play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
+#endif
               is_level_volume_0_displayed = false;
             }
             if (level_volume == 2) {
-              // draw_string_on_matrix(LEVEL_VOLUME_2);
-              // play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
-
+#if DOT_PIN
+              draw_string_on_matrix(LEVEL_VOLUME_2);
+              play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
+#endif
               is_level_volume_1_displayed = false;
             }
             if (level_volume == 3) {
-              // draw_string_on_matrix(LEVEL_VOLUME_3);
-              // play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
+#if DOT_PIN
+              draw_string_on_matrix(LEVEL_VOLUME_3);
+              play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
+#endif
 
               is_level_volume_2_displayed = false;
             }
@@ -362,7 +519,9 @@ void press_button() {
           selected_id = id;
           while (btn_1_settings_mode == ID && btn_2_set_value_counter == 1 &&
                  btn_1_set_mode_counter == 2) {
-            // draw_string_on_matrix(matrix_string);
+#if DOT_PIN
+            draw_string_on_matrix(matrix_string);
+#endif
           }
 
 #if PROTOCOL_UIM_6100

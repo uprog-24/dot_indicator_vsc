@@ -5,7 +5,14 @@
 
 #include "tim.h"
 
-#define BIP_DURATION_MS 500   ///< Duration of 1 bip for gong
+#if DOT_PIN
+#define BIP_DURATION_MS 500 ///< Duration of 1 bip for gong
+
+#elif DOT_SPI
+#define BIP_DURATION_MS 400 ///< Duration of 1 bip for gong
+
+#endif
+
 #define GONG_BUZZER_FREQ 2500 ///< Frequency for buzzer's sound
 
 /**

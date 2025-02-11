@@ -44,8 +44,10 @@ if(USE_DOT_PIN)
     set(MCU_LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/pin/STM32F103CBTX_FLASH.ld)
 elseif(USE_DOT_SPI)
     set(VERSION DOT_SPI=1)
-    set(STARTUP_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/spi/startup_stm32f103cbtx.s)
-    set(MCU_LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/spi/STM32F103CBTX_FLASH.ld)
+    set(STARTUP_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/pin/startup_stm32f103cbtx.s)
+    set(MCU_LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/pin/STM32F103CBTX_FLASH.ld)
+    # set(STARTUP_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/spi/startup_stm32f103cbtx.s)
+    # set(MCU_LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/CubeMX/spi/STM32F103CBTX_FLASH.ld)
 endif()
 
 # ##############################################################################
@@ -103,8 +105,12 @@ if(USE_DOT_PIN)
         ${PROJECT_DIR}/middlewares/peripherals/tim.c
         ${PROJECT_DIR}/middlewares/peripherals/gpio.c
 
-        ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
-        ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
+        # ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
+        # ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
+
+
+        # ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
     )
 
     file(GLOB_RECURSE STM32CUBEMX_SOURCES
@@ -159,6 +165,7 @@ elseif(USE_DOT_SPI)
 
         ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
         ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/test_mode.c
         # ${PROJECT_DIR}/middlewares/peripherals/gpio.c
     )
 
@@ -172,7 +179,7 @@ set(COMMON_PROTOCOL_SOURCES
     ${PROJECT_DIR}/middlewares/peripherals/flash.c
     ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
     ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
-    # ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
+    ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
 )
 
 # # List of source files to compile

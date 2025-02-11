@@ -30,6 +30,12 @@
 #define DISPLAY_STR_DURING_MS                                                  \
   2000 ///< Time in ms to display string on matrix (TEST_MODE)
 
+#if DOT_PIN
+#define BIP_OFFSET_MS 0
+#elif DOT_SPI
+#define BIP_OFFSET_MS 200
+#endif
+
 /**
  * @brief  Get prescaler for TIM2 (PWM) by current frequency.
  * @note   Prescaler = tim_freq / (tim_period_ARR * buzz_signal_freq)
@@ -71,6 +77,9 @@ static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
  * @retval None
  */
 void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
+
+#if DOT_PIN
+
 #if 1
   TIM2_Start_PWM();
   // uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
@@ -197,6 +206,10 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
   TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
   // TIM2_Start_PWM();
 #endif
+
+#elif DOT_SPI
+  set_active_buzzer_state(TURN_ON);
+#endif
 }
 
 /**
@@ -214,7 +227,12 @@ static void TIM2_Stop_PWM() { HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2); }
 void TIM2_Stop_bip() {
   uint16_t prescaler = 0;
   // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
+
+#if DOT_PIN
   TIM2_Stop_PWM();
+#elif DOT_SPI
+  set_active_buzzer_state(TURN_OFF);
+#endif
 }
 
 /// TIM1 counter to control elapsed time in ms for bips of gong
@@ -226,7 +244,7 @@ volatile uint32_t tim1_elapsed_ms = 0;
  * @param  None
  * @retval None
  */
-static void TIM1_Stop() {
+void TIM1_Stop() {
   tim1_elapsed_ms = 0;
   HAL_TIM_Base_Stop_IT(&htim1);
   HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
@@ -261,6 +279,8 @@ volatile uint32_t connection_sec_is_elapsed = 0;
  * @param  htim: TIM structure
  * @retval None
  */
+extern volatile bool is_button_1_pressed;
+volatile bool is_time_sec_for_settings_elapsed = false;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Flag to control first btn1 click
   extern bool is_first_btn_clicked;
@@ -309,15 +329,44 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     if (matrix_state == MATRIX_STATE_MENU) {
       time_since_last_press_sec += 1;
+      // #if DOT_SPI
+      //       if (time_since_last_press_sec >= 2) {
+      //         is_button_1_pressed = true;
+      //         matrix_state = MATRIX_STATE_MENU;
+      //         btn_1_set_mode_counter++;
+      //         is_interface_connected = false;
+      //       }
+
+      // #endif
 
       if (time_since_last_press_sec >= PERIOD_SEC_FOR_SETTINGS) {
+
+#if DOT_SPI
+        is_time_sec_for_settings_elapsed = true;
+        return;
+#endif
         time_since_last_press_sec = 0;
 
         btn_1_set_mode_counter = 0;
         btn_2_set_value_counter = 0;
         is_first_btn_clicked = true;
+
+        // #if DOT_SPI
+        //         extern volatile bool is_saved_settings;
+        //         is_saved_settings = 1;
+        // #endif
+        // #if DOT_PIN
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;
+        // #elif DOT_SPI
+
+        // matrix_string[DIRECTION] = 'c';
+        // matrix_string[MSB] = 'c';
+        // matrix_string[LSB] = 'c';
+
+        // matrix_state = MENU_STATE_CLOSE;
+
+        // #endif
       }
     }
 
@@ -344,7 +393,11 @@ static uint16_t _bip_volume = 0;
  */
 void stop_buzzer_sound() {
   TIM1_Stop();
+#if DOT_PIN
   TIM2_Stop_bip();
+#elif DOT_SPI
+  set_active_buzzer_state(TURN_OFF);
+#endif
   _bip_counter = 0;
 }
 
@@ -353,6 +406,8 @@ void stop_buzzer_sound() {
  * @param  htim: Structure of TIM
  * @retval None
  */
+#include "main.h"
+extern matrix_state_t matrix_state;
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM1) {
     tim1_elapsed_ms++;
@@ -360,39 +415,65 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     // if (tim1_elapsed_ms == 1056 / 2) { // stop bip 1
     if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
 
+      // TIM2_Stop_bip();
+      // TIM2_Start_bip(900, _bip_volume);
+
+#if DOT_PIN
       TIM2_Stop_bip();
       TIM2_Start_bip(900, _bip_volume);
+#elif DOT_SPI
+      set_active_buzzer_state(TURN_OFF);
+#endif
 
       if (_bip_counter == 1) {
         stop_buzzer_sound();
       }
     }
 
-    // if (tim1_elapsed_ms == 100 + _bip_duration_ms) { // start bip 2
-    //   TIM2_Start_bip(1200, _bip_volume);             // 1200      // 1319
-    // }
-
+#if DOT_SPI
+    if (tim1_elapsed_ms == BIP_OFFSET_MS + _bip_duration_ms) { // start bip 2
+      // TIM2_Start_bip(1200, _bip_volume);             // 1200      // 1319
+      set_active_buzzer_state(TURN_ON);
+    }
+#endif
     //  if (tim1_elapsed_ms == 100 + 2 * _bip_duration_ms) { // stop bip 2
     // if (tim1_elapsed_ms == (1048 + 1056) / 2) { // stop bip 2
-    if (tim1_elapsed_ms == 2 * _bip_duration_ms) { // stop bip 2
+    if (tim1_elapsed_ms == BIP_OFFSET_MS + 2 * _bip_duration_ms) { // stop bip 2
 
+      // TIM2_Stop_bip();
+      // TIM2_Start_bip(800, _bip_volume);
+
+#if DOT_PIN
       TIM2_Stop_bip();
       TIM2_Start_bip(800, _bip_volume);
+
+#elif DOT_SPI
+      set_active_buzzer_state(TURN_OFF);
+#endif
 
       if (_bip_counter == 2) {
         stop_buzzer_sound();
       }
     }
-
-    // if (tim1_elapsed_ms == 200 + 2 * _bip_duration_ms) { // start bip 3
-    //   TIM2_Start_bip(1300, _bip_volume);                 // 1200       //
-    //   1568
-    // }
-
+#if DOT_SPI
+    if (tim1_elapsed_ms ==
+        2 * BIP_OFFSET_MS + 2 * _bip_duration_ms) { // start bip 3
+      // TIM2_Start_bip(1300, _bip_volume);
+      set_active_buzzer_state(TURN_ON);
+    }
+#endif
     //  if (tim1_elapsed_ms == 200 + 3 * _bip_duration_ms) { // stop bip 3
     // if (tim1_elapsed_ms == (1048 + 1056 + 882) / 2) { // stop bip 3
-    if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
+    if (tim1_elapsed_ms ==
+        2 * BIP_OFFSET_MS + 3 * _bip_duration_ms) { // stop bip 3
+                                                    // TIM2_Stop_bip();
+
+#if DOT_PIN
       TIM2_Stop_bip();
+
+#elif DOT_SPI
+      set_active_buzzer_state(TURN_OFF);
+#endif
 
       if (_bip_counter == 3) {
         stop_buzzer_sound();
@@ -766,7 +847,10 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
 
   // start bip 1
   //	is_gong_play = true;
+
+#if DOT_PIN
   TIM2_Start_PWM();
+#endif
   TIM2_Start_bip(_bip_freq, volume);
 }
 

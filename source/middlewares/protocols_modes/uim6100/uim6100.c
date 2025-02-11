@@ -131,9 +131,16 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     is_cabin_overload = true;
 #if 1
     TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+#if DOT_PIN
     matrix_string[DIRECTION] = 'K';
     matrix_string[MSB] = 'g';
     matrix_string[LSB] = 'c';
+#elif DOT_SPI
+
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
+#endif
 #endif
   }
   // next received bytes by CAN
@@ -260,14 +267,12 @@ void process_data_uim(msg_t *msg) {
     // cabin indicator
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
       process_code_msg(code_msg, matrix_settings.volume);
-      // setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
-      // setting_gong(msg->w3, matrix_settings.volume);
+      setting_gong(msg->w3, matrix_settings.volume);
     } else {
       // floor indicator
       if (matrix_settings.addr_id == drawing_data.floor ||
           matrix_settings.addr_id == 47) {
-        // setting_gong(rx_data_can[BYTE_W_3], matrix_settings.volume);
-        // setting_gong(msg->w3, matrix_settings.volume);
+        setting_gong(msg->w3, matrix_settings.volume);
       }
     }
   }

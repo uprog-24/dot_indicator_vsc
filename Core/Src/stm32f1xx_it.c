@@ -217,6 +217,19 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
 }
 
 /**
+ * @brief This function handles CAN RX1 interrupt.
+ */
+void CAN1_RX1_IRQHandler(void) {
+  /* USER CODE BEGIN CAN1_RX1_IRQn 0 */
+
+  /* USER CODE END CAN1_RX1_IRQn 0 */
+  HAL_CAN_IRQHandler(&hcan);
+  /* USER CODE BEGIN CAN1_RX1_IRQn 1 */
+
+  /* USER CODE END CAN1_RX1_IRQn 1 */
+}
+
+/**
  * @brief This function handles CAN SCE interrupt.
  */
 void CAN1_SCE_IRQHandler(void) {
@@ -297,18 +310,21 @@ void USART1_IRQHandler(void) {
 /**
  * @brief This function handles EXTI line[15:10] interrupts.
  */
-// void EXTI15_10_IRQHandler(void) {
-//   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+void EXTI15_10_IRQHandler(void) {
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
 
-//   /* USER CODE END EXTI15_10_IRQn 0 */
-//   HAL_GPIO_EXTI_IRQHandler(BUTTON_1_Pin);
-//   HAL_GPIO_EXTI_IRQHandler(BUTTON_2_Pin);
-//   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(BUTTON_1_Pin);
+  HAL_GPIO_EXTI_IRQHandler(BUTTON_2_Pin);
+#if DOT_SPI
+  HAL_GPIO_EXTI_IRQHandler(SW_IN_3_Pin);
+#endif
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
-//   HAL_GPIO_EXTI_IRQHandler(DATA_Pin);
+  HAL_GPIO_EXTI_IRQHandler(DATA_Pin);
 
-//   /* USER CODE END EXTI15_10_IRQn 1 */
-// }
+  /* USER CODE END EXTI15_10_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 
