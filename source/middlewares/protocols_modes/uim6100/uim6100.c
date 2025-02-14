@@ -130,7 +130,9 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
     is_cabin_overload = true;
 #if 1
-    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    if (matrix_settings.volume != VOLUME_0) {
+      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
 #if DOT_PIN
     matrix_string[DIRECTION] = 'K';
     matrix_string[MSB] = 'g';
@@ -152,7 +154,9 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_FIRE_DANGER) {
     is_fire_danger = true;
 #if 1
-    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    if (matrix_settings.volume != VOLUME_0) {
+      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
 #endif
   }
   // next received bytes by CAN
@@ -263,34 +267,30 @@ void process_data_uim(msg_t *msg) {
   setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
                   special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
-  if (matrix_settings.volume != VOLUME_0) {
-    // cabin indicator
-    if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-      process_code_msg(code_msg, matrix_settings.volume);
+  // if (matrix_settings.volume != VOLUME_0) {
+  // Кабинный индикатор
+  if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+    process_code_msg(code_msg, matrix_settings.volume);
+    if (matrix_settings.volume != VOLUME_0) {
       setting_gong(msg->w3, matrix_settings.volume);
-    } else {
-      // floor indicator
-      if (matrix_settings.addr_id == drawing_data.floor ||
-          matrix_settings.addr_id == 47) {
+    }
+  } else {
+    // Этажный индикатор
+    if (matrix_settings.addr_id == drawing_data.floor ||
+        matrix_settings.addr_id == 47) {
+      if (matrix_settings.volume != VOLUME_0) {
         setting_gong(msg->w3, matrix_settings.volume);
       }
     }
+    // }
   }
-
-  // if (is_cabin_overload) {
-  //   draw_string_on_matrix("%Kg");
-  // } else {
-
-  // }
 
   // while new 6 data bytes are not received, draw str
   while (is_data_received == false && is_interface_connected == true) {
-    // draw_string_on_matrix(matrix_string);
-
 #if DOT_PIN
     draw_string_on_matrix(matrix_string);
 #elif DOT_SPI
-    Display_123(matrix_string);
+    display_symbols_spi(matrix_string);
 #endif
   }
 }

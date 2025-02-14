@@ -12,12 +12,6 @@
 #include <stdbool.h>
 
 /* Select protocol, demo/test mode */
-
-// #define PERIOD_SEC_FOR_SETTINGS                                                \
-//   20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
-//      ///< SETTINGS mode of matrix
-
-/* Select protocol, demo/test mode */
 #define TEST_MODE 0
 #define DEMO_MODE 0
 #define PROTOCOL_UIM_6100 1
@@ -31,7 +25,7 @@
 
 #elif DOT_SPI
 #define PERIOD_SEC_FOR_SETTINGS                                                \
-  5 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
+  10 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
 ///< SETTINGS mode of matrix
 
 #endif
@@ -61,7 +55,7 @@
 
 #define PROTOCOL_NAME "SHK"
 #define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 49
+#define ADDR_ID_LIMIT 47
 #define MAX_POSITIVE_NUMBER_LOCATION 40
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \

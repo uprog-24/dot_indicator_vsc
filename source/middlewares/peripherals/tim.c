@@ -281,6 +281,7 @@ volatile uint32_t connection_sec_is_elapsed = 0;
  */
 extern volatile bool is_button_1_pressed;
 volatile bool is_time_sec_for_settings_elapsed = false;
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Flag to control first btn1 click
   extern bool is_first_btn_clicked;
@@ -309,6 +310,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     read_data_bit();
 
+#elif (PROTOCOL_UIM_6100) && (DOT_SPI)
+    extern volatile uint32_t
+        button_press_time; // Время удержания кнопки (в миллисекундах)
+    extern volatile uint8_t is_button_pressed;
+
+    // Если кнопка все еще нажата
+    if (is_button_pressed) {
+      button_press_time++; // Увеличиваем время удержания кнопки
+    }
 #endif
   }
 
@@ -329,16 +339,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     if (matrix_state == MATRIX_STATE_MENU) {
       time_since_last_press_sec += 1;
-      // #if DOT_SPI
-      //       if (time_since_last_press_sec >= 2) {
-      //         is_button_1_pressed = true;
-      //         matrix_state = MATRIX_STATE_MENU;
-      //         btn_1_set_mode_counter++;
-      //         is_interface_connected = false;
-      //       }
-
-      // #endif
-
       if (time_since_last_press_sec >= PERIOD_SEC_FOR_SETTINGS) {
 
 #if DOT_SPI
@@ -351,22 +351,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         btn_2_set_value_counter = 0;
         is_first_btn_clicked = true;
 
-        // #if DOT_SPI
-        //         extern volatile bool is_saved_settings;
-        //         is_saved_settings = 1;
-        // #endif
-        // #if DOT_PIN
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;
-        // #elif DOT_SPI
-
-        // matrix_string[DIRECTION] = 'c';
-        // matrix_string[MSB] = 'c';
-        // matrix_string[LSB] = 'c';
-
-        // matrix_state = MENU_STATE_CLOSE;
-
-        // #endif
       }
     }
 
@@ -408,8 +394,11 @@ void stop_buzzer_sound() {
  */
 #include "main.h"
 extern matrix_state_t matrix_state;
+
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
+
   if (htim->Instance == TIM1) {
+
     tim1_elapsed_ms++;
 
     // if (tim1_elapsed_ms == 1056 / 2) { // stop bip 1
@@ -625,7 +614,10 @@ void MX_TIM3_Init(void) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-
+#if DOT_SPI
+  HAL_NVIC_SetPriority(TIM3_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+#endif
   /* USER CODE END TIM3_Init 2 */
 }
 /* TIM4 init function */
@@ -875,7 +867,7 @@ void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
 #if DOT_PIN
       draw_string_on_matrix(str_symbols);
 #elif DOT_SPI
-      Display_123(str_symbols);
+      display_symbols_spi(str_symbols);
 #endif
     }
     HAL_TIM_Base_Stop_IT(&htim4);

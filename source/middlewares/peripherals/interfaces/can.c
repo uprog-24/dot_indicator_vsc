@@ -408,7 +408,7 @@ void CAN_TxData(uint32_t stdId) {
 #if DOT_PIN
     draw_string_on_matrix(str_ok);
 #elif DOT_SPI
-    Display_123("c0K");
+    display_symbols_spi("c0K");
 #endif
   }
 

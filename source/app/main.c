@@ -87,7 +87,6 @@ char matrix_string[3];
 volatile bool is_saved_settings = 0;
 
 /* USER CODE END 0 */
-
 /**
  * @brief  The application entry point.
  * @retval int
@@ -175,15 +174,6 @@ int main(void) {
 #endif
     switch (matrix_state) {
     case MATRIX_STATE_START:
-      // #if DOT_SPI
-      //       if (is_saved_settings) {
-      //         is_saved_settings = 0;
-      //         stop_timer_menu();
-      //         update_structure(&matrix_settings, VOLUME_3, 47);
-      //         overwrite_settings(&matrix_settings);
-      //       }
-      // #endif
-
       protocol_start();
       matrix_state = MATRIX_STATE_WORKING;
       break;
@@ -207,9 +197,6 @@ int main(void) {
 
       case MENU_STATE_CLOSE:
         stop_timer_menu();
-#if DOT_SPI
-        // update_structure(&matrix_settings, VOLUME_3, 47);
-#endif
         overwrite_settings(&matrix_settings);
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;
@@ -258,12 +245,13 @@ void MX_GPIO_Init_SPI(void) {
   /*Configure GPIO pin : SW_IN_3_Pin */
   GPIO_InitStruct.Pin = SW_IN_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SW_IN_3_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+  // HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END MX_GPIO_Init_2 */
 }

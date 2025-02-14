@@ -124,17 +124,18 @@ void setting_symbols(
 #if DOT_SPI
 #include "LED_driver.h"
 
-void STP16_SendData(uint16_t chip1, uint16_t chip2, uint16_t chip3) {
+void STP16_SendData(uint16_t register1, uint16_t register2,
+                    uint16_t register3) {
   uint8_t spi_tx_buffer[6];
 
-  spi_tx_buffer[0] = (chip3 >> 8) & 0xFF; // 3-й чип (старший байт)
-  spi_tx_buffer[1] = chip3 & 0xFF; // 3-й чип (младший байт)
+  spi_tx_buffer[0] = (register3 >> 8) & 0xFF; // 3-й регистр (старший байт)
+  spi_tx_buffer[1] = register3 & 0xFF; // 3-й регистр (младший байт)
 
-  spi_tx_buffer[2] = (chip2 >> 8) & 0xFF; // 2-й чип (старший байт)
-  spi_tx_buffer[3] = chip2 & 0xFF; // 2-й чип (младший байт)
+  spi_tx_buffer[2] = (register2 >> 8) & 0xFF; // 2-й регистр (старший байт)
+  spi_tx_buffer[3] = register2 & 0xFF; // 2-й регистр (младший байт)
 
-  spi_tx_buffer[4] = (chip1 >> 8) & 0xFF; // 1-й чип (старший байт)
-  spi_tx_buffer[5] = chip1 & 0xFF; // 1-й чип (младший байт)
+  spi_tx_buffer[4] = (register1 >> 8) & 0xFF; // 1-й регистр (старший байт)
+  spi_tx_buffer[5] = register1 & 0xFF; // 1-й регистр (младший байт)
 
   software_SPI_sendByte(spi_tx_buffer[0]);
   software_SPI_sendByte(spi_tx_buffer[1]);
@@ -145,57 +146,64 @@ void STP16_SendData(uint16_t chip1, uint16_t chip2, uint16_t chip3) {
   software_SPI_sendByte(spi_tx_buffer[4]);
   software_SPI_sendByte(spi_tx_buffer[5]);
 
-  //    HAL_SPI_Transmit(&hspi1, spi_tx_buffer, 6, HAL_MAX_DELAY);
-
   // Импульс LE (защелкивание данных)
   LED_driver_impulse_to_latch();
   // включаем светодиоды
   LED_driver_start_indication();
 }
 
-#include "font.h"
-void Display_123(char *matrix_string) {
-  // extern const uint8_t bitmap[NUMBER_OF_SYMBOLS + 1]
-  //                            [ELEMENTS_IN_BITMAP]; // bitmap
-
-  extern const uint8_t bitmap[28 + 1][6]; // bitmap
-  // extern symbol_t symbols[];
+void display_symbols_spi(char *matrix_string) {
 
   for (int row = 0; row < 6; row++) // Перебираем строки
   {
-    uint16_t chip1 = 0, chip2 = 0, chip3 = 0;
+    uint16_t register1 = 0, register2 = 0, register3 = 0;
 
-    // Символ 1 на чипе 1
+    // Символ 1 на регистре 1
     for (int col = 0; col < 7; col++) {
       if (get_symbol_code(matrix_string[LSB])[row] & (1 << (7 - col))) {
-        chip1 |= (1 << (7 - col));
+        register1 |= (1 << (7 - col));
       }
     }
 
-    // Символ 2 на чипе 2
+    // Символ 2 на регистре 2
     for (int col = 0; col < 7; col++) {
       if (get_symbol_code(matrix_string[MSB])[row] & (1 << (7 - col))) {
-        chip2 |= (1 << (7 - col));
+        register2 |= (1 << (7 - col));
       }
     }
 
-    // Символ 3 на чипе 3
+    // Символ 3 на регистре 3
     for (int col = 0; col < 7; col++) {
       if (get_symbol_code(matrix_string[DIRECTION])[row] & (1 << (7 - col))) {
-        chip3 |= (1 << (7 - col));
+        register3 |= (1 << (7 - col));
       }
     }
 
     // Включаем строку (OUT8 - OUT12 или OUT8 - OUT13)
     uint16_t row_mask = (1 << (10 + row));
 
-    chip1 |= row_mask; // Включаем строку на 1-м чипе
-    chip2 |= row_mask; // Включаем строку на 2-м чипе
-    chip3 |= row_mask; // Включаем строку на 3-м чипе
+    /** Центрирование символа для register1 и register2 */
+    if (matrix_string[LSB] == 'c') {
+
+      if (row != 0)
+        register2 |= (1 << (7 + row)); // Включаем строку на 2-м чипе
+
+      if (13 + row < 16) {
+        if (row != 0)
+          register1 = register2 | (1 << (13 + row));
+      } else {
+        register1 = 0;
+      }
+
+    } else {
+      register1 |= row_mask; // Включаем строку на 1-м чипе
+      register2 |= row_mask; // Включаем строку на 2-м чипе
+    }
+
+    register3 |= row_mask; // Включаем строку на 3-м чипе
 
     // Отправляем данные
-    STP16_SendData(chip1, chip2, chip3);
-    //    HAL_Delay(5);
+    STP16_SendData(register1, register2, register3);
   }
 }
 

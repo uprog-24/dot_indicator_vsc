@@ -104,6 +104,6 @@ void demo_mode_start(void) {
                                     STOP_FLOORS_BUFF_SIZE);
   demo_start_finish_floors_movement(14, 1, NULL, 0);
 
-  // Display_123(">9c");
+  // display_symbols_spi("cbc");
 #endif
 }

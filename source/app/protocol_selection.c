@@ -109,7 +109,7 @@ void protocol_process_data() {
 #if DOT_PIN
     draw_string_on_matrix("c--");
 #elif DOT_SPI
-    Display_123("c--");
+    display_symbols_spi("c--");
 #endif
     // draw_string_on_matrix("c--");
   }

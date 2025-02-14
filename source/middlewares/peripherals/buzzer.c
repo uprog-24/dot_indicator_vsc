@@ -9,7 +9,7 @@
 #define BIP_DURATION_MS 500 ///< Duration of 1 bip for gong
 
 #elif DOT_SPI
-#define BIP_DURATION_MS 400 ///< Duration of 1 bip for gong
+#define BIP_DURATION_MS 350 ///< Duration of 1 bip for gong
 
 #endif
 
