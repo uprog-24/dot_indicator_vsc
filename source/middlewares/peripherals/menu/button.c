@@ -465,7 +465,7 @@ void press_button() {
 #elif DOT_SPI
 
     extern bool is_time_sec_for_settings_elapsed;
-    button_press_time = 0;
+    // button_press_time = 0;
 
     /** Настройка звука:
      * длинное нажатие - вход в режим,
