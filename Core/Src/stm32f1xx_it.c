@@ -311,17 +311,17 @@ void USART1_IRQHandler(void) {
  * @brief This function handles EXTI line[15:10] interrupts.
  */
 void EXTI15_10_IRQHandler(void) {
-  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+/* USER CODE BEGIN EXTI15_10_IRQn 0 */
 
-  /* USER CODE END EXTI15_10_IRQn 0 */
+/* USER CODE END EXTI15_10_IRQn 0 */
+#if DOT_PIN
   HAL_GPIO_EXTI_IRQHandler(BUTTON_1_Pin);
   HAL_GPIO_EXTI_IRQHandler(BUTTON_2_Pin);
-#if DOT_SPI
+  HAL_GPIO_EXTI_IRQHandler(DATA_Pin);
+#elif DOT_SPI
   HAL_GPIO_EXTI_IRQHandler(SW_IN_3_Pin);
 #endif
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
-
-  HAL_GPIO_EXTI_IRQHandler(DATA_Pin);
 
   /* USER CODE END EXTI15_10_IRQn 1 */
 }

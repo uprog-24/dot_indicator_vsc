@@ -115,6 +115,9 @@ void Error_Handler(void);
 #define ROW_7_GPIO_Port GPIOB
 #define ROW_8_Pin GPIO_PIN_9
 #define ROW_8_GPIO_Port GPIOB
+
+#define DATA_Pin GPIO_PIN_10
+#define DATA_GPIO_Port GPIOA
 #elif DOT_SPI
 #define MBI5026_SCK_PIN_Pin GPIO_PIN_5
 #define MBI5026_SCK_PIN_GPIO_Port GPIOA
@@ -126,46 +129,46 @@ void Error_Handler(void);
 #define MBI5026_LE_PIN_GPIO_Port GPIOA
 #define SW_IN_3_Pin GPIO_PIN_11
 #define SW_IN_3_GPIO_Port GPIOA
-// #define BUZ_3_Pin GPIO_PIN_12
-// #define BUZ_3_GPIO_Port GPIOA
 
 #define BUZZ_Pin GPIO_PIN_12
 #define BUZZ_GPIO_Port GPIOA
 
-#define BUTTON_1_Pin GPIO_PIN_14
-#define BUTTON_1_GPIO_Port GPIOC
-#define BUTTON_1_EXTI_IRQn EXTI15_10_IRQn
-#define BUTTON_2_Pin GPIO_PIN_15
-#define BUTTON_2_GPIO_Port GPIOC
-#define BUTTON_2_EXTI_IRQn EXTI15_10_IRQn
 #endif
 /* USER CODE BEGIN Private defines */
 
-#define DATA_Pin GPIO_PIN_10
-#define DATA_GPIO_Port GPIOA
-
 /**
- * Stores dot/active buzzer states
- */
-typedef enum { TURN_OFF, TURN_ON } states_t;
-
-/**
- * Stores matrix states
+ * @brief  Состояния точки/активного зуммера.
  */
 typedef enum {
-  MATRIX_STATE_START,
-  MATRIX_STATE_WORKING,
-  MATRIX_STATE_MENU
+  TURN_OFF, ///< Выключить точку/активный зуммер
+  TURN_ON   ///< Включить точку/активный зуммер
+} states_t;
+
+/**
+ * @brief  Состояния матрицы.
+ */
+typedef enum {
+  MATRIX_STATE_START,   ///< Матрица запускается
+  MATRIX_STATE_WORKING, ///< Матрица работает
+  MATRIX_STATE_MENU     ///< Матрица в состоянии меню
 } matrix_state_t;
 
 /**
- * Stores menu states
+ * @brief  Состояния меню.
  */
 typedef enum {
-  MENU_STATE_OPEN,
-  MENU_STATE_WORKING,
-  MENU_STATE_CLOSE
+  MENU_STATE_OPEN,    ///< Меню открыто
+  MENU_STATE_WORKING, ///< Меню работает
+  MENU_STATE_CLOSE    ///< Меню закрыто
 } menu_state_t;
+
+/**
+ * @brief  Действия при выходе из меню.
+ */
+typedef enum {
+  NOT_SAVE_SETTINGS, ///< Не сохранять настройки
+  SAVE_SETTINGS      ///< Сохранить настройки
+} menu_exit_actions_t;
 
 /* USER CODE END Private defines */
 

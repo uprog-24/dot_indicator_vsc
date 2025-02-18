@@ -117,18 +117,9 @@ int main(void) {
 
 #if DOT_PIN
   MX_GPIO_Init();
-  // Passive buzzer
   MX_TIM2_Init_1uS();
-#endif
-  // MX_GPIO_Init();
-  // MX_TIM2_Init();
-  // MX_TIM2_Init_1uS();
-  // Test_BuzzerStart();
-  MX_TIM3_Init();
-  MX_TIM4_Init();
-  MX_TIM1_Init();
 
-#if DOT_SPI
+#elif DOT_SPI
   MX_GPIO_Init_SPI();
 
   software_SPI_addPins(MBI5026_MOSI_PIN_GPIO_Port, MBI5026_MOSI_PIN_Pin,
@@ -136,6 +127,10 @@ int main(void) {
   LED_driver_set_pins(MBI5026_LE_PIN_GPIO_Port, MBI5026_LE_PIN_Pin,
                       MBI5026_NOE_PIN_GPIO_Port, MBI5026_NOE_PIN_Pin);
 #endif
+
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -160,7 +155,7 @@ int main(void) {
 #else
 #include "conf.h"
 
-#if 0
+#if 1
   display_protocol_name(PROTOCOL_NAME);
   display_protocol_name(PROJECT_VER);
 #endif

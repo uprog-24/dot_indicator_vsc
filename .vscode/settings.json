@@ -21,6 +21,11 @@
     "can.h": "c",
     "led_driver.h": "c",
     "inttypes.h": "c",
-    "font.h": "c"
+    "font.h": "c",
+    "dot.h": "c",
+    "drawing.h": "c",
+    "tim.h": "c",
+    "buzzer.h": "c",
+    "stdio.h": "c"
   }
 }

@@ -178,7 +178,7 @@ set(COMMON_PROTOCOL_SOURCES
     ${PROJECT_DIR}/app/protocol_selection.c
     ${PROJECT_DIR}/middlewares/peripherals/flash.c
     ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
-    ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
+    # ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
     ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
 )
 

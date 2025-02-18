@@ -30,9 +30,18 @@
 
 #if DOT_SPI
 #define DEBOUNCE_DELAY 150 // Задержка в миллисекундах для фильтрации дребезга
+#define LONG_PRESS_TIME 1000 // 1000 мс - долгое нажатие
 
 uint8_t button_state = 1; // Состояние кнопки (1 - отпущена, 0 - нажата)
+volatile uint32_t button_press_time =
+    0; // Время удержания кнопки (в миллисекундах)
 
+uint32_t last_time = 0; // Время последнего изменения состояния
+
+volatile bool is_long_press_detected = false;
+volatile bool is_short_press_detected = false;
+
+volatile bool is_button_pressed = false; // Flag for button state
 #endif
 
 /**
@@ -67,11 +76,29 @@ static bool is_level_volume_2_displayed = false;
 /// Flag to control bip for level_volume_3
 static bool is_level_volume_3_displayed = false;
 
+/**
+ * @brief Сброс флагов для отработки гонгов при выборе уровня громкости
+ * (L0-L3) в меню
+ *
+ */
 static void reset_volume_flags() {
   is_level_volume_0_displayed = false;
   is_level_volume_1_displayed = false;
   is_level_volume_2_displayed = false;
   is_level_volume_3_displayed = false;
+}
+
+/**
+ * @brief Открытие меню настроек.
+ *
+ * @param matrix_state Указатель на состояние индикатора.
+ */
+static void go_to_menu(matrix_state_t *matrix_state) {
+  *matrix_state = MATRIX_STATE_MENU; // Переход индикатора в режим меню
+  is_button_1_pressed =
+      true; // Нажатие кнопки (обработка в функции press_button())
+  btn_1_set_mode_counter++;
+  is_interface_connected = false;
 }
 
 /**
@@ -84,41 +111,6 @@ static void reset_volume_flags() {
  * @param  GPIO_Pin: Button's pins connected EXTI line
  * @retval None
  */
-
-#define SHORT_PRESS_THRESHOLD 500
-uint32_t button_pressed_time = 0;
-
-#define SHORT_PRESS_TIME 500 // 500 мс - короткое нажатие
-#define LONG_PRESS_TIME 2000 // 2000 мс - долгое нажатие
-
-uint32_t last_time = 0; // Время последнего изменения состояния
-
-volatile bool is_btn_state_changed = false;
-
-volatile bool is_long_press_detected = false;
-volatile bool is_short_press_detected = false;
-
-#define LONG_PRESS_TIME 2000 // 2 секунды
-
-volatile uint32_t button_press_time =
-    0; // Время удержания кнопки (в миллисекундах)
-// volatile uint8_t button_pressed = 0;
-
-uint8_t short_state = 0; // Состояние для короткого нажатия
-uint8_t long_state = 0; // Состояние для длинного нажатия
-uint32_t time_key1 = 0;
-volatile uint32_t start_time = 0;
-uint32_t current_time = 0;
-
-static uint8_t debounced_state = 0; // Флаг для фильтрации дребезга
-
-volatile bool is_button_pressed = false; // Flag for button state
-
-#if BEST
-static uint8_t button_state = 1; // Store current state (1
-#else
-// uint8_t button_state = 1; // Состояние кнопки
-#endif
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /* Current matrix state: MATRIX_STATE_INIT, MATRIX_STATE_START,
    MATRIX_STATE_WORKING, MATRIX_STATE_MENU */
@@ -127,27 +119,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /// Counter for elapsed time in seconds between pressing of buttons
   extern uint32_t time_since_last_press_sec;
 
-  extern volatile uint32_t tim1_elapsed_ms;
-
-  static uint32_t time_key1 = 0; // Время последнего изменения состояния кнопки
-  static uint32_t press_time = 0; // Время, когда кнопка была нажата
-  uint32_t ms = HAL_GetTick(); // Текущее время в миллисекундах
-
-  static uint8_t key1_state =
-      1; // Хранение состояния кнопки (0 - нажата, 1 - отпущена)
-
-  static uint32_t lastPressTime = 0; // Время последнего нажатия
-  uint32_t currentTime = HAL_GetTick(); // Текущее время в миллисекундах
-
-  if (GPIO_Pin == BUTTON_1_Pin
-#if DOT_SPI
-      || GPIO_Pin == SW_IN_3_Pin
+  if (
+  /**
+   * @brief DOT_PIN: Обработка нажатия BUTTON_1_Pin: вход в меню,
+   * переключение режимов ID, VOL, ESC.
+   *        DOT_SPI: Обработка нажатия SW_IN_3_Pin: вход в режим
+   * выбора адреса - короткое нажатие,
+   * вход в режим выбора режима звукового оповещения
+   * (З - звук есть/Б - звука нет) - длинное нажатие
+   * (переключение - короткое нажатие).
+   */
+#if DOT_PIN
+      GPIO_Pin == BUTTON_1_Pin
+#elif DOT_SPI
+      GPIO_Pin == SW_IN_3_Pin
 #endif
   ) {
 
 #if DOT_SPI
-#if 1
-    uint32_t current_time = HAL_GetTick();
+    uint32_t current_time = HAL_GetTick(); // Текущее время в миллисекундах
     if (current_time - last_time > DEBOUNCE_DELAY) {
       uint8_t current_button_state =
           HAL_GPIO_ReadPin(SW_IN_3_GPIO_Port, SW_IN_3_Pin);
@@ -156,53 +146,35 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         button_state = current_button_state;
         last_time = current_time;
 
+        /* Кнопка нажата (состояние лог. 0)*/
         if (current_button_state == GPIO_PIN_RESET) {
           current_time = HAL_GetTick();
           button_press_time = 0;
           if (!is_button_pressed) { // Чтобы не запускать таймер на каждое
-                                    // прерывание
-            // is_button_1_pressed = false; // Кнопка не нажата
-            is_button_pressed = 1; // Устанавливаем флаг нажатия
+            // прерывание
+            is_button_pressed = true; // Устанавливаем флаг нажатия
             button_press_time = 0; // Сброс времени нажатия
             TIM3_Start(PRESCALER_FOR_MS, 1);
           }
-          // }
         } else {
-          is_button_1_pressed = false;
-          is_button_pressed = 0;
+          /* Кнопка отпущена (состояние лог. 1)*/
+          is_button_pressed = false; // Кнопка отпущена
           button_state = 1;
+          TIM3_Stop();
 
-          // Проверяем время нажатия кнопки
+          // Проверяем время, в течении которого была нажата кнопка
           if (button_press_time >=
-              1000) { // Если время удержания больше или равно 2
-            // секундам
-
+              LONG_PRESS_TIME) { // Если время удержания больше или равно
+                                 // LONG_PRESS_TIME в мс
             is_long_press_detected = true;
-            // is_short = false;
-            is_button_pressed = 0; // Сброс флага
-            button_press_time = 0; // Сброс времени
-            TIM3_Stop();
-
-            matrix_state = MATRIX_STATE_MENU;
-            is_button_1_pressed = true;
-            btn_1_set_mode_counter++;
-            is_interface_connected = false;
           } else {
             is_short_press_detected = true;
-            // is_long = false;
-            is_button_pressed = 0; // Сброс флага
-            button_press_time = 0; // Сброс времени
-            TIM3_Stop();
-
-            matrix_state = MATRIX_STATE_MENU;
-            is_button_1_pressed = true;
-            btn_1_set_mode_counter++;
-            is_interface_connected = false;
           }
+          button_press_time = 0;
+          go_to_menu(&matrix_state);
         }
       }
     }
-#endif
 
 #elif DOT_PIN
     matrix_state = MATRIX_STATE_MENU;
@@ -213,6 +185,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 #endif
   }
 
+  /* Обработка нажатия BUTTON_2_Pin, выбор значения для ID, VOL, ESC */
+#if DOT_PIN
   if (GPIO_Pin == BUTTON_2_Pin) {
     is_button_2_pressed = true;
 
@@ -222,10 +196,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
       btn_2_set_value_counter++;
     }
   }
+#endif
 
-  if (GPIO_Pin == BUTTON_1_Pin || GPIO_Pin == BUTTON_2_Pin
-#if DOT_SPI
-      || GPIO_Pin == SW_IN_3_Pin
+  /* Сброс времени последнего нажатия кнопки меню */
+  if (
+#if DOT_PIN
+      GPIO_Pin == BUTTON_1_Pin || GPIO_Pin == BUTTON_2_Pin
+#elif DOT_SPI
+      GPIO_Pin == SW_IN_3_Pin
 #endif
   ) {
     time_since_last_press_sec = 0;
@@ -254,15 +232,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 /**
- * @brief  Start TIM4 for counting 20 seconds between click buttons when
- *         matrix_state = MATRIX_STATE_MENU
+ * @brief  Start TIM4 for counting PERIOD_SEC_FOR_SETTINGS seconds between click
+ * buttons when matrix_state = MATRIX_STATE_MENU.
  * @param  None
  * @retval None
  */
 void start_timer_menu() { TIM4_Start(); }
 
 /**
- * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU
+ * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU.
  * @param  None
  * @retval None
  */
@@ -286,13 +264,71 @@ static uint8_t selected_id;
 /// Structure for data that will be displayed on matrix
 static drawing_data_t drawing_data = {0, 0};
 
+/// Сдвиг для адреса (протокол Alpaca)
 uint8_t shift_mode = 1;
 
 /**
+ * @brief Обновление настроек матрицы (адрес и громкость).
+ *
+ * @param selected_level_volume Выбранная громкость звуковых оповещений.
+ * @param selected_id Выбранный адрес индикатора.
+ */
+void update_matrix_settings(uint8_t *selected_level_volume,
+                            uint8_t *selected_id) {
+  switch (*selected_level_volume) {
+  case 0:
+    update_structure(&matrix_settings, VOLUME_0, *selected_id);
+    break;
+  case 1:
+    update_structure(&matrix_settings, VOLUME_1, *selected_id);
+    break;
+  case 2:
+    update_structure(&matrix_settings, VOLUME_2, *selected_id);
+    break;
+  case 3:
+    update_structure(&matrix_settings, VOLUME_3, *selected_id);
+    break;
+  }
+}
+
+/**
+ * @brief Выход из меню с сохранением/без сохранения настроек в памяти
+ * устройства
+ *
+ * @param menu_state
+ * @param menu_exit_action
+ */
+void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
+
+  switch (menu_exit_action) {
+  case NOT_SAVE_SETTINGS:
+    /* code */
+    break;
+
+  case SAVE_SETTINGS:
+#if DOT_SPI
+    is_short_press_detected = false;
+    is_long_press_detected = false;
+
+    extern uint32_t time_since_last_press_sec;
+    time_since_last_press_sec = 0;
+    *menu_state =
+        MENU_STATE_CLOSE; // Состояние меню для перезаписи настроек индикатора
+    btn_1_set_mode_counter = 0;
+    btn_2_set_value_counter = 0;
+    is_first_btn_clicked = true;
+#elif DOT_PIN
+
+#endif
+    break;
+  }
+}
+
+/**
  * @brief  Handle pressing BUTTON_1 and BUTTON_2.
- * @note   When BUTTON_1 is pressed 1st time - matrix_state =
- * MATRIX_STATE_MENU, BUTTON_1 allows to select settings_mode_t: ID, VOLUME,
- * ESCAPE BUTTON_2 allows to select value for ID, VOLUME
+ * @note   When BUTTON_1 is pressed 1st time - matrix_state = MATRIX_STATE_MENU,
+ *         BUTTON_1 allows to select settings_mode_t: ID, VOLUME, ESCAPE.
+ *         BUTTON_2 allows to select value for ID, VOLUME.
  * @param  None
  * @retval None
  */
@@ -450,27 +486,12 @@ void press_button() {
         }
       }
 
-      // exit from menu
+      /* Выход из меню */
       if (is_time_sec_for_settings_elapsed) {
         is_time_sec_for_settings_elapsed = false;
 
-        switch (selected_level_volume) {
-        case 0:
-          update_structure(&matrix_settings, VOLUME_0, selected_id);
-          break;
-        case 1:
-          update_structure(&matrix_settings, VOLUME_1, selected_id);
-          break;
-        }
-        is_short_press_detected = false;
-        is_long_press_detected = false;
-
-        extern uint32_t time_since_last_press_sec;
-        time_since_last_press_sec = 0;
-        menu_state = MENU_STATE_CLOSE;
-        btn_1_set_mode_counter = 0;
-        btn_2_set_value_counter = 0;
-        is_first_btn_clicked = true;
+        update_matrix_settings(&selected_level_volume, &selected_id);
+        menu_exit(&menu_state, SAVE_SETTINGS);
       }
 
       level_volume++;
@@ -499,27 +520,12 @@ void press_button() {
         display_symbols_spi(matrix_string);
       }
 
-      // exit from menu
+      /* Выход из меню */
       if (is_time_sec_for_settings_elapsed) {
         is_time_sec_for_settings_elapsed = false;
 
-        switch (selected_level_volume) {
-        case 0:
-          update_structure(&matrix_settings, VOLUME_0, selected_id);
-          break;
-        case 1:
-          update_structure(&matrix_settings, VOLUME_1, selected_id);
-          break;
-        }
-        is_short_press_detected = false;
-        is_long_press_detected = false;
-
-        extern uint32_t time_since_last_press_sec;
-        time_since_last_press_sec = 0;
-        menu_state = MENU_STATE_CLOSE;
-        btn_1_set_mode_counter = 0;
-        btn_2_set_value_counter = 0;
-        is_first_btn_clicked = true;
+        update_matrix_settings(&selected_level_volume, &selected_id);
+        menu_exit(&menu_state, SAVE_SETTINGS);
       }
 
 #if PROTOCOL_UIM_6100

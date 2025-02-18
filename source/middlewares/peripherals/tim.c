@@ -21,6 +21,7 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
+#include "buzzer.h"
 #include "config.h"
 #include "drawing.h"
 #include "ukl.h"
@@ -69,7 +70,7 @@ static void TIM2_Set_volume(uint8_t volume) {
  * @brief  Start PWM TIM2 for buzzer
  * @retval None
  */
-static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
+static void buzzer_start() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
 
 /**
  * @brief  Set frequency for sound of buzzer (turning on buzzer using TIM2)
@@ -81,7 +82,7 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
 #if DOT_PIN
 
 #if 1
-  TIM2_Start_PWM();
+  buzzer_start();
   // uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
   // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
   // TIM2_Set_volume(volume);
@@ -204,7 +205,7 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
 
 #endif
   TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
-  // TIM2_Start_PWM();
+  // buzzer_start();
 #endif
 
 #elif DOT_SPI
@@ -342,9 +343,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       if (time_since_last_press_sec >= PERIOD_SEC_FOR_SETTINGS) {
 
 #if DOT_SPI
+        /* Для выхода из меню С сохранением настроек в памяти устройства */
         is_time_sec_for_settings_elapsed = true;
         return;
 #endif
+        /* Для выхода из меню БЕЗ сохранением настроек в памяти устройства */
         time_since_last_press_sec = 0;
 
         btn_1_set_mode_counter = 0;
@@ -656,6 +659,53 @@ void MX_TIM4_Init(void) {
   /* USER CODE END TIM4_Init 2 */
 }
 
+void MX_TIM2_Init_1uS(void) {
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 64 - 1; // freq tim = 1 000 000
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 65535;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
+}
+
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *tim_baseHandle) {
   if (tim_baseHandle->Instance == TIM1) {
     /* USER CODE BEGIN TIM1_MspInit 0 */
@@ -841,7 +891,7 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
   //	is_gong_play = true;
 
 #if DOT_PIN
-  TIM2_Start_PWM();
+  buzzer_start();
 #endif
   TIM2_Start_bip(_bip_freq, volume);
 }
