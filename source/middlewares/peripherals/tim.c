@@ -266,6 +266,9 @@ volatile uint32_t time_since_last_press_sec = 0;
 /// Counter for elapsed time in seconds to check interface connection
 volatile uint32_t connection_sec_is_elapsed = 0;
 
+/// Counter for elapsed time in seconds to check interface connection
+volatile uint32_t tim3_mcs_is_elapsed = 0;
+
 /**
  * @brief  Handle Interrupt by TIM's period is elapsed,
  *         setting the state of the flags.
@@ -280,8 +283,11 @@ volatile uint32_t connection_sec_is_elapsed = 0;
  * @param  htim: TIM structure
  * @retval None
  */
-extern volatile bool is_button_1_pressed;
+
 volatile bool is_time_sec_for_settings_elapsed = false;
+volatile uint32_t is_time_ms_for_draw_elapsed = 0;
+volatile bool is_tim3_half_period_elapsed = false; // Флаг 500 мкс
+volatile bool is_tim3_full_period_elapsed = false; // Флаг 1 мс
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Flag to control first btn1 click
@@ -300,12 +306,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING, MENU_STATE_CLOSE
   extern menu_state_t menu_state;
 
+  // Для пассивного бузера
   if (htim->Instance == TIM2) {
     is_tim2_period_elapsed = true;
+    // tim3_mcs_is_elapsed++;
+
+    // if (tim3_mcs_is_elapsed >= 1000) {
+    //   tim3_mcs_is_elapsed = 0;
+    //   is_tim3_period_elapsed = true;
+    // }
   }
 
   if (htim->Instance == TIM3) {
+    // tim3_mcs_is_elapsed++;
+
+    // // if (tim3_mcs_is_elapsed >= 1000) {
+    // tim3_mcs_is_elapsed = 0;
     is_tim3_period_elapsed = true;
+    // // }
+
+    // is_tim3_period_elapsed = true;
 
 #if PROTOCOL_UKL
 
