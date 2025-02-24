@@ -140,6 +140,7 @@ int main(void) {
 #else
 #include "conf.h"
 
+  TIM3_Start(PRESCALER_FOR_US, 1000); // 1 мс
   display_protocol_name(PROTOCOL_NAME);
   display_protocol_name(PROJECT_VER);
 
