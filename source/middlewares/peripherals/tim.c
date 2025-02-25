@@ -287,7 +287,9 @@ volatile uint32_t tim3_mcs_is_elapsed = 0;
 volatile bool is_time_sec_for_settings_elapsed = false;
 volatile uint32_t is_time_ms_for_draw_elapsed = 0;
 volatile bool is_tim3_half_period_elapsed = false; // Флаг 500 мкс
-volatile bool is_tim3_full_period_elapsed = false; // Флаг 1 мс
+
+static volatile bool is_start_indicator = true; // Флаг 1 мс
+static uint16_t tim4_ms_counter = 0;
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Flag to control first btn1 click
@@ -309,12 +311,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   // Для пассивного бузера
   if (htim->Instance == TIM2) {
     is_tim2_period_elapsed = true;
-    // tim3_mcs_is_elapsed++;
-
-    // if (tim3_mcs_is_elapsed >= 1000) {
-    //   tim3_mcs_is_elapsed = 0;
-    //   is_tim3_period_elapsed = true;
-    // }
   }
 
   if (htim->Instance == TIM3) {
@@ -322,7 +318,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     // // if (tim3_mcs_is_elapsed >= 1000) {
     // tim3_mcs_is_elapsed = 0;
-    is_tim3_period_elapsed = true;
+    // is_tim3_period_elapsed = true;
     // // }
 
     // is_tim3_period_elapsed = true;
@@ -345,6 +341,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
   if (htim->Instance == TIM4) {
     is_tim4_period_elapsed = true;
+
+    if (is_start_indicator) {
+      tim4_ms_counter += 1;
+      if (tim4_ms_counter >= 3000) {
+        tim4_ms_counter = 0;
+        is_start_indicator = false;
+      }
+    }
 
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
 
@@ -656,7 +660,7 @@ void MX_TIM4_Init(void) {
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 64000 - 1;
+  htim4.Init.Prescaler = 64000 - 1; // freq tim = 1 000
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 100 - 1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -924,24 +928,24 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
  */
 void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
   is_tim4_period_elapsed = false;
+  is_start_indicator = true;
+  // uint16_t tim4_ms_counter = 0;
 
-  uint16_t tim4_ms_counter = 0;
+  // __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
+  // __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
 
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
-
-  while (tim4_ms_counter < time_ms) {
-    HAL_TIM_Base_Start_IT(&htim4);
-    is_tim4_period_elapsed = false;
-    while (!is_tim4_period_elapsed) {
+  while (is_start_indicator) {
+    // HAL_TIM_Base_Start_IT(&htim4);
+    // is_tim4_period_elapsed = false;
+    // while (!is_tim4_period_elapsed) {
 #if DOT_PIN
-      draw_string_on_matrix(str_symbols);
+    draw_string_on_matrix(str_symbols);
 #elif DOT_SPI
-      display_symbols_spi(str_symbols);
+    display_symbols_spi(str_symbols);
 #endif
-    }
-    HAL_TIM_Base_Stop_IT(&htim4);
-    tim4_ms_counter += TIM4_PERIOD;
+    // }
+    // HAL_TIM_Base_Stop_IT(&htim4);
+    // tim4_ms_counter += 1;
   }
 }
 
@@ -969,6 +973,12 @@ void TIM3_Start(uint16_t prescaler, uint16_t period) {
   HAL_TIM_Base_Start_IT(&htim3);
 }
 
+void TIM4_Start(uint16_t prescaler, uint16_t period) {
+  __HAL_TIM_SET_PRESCALER(&htim4, prescaler);
+  __HAL_TIM_SET_AUTORELOAD(&htim4, period);
+  HAL_TIM_Base_Start_IT(&htim4);
+}
+
 /**
  * @brief  Stop TIM3
  * @param  None
@@ -984,11 +994,13 @@ void TIM3_Stop() { HAL_TIM_Base_Stop_IT(&htim3); }
  * @param  None
  * @retval None
  */
+#if 0
 void TIM4_Start() {
   __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
   __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
   HAL_TIM_Base_Start_IT(&htim4);
 }
+#endif
 
 /**
  * @brief  Stop TIM4.

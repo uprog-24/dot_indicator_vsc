@@ -112,6 +112,8 @@ if(USE_DOT_PIN)
         # ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
         ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
         ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/ukl/ukl.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/uel/uel.c
     )
 
     file(GLOB_RECURSE STM32CUBEMX_SOURCES

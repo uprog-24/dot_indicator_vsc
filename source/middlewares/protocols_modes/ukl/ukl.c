@@ -15,9 +15,9 @@
 #define SPECIAL_SYMBOLS_BUFF_SIZE 7 ///< Number of special symbols
 #define DELAY_MS_DATA_RECEIVE                                                  \
   200 - 1 ///< Delay after receiving 13 bytes before next reading pin
-#define GONG_BUZZER_FREQ 3000 ///< Frequency of bip for ARRIVAL gong
+#define GONG_BUZZER_FREQ 1000 ///< Frequency of bip for ARRIVAL gong
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
-  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+  3000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
 #define BUZZER_FREQ_FIRE_DANGER                                                \
   BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
 #define FILTER_BUFF_SIZE                                                       \
@@ -67,6 +67,42 @@ static const code_location_symbols_t
         {.code_location = LOCATION_MINUS_3, .symbols = "-3"},
         {.code_location = LOCATION_MINUS_4, .symbols = "-4"}};
 
+static uint8_t gong[2] = {
+    0,
+};
+
+static uint8_t bip_num = 0;
+static void setting_gong(control_bits_states_t control_bits, uint8_t volume) {
+  direction_ukl_t direction = control_bits & DIRECTION_MASK;
+  uint16_t arrival = control_bits & GONG_ARRIVAL;
+
+  // if signal 0 is changing to signal 1, then arrival on floor
+  gong[0] = (arrival == GONG_ARRIVAL) != 0 ? 1 : 0;
+
+  if (gong[0] && !gong[1]) {
+
+    switch (direction) {
+    case UKL_MOVE_UP:
+      play_gong(1, GONG_BUZZER_FREQ, volume);
+      // bip_num = 1;
+      break;
+    case UKL_MOVE_DOWN:
+      play_gong(2, GONG_BUZZER_FREQ, volume);
+      // bip_num = 2;
+      break;
+    case UKL_NO_MOVE:
+      play_gong(3, GONG_BUZZER_FREQ, volume);
+      // bip_num = 3;
+      break;
+    default:
+      // __NOP();
+      // play_gong(3, GONG_BUZZER_FREQ, volume);
+      break;
+    }
+  }
+  gong[1] = gong[0];
+}
+
 /// Flag to control if cabin is overloaded
 static bool is_cabin_overload_sound = false;
 
@@ -84,6 +120,9 @@ static uint8_t order_button_cnt = 0;
 
 /// Counter for number received data (order button is disable sound)
 static uint8_t button_disable_cnt = 0;
+
+/// Counter for number received data (order button is disable sound)
+static uint8_t gong_disable_cnt = 0;
 
 /// Counter for number received data (fire danger)
 static uint8_t fire_danger_cnt = 0;
@@ -103,24 +142,65 @@ static uint8_t fire_disable_cnt = 0;
  */
 static void setting_sound_ukl(char *matrix_string,
                               control_bits_states_t control_bits) {
-  if (control_bits == (control_bits_states_t)UKL_MOVE_UP ||
+#if 0
+                                if (control_bits == (control_bits_states_t)UKL_MOVE_UP ||
       control_bits == (control_bits_states_t)UKL_MOVE_DOWN ||
       control_bits == (control_bits_states_t)UKL_NO_MOVE) {
     stop_buzzer_sound();
   }
+#endif
 
+  /* Перевозка лежачих больных */
   if ((control_bits & TRANSPORTATION_BEDRIDDEN_PATIENTS) ==
       TRANSPORTATION_BEDRIDDEN_PATIENTS) {
     matrix_string[DIRECTION] = '+';
   }
 
+  /* Нажатие кнопки приказа */
+  if (is_press_order_button) {
+    // is_press_order_button = false;
+#if 0
+    is_press_order_button = false;
+    if (matrix_settings.volume != VOLUME_0) {
+      play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+    }
+#endif
+    // order_button_cnt++;
+    // if (order_button_cnt > 2U) { // 230 ms * n
+    if (button_disable_cnt == 0) {
+
+      stop_buzzer_sound();
+      order_button_cnt = 0;
+#if 1
+      if (matrix_settings.volume != VOLUME_0) {
+        // BIP_DURATION_MS = 500 ms
+        play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+      }
+
+#endif
+    }
+
+    /** Не воспроизводить последующие нажатия в течение 230 ms * n, n = 3;
+     * продолжительность BIP_DURATION_MS 500
+     */
+    if (is_press_order_button) {
+      button_disable_cnt++;
+      if (button_disable_cnt == 3) { // // 230 ms * n
+        button_disable_cnt = 0;
+        is_press_order_button = false;
+      }
+    }
+  }
+#if 0
   if ((control_bits & SIGNAL_PRESS_ORDER_BUTTON) == SIGNAL_PRESS_ORDER_BUTTON) {
     order_button_cnt++;
     if (order_button_cnt > 5U) { // 1150 ms
       stop_buzzer_sound();
       order_button_cnt = 0;
 #if 1
-      play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+      if (matrix_settings.volume != VOLUME_0) {
+        play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+      }
 #endif
       is_press_order_button = true;
     }
@@ -138,35 +218,97 @@ static void setting_sound_ukl(char *matrix_string,
     button_disable_cnt = 0;
     is_press_order_button = false;
   }
-
-  if ((control_bits & GONG_ARRIVAL) == GONG_ARRIVAL) {
-    if (!is_gong_play) {
-      stop_buzzer_sound();
-#if 1
-      play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
 #endif
-      is_gong_play = true;
+
+#if 0
+  /* Гонг прибытия */
+  // if (is_gong_play) {
+
+  //   stop_buzzer_sound();
+
+  //   if (matrix_settings.volume != VOLUME_0) {
+  //     setting_gong(control_bits, matrix_settings.volume);
+  //     // play_gong(bip_num, GONG_BUZZER_FREQ, matrix_settings.volume);
+  //   }
+
+  //   is_gong_play = false;
+  // }
+
+#if 1
+  if (is_gong_play) {
+
+    if (gong_disable_cnt == 0) {
+
+      stop_buzzer_sound();
+      // order_button_cnt = 0;
+#if 1
+      if (matrix_settings.volume != VOLUME_0) {
+        setting_gong(control_bits, matrix_settings.volume);
+        // play_gong(bip_num, GONG_BUZZER_FREQ, matrix_settings.volume);
+      }
+
+#endif
     }
-  } else {
-    is_gong_play = false;
+
+    /** Не воспроизводить последующие нажатия в течение 230 ms * n, n = 3;
+     * продолжительность BIP_DURATION_MS 500
+     */
+    if (is_gong_play) {
+      gong_disable_cnt++;
+      if (gong_disable_cnt == 2) { // // 230 ms * n
+        gong_disable_cnt = 0;
+        is_gong_play = false;
+      }
+    }
+
+    //     stop_buzzer_sound();
+
+    // #if 1
+    //     if (matrix_settings.volume != VOLUME_0) {
+    //     setting_gong(control_bits, matrix_settings.volume);
+    //     }
+    // #endif
+    //     is_gong_play = false;
+
+    // } else {
+    // is_gong_play = false;
   }
 
-  if ((control_bits & CABIN_OVERLOAD) == CABIN_OVERLOAD) { // ?
-    cabin_overload_cnt++;
-    if (cabin_overload_cnt > 5U) { // 1150 ms
-      stop_buzzer_sound();
-      cabin_overload_cnt = 0;
-#if 1
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
 #endif
+
+#endif
+
+  /* Перегруз кабины */
+  if ((control_bits & CABIN_OVERLOAD) == CABIN_OVERLOAD) { // ?
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
+
+    // cabin_overload_cnt++;
+    // if (cabin_overload_cnt > 2U) { // 230 ms * n
+    // stop_buzzer_sound();
+    cabin_overload_cnt = 0;
+#if 1
+    if (!is_cabin_overload_sound) {
+      stop_buzzer_sound();
+      if (matrix_settings.volume != VOLUME_0) {
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
       is_cabin_overload_sound = true;
     }
+#endif
+    // is_cabin_overload_sound = true;
+    // }
 
-  } else {
+  }
+  // next received bytes
+  else if (is_cabin_overload_sound) {
+    stop_buzzer_sound();
     cabin_overload_cnt = 0;
     is_cabin_overload_sound = false;
   }
 
+  /* Пожарная опасность */
   if ((control_bits & FARE_DANGER) == FARE_DANGER) {
     matrix_string[MSB] = 'F';
     matrix_string[LSB] = 'c';
@@ -175,7 +317,9 @@ static void setting_sound_ukl(char *matrix_string,
       stop_buzzer_sound();
       fire_danger_cnt = 0;
 #if 1
-      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+      if (matrix_settings.volume != VOLUME_0) {
+        TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+      }
 #endif
       is_fire_danger_sound = true;
     }
@@ -189,7 +333,8 @@ static void setting_sound_ukl(char *matrix_string,
       }
     }
 
-  } else {
+  } else if (is_fire_danger_sound) {
+    stop_buzzer_sound();
     is_fire_danger_sound = false;
     fire_disable_cnt = 0;
     fire_danger_cnt = 0;
@@ -300,8 +445,8 @@ static void sort_bubble(floor_counter_t *filter_buff, uint8_t buff_size) {
  *            already has current received data, if current received data is
  *            not filter_buff then add it with filter_buff[i].counter = 1;
  *         3. If counter number_received_data == FILTER_BUFF_SIZE then call
- *            sort_bubble, filter_buff[0].counter has maximum value and will be
- *            displayed on matrix
+ *            sort_bubble, filter_buff[0].counter has maximum value and will
+ * be displayed on matrix
  * @param  None
  * @retval None
  */
@@ -365,6 +510,33 @@ volatile bool is_read_data_completed = false;
 static void process_data_ukl() {
 #if 1
 
+// Проверяем кнопку приказа ДО фильтрации
+#if 1
+  control_bits_states_t control_bits =
+      received_data_ukl_copy & CONTROL_BITS_MASK;
+
+  // Кабинный индикатор
+  if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+    if ((control_bits & SIGNAL_PRESS_ORDER_BUTTON) ==
+        SIGNAL_PRESS_ORDER_BUTTON) {
+      is_press_order_button = true;
+    }
+
+#if 0
+    // if (!is_gong_play) {
+    //   setting_gong(control_bits, matrix_settings.volume);
+    // }
+    if ((control_bits & GONG_ARRIVAL) == GONG_ARRIVAL) {
+      // setting_gong(control_bits, matrix_settings.volume);
+      is_gong_play = true;
+    }
+#endif
+  }
+
+  // setting_gong(control_bits, matrix_settings.volume);
+
+#endif
+
   filter_data();
 
   if (is_data_filtered) {
@@ -377,13 +549,29 @@ static void process_data_ukl() {
     setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
                     special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
-    if (matrix_settings.volume != VOLUME_0) {
+    // Кабинный индикатор
+    if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+      if (matrix_settings.volume != VOLUME_0) {
+        // stop_buzzer_sound();
+        setting_gong(control_bits, matrix_settings.volume);
+      }
       setting_sound_ukl(matrix_string, control_bits);
+    } else {
+      // Этажный индикатор
+      if (matrix_settings.addr_id == drawing_data.floor) {
+        if (matrix_settings.volume != VOLUME_0) {
+          setting_gong(control_bits, matrix_settings.volume);
+        }
+      }
     }
   }
 
+  while (is_read_data_completed == false && is_interface_connected) {
+    draw_string_on_matrix(matrix_string);
+  }
 #endif
 
+// без фильтрации
 #if 0
   transform_direction_to_common(received_data_ukl_copy & DIRECTION_MASK);
   drawing_data.floor = received_data_ukl_copy & CODE_FLOOR_MASK;
@@ -393,12 +581,13 @@ static void process_data_ukl() {
     setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
                     special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
     setting_sound_ukl(matrix_string, control_bits);
+    setting_gong(control_bits, matrix_settings.volume);
   }
-#endif
 
   while (is_read_data_completed == false && is_interface_connected) {
     draw_string_on_matrix(matrix_string);
   }
+#endif
 }
 
 /**
@@ -477,7 +666,10 @@ void read_data_bit() {
 
     // filter "+-4"
     // 0x7FF and 0x1FFF
-    if ((received_data_ukl_copy & 0xFFF) != 0xFFF) {
+    // if ((received_data_ukl_copy & 0xFFF) != 0xFFF) {
+    if ((received_data_ukl_copy != 0x1FFF) &&
+        (received_data_ukl_copy != 0x7FF) &&
+        (received_data_ukl_copy & 0xFFF) != 0xFFF) { // -4
       is_read_data_completed = true;
     }
 
@@ -500,7 +692,8 @@ void read_data_bit() {
 }
 
 /**
- * @brief  Stop protocol, reset variables when matrix_state = MATRIX_STATE_MENU
+ * @brief  Stop protocol, reset variables when matrix_state =
+ * MATRIX_STATE_MENU
  * @param  None
  * @retval None
  */

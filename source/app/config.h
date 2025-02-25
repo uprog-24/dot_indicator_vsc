@@ -14,14 +14,15 @@
 /* Select protocol, demo/test mode */
 #define TEST_MODE 0
 #define DEMO_MODE 0
-#define PROTOCOL_UIM_6100 1
+#define PROTOCOL_UIM_6100 0
 #define PROTOCOL_UEL 0
-#define PROTOCOL_UKL 0
+#define PROTOCOL_UKL 1
 #define PROTOCOL_ALPACA 0
 #if DOT_PIN
 #define PERIOD_SEC_FOR_SETTINGS                                                \
-  20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
-     ///< SETTINGS mode of matrix
+  20000 ///< Period of TIM4 (seconds) for counting time between clicks of btns
+        ///< in
+        ///< SETTINGS mode of matrix
 
 #elif DOT_SPI
 #define PERIOD_SEC_FOR_SETTINGS                                                \
@@ -178,7 +179,7 @@
 #define MAX_POSITIVE_NUMBER_LOCATION 55
 #define MAIN_CABIN_ID 0
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1 ///< Time in ms to check interface connection
+  1000 ///< Time in ms to check interface connection
 
 /* Protocol ALPACA (CAN) */
 #elif PROTOCOL_ALPACA && !PROTOCOL_UKL && !PROTOCOL_UIM_6100 &&                \

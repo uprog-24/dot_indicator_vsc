@@ -237,7 +237,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @param  None
  * @retval None
  */
-void start_timer_menu() { TIM4_Start(); }
+void start_timer_menu() {
+  // TIM4_Start();
+}
 
 /**
  * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU.
@@ -590,7 +592,20 @@ void press_button() {
         case ID:
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
 
-          if (id == MAIN_CABIN_ID) {
+#if PROTOCOL_UKL
+          if (id >= 57 && id <= 59) {
+            matrix_string[DIRECTION] = 'c';
+            matrix_string[MSB] = 'p';
+            matrix_string[LSB] =
+                (id == 57) ? 'c' : convert_int_to_char(id % 10 - 7);
+          } else if (id >= 60 && id <= 63) {
+            matrix_string[DIRECTION] = 'c';
+            matrix_string[MSB] = '-';
+            matrix_string[LSB] = convert_int_to_char(id % 10 + 1);
+          } else
+#endif
+
+              if (id == MAIN_CABIN_ID) {
             matrix_string[DIRECTION] = 'c';
             matrix_string[MSB] = 'K';
             matrix_string[LSB] = 'c';
@@ -615,7 +630,13 @@ void press_button() {
             id++;
           }
 #else
-          id++;
+          if (id == 63) {
+            id = 0;
+          } else if (id == 55) {
+            id = 57;
+          } else {
+            id++;
+          }
 #endif
 
 #elif PROTOCOL_ALPACA

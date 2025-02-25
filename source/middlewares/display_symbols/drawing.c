@@ -224,259 +224,9 @@ void display_symbols_spi(char *matrix_string) {
  * @param  shift:     Shift by Y for animation of symbol movement
  * @retval None
  */
-extern volatile bool is_tim3_period_elapsed;
-#if 0
-static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
-                                  uint8_t shift) {
-  uint8_t *cur_symbol_code = NULL;
-
-  cur_symbol_code = get_symbol_code(symbol);
-
-  if (cur_symbol_code == NULL) {
-    return;
-  }
-
-  for (uint8_t current_row = 0; current_row < ROWS; current_row++) {
-    /* Включаем текущую строку и выключаем остальные */
-    for (uint8_t row = 0; row < ROWS; row++) {
-      // if (row == current_row) {
-      //   set_row_state(current_row, TURN_ON);
-      // } else {
-      //   set_row_state(row, TURN_OFF);
-      // }
-      set_row_state(row, (row == current_row) ? TURN_ON : TURN_OFF);
-    }
-
-    uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
-    uint8_t num_bit = BINARY_SYMBOL_CODE_SIZE;
-
-    if (current_row + shift < ROWS) {
-      convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
-                                     binary_symbol_code_row,
-                                     BINARY_SYMBOL_CODE_SIZE);
-    } else {
-      memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
-    }
-
-    /* Выставляем состояние колонок */
-    uint8_t start_col = start_pos;
-    if (start_col <= MAX_POSITION_COLUMN) {
-      uint8_t end_col = start_col + FONT_WIDTH;
-      for (uint8_t col = start_col; col < end_col; col++) {
-        /* from index 6 to 6 - FONT_WIDTH = 6 - 5 = 1. Symbols from symbols[] in
-         font.c */
-        if (is_tim3_period_elapsed) { // Таймер сработал (1 мс)
-          is_tim3_period_elapsed = false; // Сброс флага
-          if (binary_symbol_code_row[num_bit] == 1) {
-            set_col_state(col, TURN_ON);
-          } else {
-            set_col_state(col, TURN_OFF);
-          }
-        }
-
-        num_bit--;
-      }
-    }
-    // set_all_cols_state(TURN_OFF);
-    set_all_rows_state(TURN_OFF);
-    set_all_cols_state(TURN_OFF);
-    // set_full_matrix_state(TURN_OFF);
-  }
-}
-#endif
-
-#if 0
-void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
-  uint8_t *cur_symbol_code = get_symbol_code(symbol);
-  if (cur_symbol_code == NULL)
-    return;
-
-  static uint8_t current_row = 0; // Текущая строка
-  static uint8_t current_col = 0; // Текущая колонка
-
-  if (is_tim3_period_elapsed) { // Разрешение обновления раз в 1 мс
-    is_tim3_period_elapsed = false; // Сброс флага
-
-    // Выключаем все колонки перед обновлением
-    // set_all_cols_state(TURN_OFF);
-    // set_all_rows_state(TURN_OFF);
-    // set_col_state(current_col, TURN_OFF);
-    // Выключаем только предыдущую колонку (а не всю матрицу)
-#if 0
-    set_col_state(start_pos + current_col, TURN_OFF);
-
-    // Включаем нужную строку
-    for (uint8_t row = 0; row < ROWS; row++) {
-      set_row_state(row, (row == current_row) ? TURN_ON : TURN_OFF);
-    }
-#endif
-
-    // 🔹 Выключаем всю предыдущую колонку перед обновлением
-    // set_col_state(start_pos + current_col, TURN_OFF);
-
-    set_all_cols_state(TURN_OFF);
-    // set_all_rows_state(TURN_OFF);
-
-    // set_col_state(start_pos + current_col, TURN_OFF);
-    // if (current_row != 0) {
-    //   set_row_state(current_row - 1, TURN_OFF);
-    // }
-
-    // Включаем только нужную строку
-    set_row_state(current_row, TURN_ON);
-
-    // Получаем бит для текущей колонки
-    uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
-    if (current_row + shift < ROWS) {
-      convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
-                                     binary_symbol_code_row,
-                                     BINARY_SYMBOL_CODE_SIZE);
-    } else {
-      memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
-    }
-#
-    // Управление колонкой (НЕ выключаем всю строку, а только текущий столбец)
-    uint8_t bit_index = BINARY_SYMBOL_CODE_SIZE - current_col;
-    if (binary_symbol_code_row[bit_index] == 1) {
-      set_col_state(start_pos + current_col, TURN_ON);
-    } else {
-      set_col_state(start_pos + current_col, TURN_OFF);
-    }
-
-    // 🔹 Выключаем колонку перед переходом к следующей (чтобы убрать тень)
-    // set_col_state(start_pos + current_col, TURN_OFF);
-    // Переход к следующей колонке
-    current_col++;
-
-    // Если прошли все 16 колонок, переходим к следующей строке
-    if (current_col >= FONT_WIDTH) {
-      current_col = 0; // Сброс колонок
-      current_row++;   // Переход к следующей строке
-      // set_all_rows_state(TURN_OFF);
-      set_row_state(current_row - 1, TURN_OFF);
-
-      if (current_row >= ROWS) {
-        current_row = 0; // Завершаем проход по строкам
-      }
-    }
-  }
-}
-#endif
-
-#if 0
-void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
-  uint8_t *cur_symbol_code = get_symbol_code(symbol);
-  if (cur_symbol_code == NULL)
-    return;
-
-  static uint8_t current_row = 0;
-  static uint8_t current_col = 0;
-  static uint16_t hold_counter = 0; // Счётчик удержания
-
-  if (is_tim3_period_elapsed) {
-    is_tim3_period_elapsed = false;
-
-    // 🔹 Выключаем предыдущую колонку перед обновлением (убираем тени)
-    set_col_state(start_pos + current_col, TURN_OFF);
-
-    // 🔹 Выключаем предыдущую строку (избегаем "залипания" пикселей)
-    if (current_row > 0) {
-      set_row_state(current_row - 1, TURN_OFF);
-    }
-
-    // Включаем нужную строку
-    set_row_state(current_row, TURN_ON);
-
-    uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
-    if (current_row + shift < ROWS) {
-      convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
-                                     binary_symbol_code_row,
-                                     BINARY_SYMBOL_CODE_SIZE);
-    } else {
-      memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
-    }
-
-    uint8_t bit_index = BINARY_SYMBOL_CODE_SIZE - current_col;
-    if (binary_symbol_code_row[bit_index] == 1) {
-      set_col_state(start_pos + current_col, TURN_ON);
-      hold_counter = 0; // Сброс счётчика перед началом удержания
-    }
-
-    hold_counter++; // Увеличиваем счётчик времени удержания
-
-    current_col++;
-    if (current_col >= FONT_WIDTH) {
-      current_col = 0;
-      current_row++;
-      // set_row_state(current_row - 1, TURN_OFF);
-
-      if (current_row >= ROWS) {
-        current_row = 0;
-      }
-    }
-  }
-}
-#endif
-// +++
-#if 0
-void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
-  uint8_t *cur_symbol_code = get_symbol_code(symbol);
-  if (cur_symbol_code == NULL)
-    return;
-
-  static uint8_t current_row = 0;
-  static uint8_t current_col = 0;
-
-  if (is_tim3_period_elapsed) { // Разрешение обновления раз в 1 мс
-    is_tim3_period_elapsed = false; // Сброс флага таймера
-
-    // 🔹 1. Отключаем ВСЕ строки перед обновлением
-    set_all_rows_state(TURN_OFF);
-    // delay_us(100);
-
-    // 🔹 2. Включаем текущую строку
-    set_row_state(current_row, TURN_ON);
-
-    // 🔹 3. Получаем бит символа для текущей колонки
-    uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
-    if (current_row + shift < ROWS) {
-      convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
-                                     binary_symbol_code_row,
-                                     BINARY_SYMBOL_CODE_SIZE);
-    } else {
-      memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
-    }
-
-    // 🔹 4. Управление колонкой
-    set_col_state(start_pos + current_col,
-                  TURN_OFF); // Выключаем текущую колонку перед переключением
-
-    uint8_t bit_index = BINARY_SYMBOL_CODE_SIZE -
-                        current_col; // Индекс бита для текущей колонки
-    if (binary_symbol_code_row[bit_index] == 1) {
-      set_col_state(start_pos + current_col,
-                    TURN_ON); // Включаем колонку, если бит равен 1
-    }
-
-    // 🔹 5. Переход к следующей колонке
-    current_col++;
-
-    // 🔹 6. Если прошли все колонки, переходим к следующей строке
-    if (current_col >= FONT_WIDTH) {
-      current_col = 0; // Сброс колонок
-      current_row++;   // Переход к следующей строке
-
-      if (current_row >= ROWS) {
-        current_row = 0; // Завершаем проход по строкам
-      }
-    }
-  }
-}
-#endif
-
 #if 1
 
-extern volatile bool is_tim3_period_elapsed;
+extern volatile bool is_tim4_period_elapsed;
 void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
 
   uint8_t *cur_symbol_code = get_symbol_code(symbol);
@@ -510,8 +260,8 @@ void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
    * Держим состояние строки с колонками, пока таймер не завершит
    * отсчет (1000 мкс)
    */
-  if (is_tim3_period_elapsed) {
-    is_tim3_period_elapsed = false;
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
 
     // Переходим к следующей строке
     current_row++;
@@ -601,13 +351,22 @@ static void draw_special_symbols(char *matrix_string) {
   } else if (matrix_string[DIRECTION] ==
              'c') { // stop floor c10..c99 and c-1..c-9
 
+    // draw DIRECTION symbol
     draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+
+    // draw MSB and LSB symbols
     if (matrix_string[MSB] == '1' || matrix_string[MSB] == 'I') {
       draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
       draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
     } else if (matrix_string[MSB] != '-') {
       draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+
+      // "cKg" перегруз
+      if (matrix_string[MSB] == 'K' && matrix_string[LSB] == 'g') {
+        draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
+      } else {
+        draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      }
     }
 
     if (matrix_string[MSB] == '-' && matrix_string[LSB] != '-') {
@@ -620,6 +379,7 @@ static void draw_special_symbols(char *matrix_string) {
       draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
       draw_symbol_on_matrix(matrix_string[LSB], 4, 0);
     }
+
   } else if (matrix_string[DIRECTION] == '>' ||
              matrix_string[DIRECTION] == '<' ||
              matrix_string[DIRECTION] == '+' ||
