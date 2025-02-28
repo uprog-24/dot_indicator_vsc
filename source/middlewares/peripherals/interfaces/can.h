@@ -29,7 +29,9 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 #include <stdint.h>
+
 /* USER CODE END Includes */
 
 extern CAN_HandleTypeDef hcan;
@@ -73,6 +75,17 @@ void CAN_TxData(uint32_t stdId);
  * @retval None
  */
 void process_data_from_can();
+
+typedef struct {
+  uint32_t std_id;        ///< ID принятого сообщения
+  uint8_t rx_data_can[8]; ///< Буфер с данными (CAN max 8 байт)
+  uint8_t dlc;            ///< Длина данных
+  bool is_data_received; ///< Состояние данных: получены/не получены
+} CAN_Data_Package_t;
+
+CAN_Data_Package_t get_received_data_by_can(void);
+bool is_can_data_received();
+void reset_value_data_received();
 
 /* USER CODE END Prototypes */
 

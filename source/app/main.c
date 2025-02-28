@@ -59,7 +59,7 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
+#if !DEMO_MODE && !TEST_MODE
 
 /// Settings of matrix: addr_id of matrix and level of volume for buzzer
 settings_t matrix_settings = {.addr_id = MAIN_CABIN_ID, .volume = VOLUME_1};
@@ -159,8 +159,8 @@ int main(void) {
 
 #if 1
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
-  display_protocol_name(PROTOCOL_NAME);
-  display_protocol_name(PROJECT_VER);
+  // display_protocol_name(PROTOCOL_NAME);
+  // display_protocol_name(PROJECT_VER);
 #endif
 
   read_settings(&matrix_settings);
@@ -185,7 +185,6 @@ int main(void) {
       switch (menu_state) {
       case MENU_STATE_OPEN:
         protocol_stop();
-        // start_timer_menu();
         menu_state = MENU_STATE_WORKING;
         break;
 
@@ -194,7 +193,6 @@ int main(void) {
         break;
 
       case MENU_STATE_CLOSE:
-        // stop_timer_menu();
         overwrite_settings(&matrix_settings);
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;

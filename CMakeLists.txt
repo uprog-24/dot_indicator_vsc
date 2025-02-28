@@ -92,6 +92,7 @@ if(USE_DOT_PIN)
         ${PROJECT_DIR}/middlewares/protocols_modes/uel
         ${PROJECT_DIR}/middlewares/protocols_modes/uim6100
         ${PROJECT_DIR}/middlewares/protocols_modes/ukl
+        ${PROJECT_DIR}/middlewares/protocols_modes/nku
     )
 
     # List of source files common for ALL MODES
@@ -114,6 +115,7 @@ if(USE_DOT_PIN)
         ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
         ${PROJECT_DIR}/middlewares/protocols_modes/ukl/ukl.c
         ${PROJECT_DIR}/middlewares/protocols_modes/uel/uel.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/nku/nku.c
     )
 
     file(GLOB_RECURSE STM32CUBEMX_SOURCES

@@ -395,7 +395,7 @@ void press_button() {
     case 2:
 
       while (btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 0) {
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_NKU
 
         draw_string_on_matrix(SETTINGS_MODE_ID);
 
@@ -590,7 +590,7 @@ void press_button() {
           break;
 
         case ID:
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_NKU
 
 #if PROTOCOL_UKL
           if (id >= 57 && id <= 59) {
@@ -629,7 +629,15 @@ void press_button() {
           } else {
             id++;
           }
-#else
+
+#elif PROTOCOL_NKU
+
+          if (id == ADDR_ID_LIMIT) {
+            id = ADDR_ID_MIN;
+          } else {
+            id++;
+          }
+#elif PROTOCOL_UKL
           if (id == 63) {
             id = 0;
           } else if (id == 55) {

@@ -340,8 +340,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 
   if (htim->Instance == TIM4) {
+    /* Флаг для отсчета 1 мс (воемя удержания состояния одной строки с
+     * колонками) для отображения символов */
     is_tim4_period_elapsed = true;
 
+    /* Счетчик для отображения протокола и версии ПО при запуске индикатора */
     if (is_start_indicator) {
       tim4_ms_counter += 1;
       if (tim4_ms_counter >= 3000) {
@@ -350,7 +353,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
+#if !DEMO_MODE && !TEST_MODE
 
     if (matrix_state == MATRIX_STATE_WORKING) {
       connection_sec_is_elapsed += 1;

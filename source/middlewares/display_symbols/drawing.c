@@ -84,7 +84,7 @@ void set_floor_symbols(char *matrix_string, uint16_t floor,
     matrix_string[MSB] = convert_int_to_char(floor / 10);
     matrix_string[LSB] = convert_int_to_char(floor % 10);
   } else {
-    // special symbols
+    // special symbols when floor code > max_positive_number_location
     for (uint8_t ind = 0; ind < spec_symbols_buff_size; ind++) {
       if (code_location_symbols[ind].code_location == floor) {
         matrix_string[MSB] = code_location_symbols[ind].symbols[0];

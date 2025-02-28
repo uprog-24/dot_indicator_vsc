@@ -16,8 +16,10 @@
 #define DEMO_MODE 0
 #define PROTOCOL_UIM_6100 0
 #define PROTOCOL_UEL 0
-#define PROTOCOL_UKL 1
+#define PROTOCOL_UKL 0
 #define PROTOCOL_ALPACA 0
+#define PROTOCOL_NKU 1
+
 #if DOT_PIN
 #define PERIOD_SEC_FOR_SETTINGS                                                \
   20000 ///< Period of TIM4 (seconds) for counting time between clicks of btns
@@ -60,7 +62,7 @@
 #define MAX_POSITIVE_NUMBER_LOCATION 40
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3 ///< Time in ms to check interface connection
+  3000 ///< Time in ms to check interface connection
 
 #if DOT_SPI
 #define config_MU_IT_04_10
@@ -199,6 +201,22 @@
 
 #define MAX_P_FLOOR_ID 10
 #define MIN_MINUS_FLOOR_ID 11
+
+#elif PROTOCOL_NKU && !PROTOCOL_UEL && !PROTOCOL_UKL && !PROTOCOL_ALPACA &&    \
+    !DEMO_MODE && !TEST_MODE && !PROTOCOL_UIM_6100
+
+#include "can.h"
+#include "nku.h"
+#include "protocol_selection.h"
+
+#define PROTOCOL_NAME "NKU"
+#define ADDR_ID_MIN 0
+#define MAX_POSITIVE_NUMBER_LOCATION 40
+#define ADDR_ID_LIMIT MAX_POSITIVE_NUMBER_LOCATION
+#define MAIN_CABIN_ID ADDR_ID_MIN
+#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
+  3000 ///< Time in ms to check interface connection
+#define BUFFER_SIZE_BYTES 8
 
 #else
 #error "Wrong configurations!"

@@ -80,4 +80,6 @@ void draw_string_on_matrix(char *str_symbols);
 
 void display_symbols_spi(char *matrix_string);
 
+char convert_int_to_char(uint8_t number);
+
 #endif /*__ DRAWING_H__ */

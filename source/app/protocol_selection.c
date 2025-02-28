@@ -51,6 +51,9 @@ void protocol_init() {
 #elif PROTOCOL_ALPACA
   MX_CAN_Init();
 
+#elif PROTOCOL_NKU
+  MX_CAN_Init();
+
 #endif
 }
 
@@ -60,12 +63,8 @@ void protocol_init() {
  * @retval None
  */
 void protocol_start() {
-#if !TEST_MODE && !DEMO_MODE
-  // TIM4_Stop();
-  // TIM4_Start(); // Timer for checking interface connection
-#endif
 
-#if PROTOCOL_UIM_6100
+#if PROTOCOL_UIM_6100 || PROTOCOL_NKU
 
   bool is_id_from_flash_valid = matrix_settings.addr_id >= ADDR_ID_MIN &&
                                 matrix_settings.addr_id <= ADDR_ID_LIMIT;
@@ -73,7 +72,7 @@ void protocol_start() {
   if (is_id_from_flash_valid) {
     start_can(&hcan, matrix_settings.addr_id);
   } else {
-    start_can(&hcan, UIM6100_MAIN_CABIN_CAN_ID);
+    start_can(&hcan, MAIN_CABIN_ID);
   }
 
 #elif PROTOCOL_UEL
@@ -103,6 +102,8 @@ void protocol_process_data() {
     process_data_pin();
 #elif PROTOCOL_ALPACA
     process_data_from_can();
+#elif PROTOCOL_NKU
+    process_data_nku();
 #endif
   } else {
 
@@ -115,7 +116,6 @@ void protocol_process_data() {
 #elif DOT_SPI
     display_symbols_spi("c--");
 #endif
-    // draw_string_on_matrix("c--");
   }
 }
 
@@ -127,14 +127,11 @@ void protocol_process_data() {
 void protocol_stop() {
   is_interface_connected = false;
 
-#if PROTOCOL_UIM_6100
+#if PROTOCOL_UIM_6100 || PROTOCOL_NKU
   stop_can(&hcan);
 #elif PROTOCOL_UEL
 
 #elif PROTOCOL_UKL
-
   stop_ukl_before_menu_mode();
 #endif
-
-  // TIM4_Stop();
 }

@@ -31,6 +31,7 @@
     "stm32f1xx_hal_conf.h": "c",
     "flash.h": "c",
     "conf.h": "c",
-    "cmath": "c"
+    "cmath": "c",
+    "nku.h": "c"
   }
 }

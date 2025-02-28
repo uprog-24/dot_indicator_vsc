@@ -23,12 +23,14 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
+#include "nku.h"
 #include "uim6100.h"
 
 msg_t msg = {0, 0, 0, 0};
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #define FILTER_11_BIT_ID_OFFSET 5 ///< Offset for Standard frame ID filter
 
@@ -36,29 +38,38 @@ msg_t msg = {0, 0, 0, 0};
 static CAN_RxHeaderTypeDef rx_header;
 
 /// Buffer for receiving data
-static uint8_t rx_data_can[6] = {
+static uint8_t rx_data_can[BUFFER_SIZE_BYTES] = {
     0x00,
 };
 
+static CAN_Data_Package_t last_received_package = {0};
+
 /// Flag to control is data received by CAN
 volatile bool is_data_received = false;
-
-// msg_t msg = {0, 0, 0, 0};
 
 /**
  * @brief  Handle Interrupt by receiving data after transmitting by CAN,
  *         setting is_data_received flag when data with StdId is received.
  *         Set the counter alive_cnt[0] to control interface connection (set
- * alive_cnt[1] and comparison in tim.c TIM4)
+ *         alive_cnt[1] and comparison in tim.c TIM4)
  * @param  hcan: Pointer to a CAN_HandleTypeDef structure
  * @retval None
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-  /// Index of byte_0 for extern in can.c
-  extern uint8_t byte_code_operation_0;
 
-  /// Index of byte_1 for extern in can.c
-  extern uint8_t byte_code_operation_1;
+#if PROTOCOL_NKU
+  if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header,
+                           last_received_package.rx_data_can) == HAL_OK) {
+
+    alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+    is_interface_connected = true;
+    is_data_received = true;
+
+    last_received_package.std_id = rx_header.StdId;
+    last_received_package.dlc = rx_header.DLC;
+    last_received_package.is_data_received = true;
+  }
+#endif
 
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
       HAL_OK) {
@@ -121,6 +132,22 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 /// Counter to control CAN errors
 volatile uint8_t cnt = 0;
 
+// Функция для получения последнего пакета данных
+CAN_Data_Package_t get_received_data_by_can(void) {
+  CAN_Data_Package_t package;
+
+  // if (last_received_package.is_data_received) {
+  //   package = last_received_package; // Копируем данные
+  //   last_received_package.is_data_received =
+  //       false; // Сбрасываем флаг после выдачи данных
+  // } else {
+  //   package.is_data_received =
+  //       false; // Если нет новых данных, вернуть пустую структуру
+  // }
+
+  return last_received_package;
+}
+
 /**
  * @brief  Handle Interrupt by CAN errors.
  * @param  hcan: Structure of CAN
@@ -153,6 +180,10 @@ void MX_CAN_Init(void) {
 #elif PROTOCOL_ALPACA
   hcan.Init.Prescaler = 16; // 125 kbit/s
   hcan.Init.Mode = CAN_MODE_LOOPBACK;
+
+#elif PROTOCOL_NKU
+  hcan.Init.Prescaler = 16; // 125 kbit/s
+  hcan.Init.Mode = CAN_MODE_NORMAL;
 #endif
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
@@ -168,7 +199,8 @@ void MX_CAN_Init(void) {
     Error_Handler();
   }
 
-#if TEST_MODE || PROTOCOL_ALPACA
+  /* Прием всех сообщений */
+#if TEST_MODE || PROTOCOL_ALPACA || PROTOCOL_NKU
   CAN_FilterTypeDef canFilterConfig;
 
   canFilterConfig.FilterBank = 0;
@@ -433,6 +465,10 @@ void CAN_TxData(uint32_t stdId) {
   }
 #endif
 }
+
+bool is_can_data_received() { return is_data_received; }
+
+void reset_value_data_received() { is_data_received = false; }
 
 uint8_t v = 0;
 /**
