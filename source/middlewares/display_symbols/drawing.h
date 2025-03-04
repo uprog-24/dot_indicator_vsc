@@ -82,4 +82,12 @@ void display_symbols_spi(char *matrix_string);
 
 char convert_int_to_char(uint8_t number);
 
+/**
+ * @brief  Display symbols on matrix (DEMO_MODE)
+ * @param  time_ms:     The time (ms) during which the symbols will be displayed
+ * @param  str_symbols: Pointer to the string to be displayed
+ * @retval None
+ */
+void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols);
+
 #endif /*__ DRAWING_H__ */

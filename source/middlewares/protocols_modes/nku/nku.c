@@ -1,5 +1,5 @@
 /**
- * @file uim6100.c
+ * @file nku.c
  */
 #include "nku.h"
 
@@ -8,7 +8,6 @@
 #include "drawing.h"
 #include "tim.h"
 
-#include "nku.h"
 #include <stdbool.h>
 
 #define ARROW_MASK                                                             \
@@ -44,16 +43,16 @@ typedef struct {
 } msg_nku_t;
 
 typedef enum {
-  PACKAGE_TYPE_1,
-  PACKAGE_TYPE_2,
-  PACKAGE_TYPE_3,
-  PACKAGE_TYPE_4,
-  PACKAGE_TYPE_5
+  MESSAGE_TYPE_1,
+  MESSAGE_TYPE_2,
+  MESSAGE_TYPE_3,
+  MESSAGE_TYPE_4,
+  MESSAGE_TYPE_5
 } package_type_t;
 
 typedef struct nku_parametrs {
   msg_nku_t rx_data_nku;
-  package_type_t package_type;
+  package_type_t message_type;
   bool is_package_received;
 } nku_parametrs_struct;
 
@@ -61,7 +60,7 @@ nku_parametrs_struct nku_parametrs = {.rx_data_nku =
                                           {
                                               0x00,
                                           },
-                                      .package_type = PACKAGE_TYPE_1,
+                                      .message_type = MESSAGE_TYPE_1,
                                       .is_package_received = false};
 
 /**
@@ -182,6 +181,7 @@ static const code_location_symbols_t
 static bool is_cabin_overload = false;
 
 static bool is_fire_danger = false;
+static bool is_btn_order = false;
 
 /// Structure for data that will be displayed on matrix
 static drawing_data_t drawing_data = {0, 0};
@@ -228,9 +228,9 @@ uint8_t third_symbol_code = 0;
 static uint8_t gong[2] = {
     0,
 };
-
+extern volatile buzzer_status_struct buzzer_status;
 static uint8_t bip_num = 0;
-static void setting_gong(msg_nku_t *rx_data_nku, uint8_t volume) {
+static void setting_gong(msg_nku_t *rx_data_nku, volume_t volume) {
   direction_nku_t direction = rx_data_nku->data7 & ARROW_MASK;
   uint16_t arrival = rx_data_nku->data4 & BIT_7_MASK;
 
@@ -242,44 +242,124 @@ static void setting_gong(msg_nku_t *rx_data_nku, uint8_t volume) {
     switch (direction) {
     case NKU_MOVE_UP:
       play_gong(1, GONG_BUZZER_FREQ, volume);
-      // bip_num = 1;
       break;
     case NKU_MOVE_DOWN:
       play_gong(2, GONG_BUZZER_FREQ, volume);
-      // bip_num = 2;
       break;
     case NKU_NO_MOVE:
       play_gong(3, GONG_BUZZER_FREQ, volume);
-      // bip_num = 3;
       break;
     default:
       // __NOP();
       // play_gong(3, GONG_BUZZER_FREQ, volume);
       break;
+
+      buzzer_status.current_sound = SOUND_GONG;
+      buzzer_status.is_gong_sound_playing = true;
     }
   }
   gong[1] = gong[0];
 }
 
-// msg_nku_t msg_nku = {0, 0, 0, 0};
+uint8_t cb = 0;
+static void setting_sounds_nku() {
+
+  /* Если беззвучный режим, то выходим из функции */
+  if (matrix_settings.volume == VOLUME_0) {
+    buzzer_status.current_sound = SOUND_NONE;
+    stop_buzzer_sound();
+    return;
+  }
+
+  switch (nku_parametrs.message_type) {
+  case MESSAGE_TYPE_1:
+
+    break;
+  case MESSAGE_TYPE_2:
+
+    break;
+  case MESSAGE_TYPE_3:
+
+    /* Гонг прибытия */
+    setting_gong(&nku_parametrs.rx_data_nku, matrix_settings.volume);
+
+    break;
+  case MESSAGE_TYPE_4:
+
+    is_fire_danger = nku_parametrs.rx_data_nku.data6 & FIRE_DANGER_MASK;
+    is_btn_order = nku_parametrs.rx_data_nku.data5 & BIT_7_MASK;
+
+    if (is_btn_order) {
+      /* Если бузер свободен (не отрабатывает другие типы звуков из
+       * перречисления типа sound_types_t), и не отрабатывается нажатие кнопки
+       * приказа, то озвучивает нажатие кнопки */
+      if (buzzer_status.current_sound == SOUND_NONE &&
+          !buzzer_status.is_button_touched_sound_playing) {
+        buzzer_status.is_button_touched_sound_playing = true;
+        buzzer_status.current_sound = SOUND_ORRDER_BUTTON;
+        play_gong(1, 1000, matrix_settings.volume);
+      }
+    }
+
+    if (is_fire_danger) {
+      if (buzzer_status.current_sound != SOUND_FIRE_SIREN) {
+        /* Выключаем все предыдущие звуки, у сигнала Пожарная опасность
+         * наивысший приоритет */
+        stop_buzzer_sound();
+        buzzer_status.current_sound = SOUND_FIRE_SIREN;
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+    }
+
+    if (!is_fire_danger && buzzer_status.current_sound == SOUND_FIRE_SIREN ||
+        buzzer_status.current_sound == SOUND_CABIN_OVERLOAD) {
+      stop_buzzer_sound();
+      buzzer_status.current_sound = SOUND_NONE;
+    }
+
+    break;
+  case MESSAGE_TYPE_5:
+    is_cabin_overload = nku_parametrs.rx_data_nku.data6 & BIT_6_MASK;
+
+    if (is_cabin_overload) {
+      if (buzzer_status.current_sound != SOUND_CABIN_OVERLOAD) {
+        cb++;
+        buzzer_status.current_sound = SOUND_CABIN_OVERLOAD;
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+    }
+
+    // Не проходит условие - стоп за счет is_fire_danger в MESSAGE_TYPE_4
+    if (!is_cabin_overload &&
+        buzzer_status.current_sound == SOUND_CABIN_OVERLOAD) {
+      stop_buzzer_sound();
+      buzzer_status.current_sound = SOUND_NONE;
+    }
+
+    break;
+
+  default:
+    break;
+  }
+}
 
 void process_data_nku() {
 
   if (is_can_data_received()) {
     reset_value_data_received();
 
-    CAN_Data_Package_t received_msg = get_received_data_by_can();
+    CAN_Data_Message_t *received_msg = get_received_data_by_can();
 
-    // Проверяем ID
-    switch (received_msg.std_id) {
+    // Проверяем ID сообщения
+    switch (received_msg->std_id) {
     case 0x506:
-      nku_parametrs.package_type = PACKAGE_TYPE_3;
+      nku_parametrs.message_type = MESSAGE_TYPE_3;
       break;
     case 0x508:
-      nku_parametrs.package_type = PACKAGE_TYPE_4;
+      nku_parametrs.message_type = MESSAGE_TYPE_4;
       break;
     case 0x50B:
-      nku_parametrs.package_type = PACKAGE_TYPE_5;
+      nku_parametrs.message_type = MESSAGE_TYPE_5;
       break;
 
     default:
@@ -288,40 +368,31 @@ void process_data_nku() {
 
     // Копируем 8 байт из массива received_msg.rx_data_can в структуру
     // nku_parametrs.rx_data_nku
-    memcpy(&nku_parametrs.rx_data_nku, received_msg.rx_data_can,
+    memcpy(&nku_parametrs.rx_data_nku, received_msg->rx_data_can,
            sizeof(msg_nku_t));
 
-    switch (nku_parametrs.package_type) {
-    case PACKAGE_TYPE_1:
+    /* Отображаем символы в зависимости от типа сообщения */
+    switch (nku_parametrs.message_type) {
+    case MESSAGE_TYPE_1:
 
       break;
-    case PACKAGE_TYPE_2:
+    case MESSAGE_TYPE_2:
 
       break;
-    case PACKAGE_TYPE_3:
+    case MESSAGE_TYPE_3:
       /* Индикация стрелки дисплея */
       transform_direction_to_common(nku_parametrs.rx_data_nku.data7 &
                                     ARROW_MASK);
       set_direction_symbol(matrix_string, drawing_data.direction);
 
-      /* Гонг прибытия */
-      setting_gong(&nku_parametrs.rx_data_nku, matrix_settings.volume);
-
       break;
-    case PACKAGE_TYPE_4:
+    case MESSAGE_TYPE_4:
       first_symbol_code = nku_parametrs.rx_data_nku.data5 & SYMBOL_MASK;
       second_symbol_code = nku_parametrs.rx_data_nku.data6 & SYMBOL_MASK;
       third_symbol_code = nku_parametrs.rx_data_nku.data7 & SYMBOL_MASK;
 
-      is_fire_danger = nku_parametrs.rx_data_nku.data6 & FIRE_DANGER_MASK;
-
-      if (is_fire_danger) {
-        matrix_string[MSB] = 'F';
-        matrix_string[LSB] = 'c';
-      } else
-
-          if (second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG ||
-              third_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG) {
+      if (second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG ||
+          third_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG) {
         if (second_symbol_code == SYMBOL_EMPTY) {
           matrix_string[MSB] = 'p';
           matrix_string[LSB] = 'c';
@@ -347,8 +418,16 @@ void process_data_nku() {
             matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
             special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
       }
+
+      /* Спец. символы */
+      is_fire_danger = nku_parametrs.rx_data_nku.data6 & FIRE_DANGER_MASK;
+      if (is_fire_danger) {
+        matrix_string[MSB] = 'F';
+        matrix_string[LSB] = 'c';
+      }
+
       break;
-    case PACKAGE_TYPE_5:
+    case MESSAGE_TYPE_5:
       is_cabin_overload = nku_parametrs.rx_data_nku.data6 & BIT_6_MASK;
 
       if (is_cabin_overload) {
@@ -356,11 +435,15 @@ void process_data_nku() {
         matrix_string[MSB] = 'K';
         matrix_string[LSB] = 'g';
       }
+
       break;
 
     default:
       break;
     }
+
+    /* Обрабатываем звуки */
+    setting_sounds_nku();
 
     // while new 8 data bytes are not received, draw str
     while (is_can_data_received() == false && is_interface_connected == true) {

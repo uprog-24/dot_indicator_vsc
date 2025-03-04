@@ -23,6 +23,20 @@ typedef enum {
   VOLUME_3 = 55 // 55
 } volume_t;
 
+typedef enum {
+  SOUND_NONE = 0,
+  SOUND_ORRDER_BUTTON,
+  SOUND_GONG,
+  SOUND_CABIN_OVERLOAD,
+  SOUND_FIRE_SIREN
+} sound_types_t;
+
+typedef struct {
+  sound_types_t current_sound;
+  bool is_gong_sound_playing;
+  bool is_button_touched_sound_playing;
+} buzzer_status_struct;
+
 /**
  * @brief Setting the state of an active buzzer.
  * @note  When state = TURN_ON - buzzer is turning on,
@@ -45,7 +59,7 @@ void set_passive_buzzer_melody(uint16_t *freq_buff, uint8_t buff_size);
  * @param  bip_frequency: Frequency bip
  * @retval None
  */
-void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume);
+void play_gong(uint8_t bip_counter, uint16_t bip_frequency, volume_t volume);
 
 /**
  * @brief  Play 1 bip for MATRIX_STATE_MENU (during selection of LEVEL_VOLUME)
@@ -55,4 +69,12 @@ void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume);
  */
 void play_bip_for_menu(bool *is_volume_displayed, volume_t volume);
 
-#endif /*__ BUTTON_H__ */
+void start_buzzer_sound();
+
+/**
+ * @brief  Остановка звука (PWM TIM2 и TIM1 для длительности бипов).
+ * @retval None
+ */
+void stop_buzzer_sound();
+
+#endif /*__ BUZZER_H__ */

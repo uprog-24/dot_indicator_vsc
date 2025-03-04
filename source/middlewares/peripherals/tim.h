@@ -96,14 +96,6 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume);
 void TIM2_Stop_bip();
 
 /**
- * @brief  Display symbols on matrix (DEMO_MODE)
- * @param  time_ms:     The time (ms) during which the symbols will be displayed
- * @param  str_symbols: Pointer to the string to be displayed
- * @retval None
- */
-void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols);
-
-/**
  * @brief  Start TIM1 CH1 Output Compare mode to control bip duration in ms
  * @param  None
  * @retval None

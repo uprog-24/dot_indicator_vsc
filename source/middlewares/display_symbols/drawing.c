@@ -224,8 +224,6 @@ void display_symbols_spi(char *matrix_string) {
  * @param  shift:     Shift by Y for animation of symbol movement
  * @retval None
  */
-#if 1
-
 extern volatile bool is_tim4_period_elapsed;
 void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
 
@@ -279,7 +277,6 @@ void draw_symbol_on_matrix(char symbol, uint8_t start_pos, uint8_t shift) {
     }
   }
 }
-#endif
 
 /**
  * @brief  Check type of start symbol, special: 'c', '>', '<', '+' or not
@@ -418,3 +415,23 @@ void draw_string_on_matrix(char *matrix_string) {
   }
 }
 #endif
+
+extern volatile bool is_start_indicator;
+/**
+ * @brief  Display symbols on matrix (DEMO_MODE)
+ * @param  time_ms:     The time (ms) during which the symbols will be displayed
+ * @param  str_symbols: Pointer to the string to be displayed
+ * @retval None
+ */
+void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
+  is_tim4_period_elapsed = false;
+  is_start_indicator = true;
+
+  while (is_start_indicator) {
+#if DOT_PIN
+    draw_string_on_matrix(str_symbols);
+#elif DOT_SPI
+    display_symbols_spi(str_symbols);
+#endif
+  }
+}

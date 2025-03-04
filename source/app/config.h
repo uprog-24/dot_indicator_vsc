@@ -63,6 +63,7 @@
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection
+#define BUFFER_SIZE_BYTES 6
 
 #if DOT_SPI
 #define config_MU_IT_04_10

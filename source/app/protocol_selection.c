@@ -5,7 +5,6 @@
 
 #include "config.h"
 #include "drawing.h"
-#include "tim.h"
 
 #define TIME_MS_FOR_PROTOCOL_NAME                                              \
   3000 ///< Time of TIM4 (ms) to display protocol's name when the power is

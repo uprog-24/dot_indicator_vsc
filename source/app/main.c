@@ -143,22 +143,16 @@ int main(void) {
   test_mode_start();
 #elif DEMO_MODE
   TIM3_Start(PRESCALER_FOR_US, 1000); // 1 мс
-  // TIM3_Start(PRESCALER_FOR_MS, 1); // 1 мс
+
   while (1) {
-#if DOT_PIN
-    // draw_symbol_on_matrix('2', 1, 0);
-    // draw_string_on_matrix(">24");
     demo_mode_start();
-#elif DOT_SPI
-    demo_mode_start();
-#endif
   }
 
 #else
 #include "conf.h"
 
 #if 1
-  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс, таймер для отображения символов
   // display_protocol_name(PROTOCOL_NAME);
   // display_protocol_name(PROJECT_VER);
 #endif
