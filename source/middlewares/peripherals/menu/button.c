@@ -134,7 +134,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @param  None
  * @retval None
  */
-void start_timer_menu() { TIM4_Start(); }
+void start_timer_menu() {
+  // TIM4_Start();
+}
 
 /**
  * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU

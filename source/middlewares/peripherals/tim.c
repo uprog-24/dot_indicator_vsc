@@ -247,6 +247,9 @@ volatile uint32_t time_since_last_press_sec = 0;
 /// Counter for elapsed time in seconds to check interface connection
 volatile uint32_t connection_sec_is_elapsed = 0;
 
+static volatile bool is_start_indicator = true; // Флаг 1 мс
+static uint16_t tim4_ms_counter = 0;
+
 /**
  * @brief  Handle Interrupt by TIM's period is elapsed,
  *         setting the state of the flags.
@@ -294,6 +297,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
   if (htim->Instance == TIM4) {
     is_tim4_period_elapsed = true;
+
+    if (is_start_indicator) {
+      tim4_ms_counter += 1;
+      if (tim4_ms_counter >= 3000) {
+        tim4_ms_counter = 0;
+        is_start_indicator = false;
+      }
+    }
 
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
 
@@ -775,20 +786,10 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
  */
 void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
   is_tim4_period_elapsed = false;
+  is_start_indicator = true;
 
-  uint16_t tim4_ms_counter = 0;
-
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
-
-  while (tim4_ms_counter < time_ms) {
-    HAL_TIM_Base_Start_IT(&htim4);
-    is_tim4_period_elapsed = false;
-    while (!is_tim4_period_elapsed) {
-      draw_string_on_matrix(str_symbols);
-    }
-    HAL_TIM_Base_Stop_IT(&htim4);
-    tim4_ms_counter += TIM4_PERIOD;
+  while (is_start_indicator) {
+    draw_string_on_matrix(str_symbols);
   }
 }
 
@@ -831,9 +832,14 @@ void TIM3_Stop() { HAL_TIM_Base_Stop_IT(&htim3); }
  * @param  None
  * @retval None
  */
-void TIM4_Start() {
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
+// void TIM4_Start() {
+//   __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
+//   __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
+//   HAL_TIM_Base_Start_IT(&htim4);
+// }
+void TIM4_Start(uint16_t prescaler, uint16_t period) {
+  __HAL_TIM_SET_PRESCALER(&htim4, prescaler);
+  __HAL_TIM_SET_AUTORELOAD(&htim4, period);
   HAL_TIM_Base_Start_IT(&htim4);
 }
 

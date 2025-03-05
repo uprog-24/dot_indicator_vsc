@@ -140,7 +140,8 @@ int main(void) {
 #else
 #include "conf.h"
 
-  TIM3_Start(PRESCALER_FOR_US, 1000); // 1 мс
+  // TIM3_Start(PRESCALER_FOR_US, 1000); // 1 мс
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
   display_protocol_name(PROTOCOL_NAME);
   display_protocol_name(PROJECT_VER);
 
@@ -166,7 +167,7 @@ int main(void) {
       switch (menu_state) {
       case MENU_STATE_OPEN:
         protocol_stop();
-        start_timer_menu();
+        // start_timer_menu();
         menu_state = MENU_STATE_WORKING;
         break;
 
@@ -175,7 +176,7 @@ int main(void) {
         break;
 
       case MENU_STATE_CLOSE:
-        stop_timer_menu();
+        // stop_timer_menu();
         overwrite_settings(&matrix_settings);
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;

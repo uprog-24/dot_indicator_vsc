@@ -121,7 +121,8 @@ void setting_symbols(
                     spec_symbols_buff_size);
 }
 
-extern volatile bool is_tim3_period_elapsed;
+// extern volatile bool is_tim3_period_elapsed;
+extern volatile bool is_tim4_period_elapsed;
 
 /**
  * @brief  Draw the symbol on matrix starting with start_pos in range
@@ -173,8 +174,8 @@ static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
    * Держим состояние строки с колонками, пока таймер не завершит
    * отсчет (1000 мкс)
    */
-  if (is_tim3_period_elapsed) {
-    is_tim3_period_elapsed = false;
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
 
     // Переходим к следующей строке
     current_row++;
@@ -263,13 +264,22 @@ static void draw_special_symbols(char *matrix_string) {
   } else if (matrix_string[DIRECTION] ==
              'c') { // stop floor c10..c99 and c-1..c-9
 
+    // draw DIRECTION symbol
     draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+
+    // draw MSB and LSB symbols
     if (matrix_string[MSB] == '1' || matrix_string[MSB] == 'I') {
       draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
       draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
     } else if (matrix_string[MSB] != '-') {
       draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      // draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      // "cKg" перегруз
+      if (matrix_string[MSB] == 'K' && matrix_string[LSB] == 'g') {
+        draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
+      } else {
+        draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      }
     }
 
     if (matrix_string[MSB] == '-' && matrix_string[LSB] != '-') {

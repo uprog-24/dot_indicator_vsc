@@ -61,8 +61,8 @@ void protocol_init() {
  */
 void protocol_start() {
 #if !TEST_MODE && !DEMO_MODE
-  TIM4_Stop();
-  TIM4_Start(); // Timer for checking interface connection
+  // TIM4_Stop();
+  // TIM4_Start(); // Timer for checking interface connection
 #endif
 
 #if PROTOCOL_UIM_6100
@@ -126,5 +126,5 @@ void protocol_stop() {
   stop_ukl_before_menu_mode();
 #endif
 
-  TIM4_Stop();
+  // TIM4_Stop();
 }

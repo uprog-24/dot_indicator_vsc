@@ -116,7 +116,7 @@ void TIM1_Start();
  * @param  None
  * @retval None
  */
-void TIM4_Start();
+void TIM4_Start(uint16_t prescaler, uint16_t period);
 
 /**
  * @brief  Stop TIM4.

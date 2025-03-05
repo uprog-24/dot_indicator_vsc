@@ -14,8 +14,9 @@
 /* Select protocol, demo/test mode */
 
 #define PERIOD_SEC_FOR_SETTINGS                                                \
-  20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
-     ///< SETTINGS mode of matrix
+  20000 ///< Period of TIM4 (seconds) for counting time between clicks of btns
+        ///< in
+        ///< SETTINGS mode of matrix
 
 /* Select protocol, demo/test mode */
 #define TEST_MODE 0
@@ -24,10 +25,6 @@
 #define PROTOCOL_UEL 0
 #define PROTOCOL_UKL 0
 #define PROTOCOL_ALPACA 0
-
-#define PERIOD_SEC_FOR_SETTINGS                                                \
-  20 ///< Period of TIM4 (seconds) for counting time between clicks of btns in
-     ///< SETTINGS mode of matrix
 
 /* Protocol UEL (UART) */
 #if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
@@ -59,7 +56,7 @@
 #define MAX_POSITIVE_NUMBER_LOCATION 40
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3 ///< Time in ms to check interface connection
+  3000 ///< Time in ms to check interface connection
 
 /* DEMO_MODE */
 #elif DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&     \

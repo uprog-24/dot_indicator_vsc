@@ -61,7 +61,7 @@ void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume) {
 void play_bip_for_menu(bool *is_volume_displayed, volume_t volume) {
   if (*is_volume_displayed == false) {
     *is_volume_displayed = true;
-    // play_gong(3, GONG_BUZZER_FREQ, volume);
+    stop_buzzer_sound();
     if (volume != VOLUME_0) {
       play_gong(3, 1000, volume);
     }
