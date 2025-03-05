@@ -7,11 +7,16 @@
 
 #include "main.h"
 #include "test_Buzzer.h"
-// #include "tim.h"
 
 #include <stdint.h>
 
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
+
+#define TIMER_HANDLE htim2
+#define TIMER_CHANNEL TIM_CHANNEL_2
 
 // Ocatve_3 Frequencies (C3->B3)
 uint32_t OctaveSmall[NOTES_NUMBER] = {131, 139, 147, 155, 165, 175,
@@ -38,7 +43,7 @@ uint8_t NoteIndex = 0;
 void Tone(uint32_t Frequency, uint32_t Duration);
 void noTone();
 
-void Test_BuzzerStart(void) { HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2); }
+void Test_BuzzerStart() { HAL_TIM_PWM_Start(&TIMER_HANDLE, TIMER_CHANNEL); }
 
 #define ARRAY_SIZE 4
 uint8_t Array[ARRAY_SIZE] = {0, 64, 128, 255};
@@ -352,6 +357,7 @@ void Test_CCR_Gdiese(void) {
   HAL_Delay(2000);
 }
 
+#if 0
 void MX_TIM2_Init_1kHz(void) {
 
   /* USER CODE BEGIN TIM2_Init 0 */
@@ -398,6 +404,7 @@ void MX_TIM2_Init_1kHz(void) {
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
 }
+#endif
 
 void MX_TIM2_Init_1uS(void) {
 
@@ -409,41 +416,47 @@ void MX_TIM2_Init_1uS(void) {
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
-  /* USER CODE BEGIN TIM2_Init 1 */
+/* USER CODE BEGIN TIM2_Init 1 */
 
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 64 - 1; // freq tim = 1 000 000
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 65535;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
+/* USER CODE END TIM2_Init 1 */
+#if DEMO_MODE
+  TIMER_HANDLE.Instance = TIM1;
+#else
+  TIMER_HANDLE.Instance = TIM2;
+#endif
+  TIMER_HANDLE.Init.Prescaler = 64 - 1; // freq tim = 1 000 000
+  TIMER_HANDLE.Init.CounterMode = TIM_COUNTERMODE_UP;
+  TIMER_HANDLE.Init.Period = 65535;
+  TIMER_HANDLE.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  TIMER_HANDLE.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&TIMER_HANDLE) != HAL_OK) {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
+  if (HAL_TIM_ConfigClockSource(&TIMER_HANDLE, &sClockSourceConfig) != HAL_OK) {
     Error_Handler();
   }
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
+  if (HAL_TIM_PWM_Init(&TIMER_HANDLE) != HAL_OK) {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+  if (HAL_TIMEx_MasterConfigSynchronization(&TIMER_HANDLE, &sMasterConfig) !=
+      HAL_OK) {
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) {
+  if (HAL_TIM_PWM_ConfigChannel(&TIMER_HANDLE, &sConfigOC, TIMER_CHANNEL) !=
+      HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-  HAL_TIM_MspPostInit(&htim2);
+  HAL_TIM_MspPostInit(&TIMER_HANDLE);
 }
 
 struct note_and_duration_t {

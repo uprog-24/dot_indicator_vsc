@@ -114,9 +114,11 @@ int main(void) {
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  // MX_TIM2_Init();
+// MX_TIM2_Init();
+#if !DEMO_MODE
   MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
+  // Test_BuzzerStart();
+#endif
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM1_Init();
@@ -133,8 +135,12 @@ int main(void) {
 #elif DEMO_MODE
 #include "test_Buzzer.h"
 
+  MX_TIM2_Init_1uS();
+  // Test_BuzzerStart();
+  // play_gong(3, 1000, VOLUME_3);
+  TIM2_Start_bip(1000, VOLUME_3);
   while (1) {
-    demo_mode_start();
+    // demo_mode_start();
   }
 
 #else

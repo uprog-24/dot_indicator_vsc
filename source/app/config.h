@@ -20,7 +20,7 @@
 
 /* Select protocol, demo/test mode */
 #define TEST_MODE 0
-#define DEMO_MODE 0
+#define DEMO_MODE 0 // TIM1 CH3
 #define PROTOCOL_UIM_6100 1
 #define PROTOCOL_UEL 0
 #define PROTOCOL_UKL 0
