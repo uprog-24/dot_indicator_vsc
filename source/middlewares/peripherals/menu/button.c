@@ -237,7 +237,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @param  None
  * @retval None
  */
-void start_timer_menu() { TIM4_Start(); }
+void start_timer_menu() {
+  // TIM4_Start();
+}
 
 /**
  * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU.
@@ -478,10 +480,24 @@ void press_button() {
 
         switch (level_volume) {
         case 0:
-          display_symbols_spi("dcc"); // VOLUME_0 - нет звука
+          display_symbols_spi(LEVEL_VOLUME_0);
+          play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
+          is_level_volume_3_displayed = false;
           break;
         case 1:
-          display_symbols_spi("Zcc"); // VOLUME_1 - есть звук
+          display_symbols_spi(LEVEL_VOLUME_1);
+          play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
+          is_level_volume_0_displayed = false;
+          break;
+        case 2:
+          display_symbols_spi(LEVEL_VOLUME_2);
+          play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
+          is_level_volume_1_displayed = false;
+          break;
+        case 3:
+          display_symbols_spi(LEVEL_VOLUME_3);
+          play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
+          is_level_volume_2_displayed = false;
           break;
         }
       }
@@ -495,7 +511,7 @@ void press_button() {
       }
 
       level_volume++;
-      if (level_volume > 1) {
+      if (level_volume > VOLUME_LEVEL_LIMIT) {
         level_volume = 0;
       }
 

@@ -26,68 +26,35 @@
 #include "drawing.h"
 #include "ukl.h"
 
-#define TIM4_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM4
-#define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec
-#define DISPLAY_STR_DURING_MS                                                  \
-  2000 ///< Time in ms to display string on matrix (TEST_MODE)
-
-#if DOT_PIN
-#define BIP_OFFSET_MS 0
-#elif DOT_SPI
-#define BIP_OFFSET_MS 200
+/**
+ * @brief  Запуск ШИМ для бузера
+ * @retval None
+ */
+static void buzzer_start() {
+#if DOT_SPI
+  HAL_TIM_PWM_Start_IT(&htim1, TIM_CHANNEL_3);
+#elif DOT_PIN
+  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
 #endif
-
-/**
- * @brief  Get prescaler for TIM2 (PWM) by current frequency.
- * @note   Prescaler = tim_freq / (tim_period_ARR * buzz_signal_freq)
- * @param  frequency: Number between 1..65535
- * @retval prescaler
- */
-static uint16_t TIM2_get_prescaler_frequency(uint16_t frequency) {
-  if (frequency == 0)
-    return 0;
-  return ((TIM2_FREQ / (TIM2_PERIOD * frequency)) - 1);
 }
 
 /**
- * @brief  Set buzzer volume using PWM duty cycle (0 to 100 percent)
- * @param  volume: Volume level percentage (0 to 100)
+ * @brief  Turn on the sound of buzzer.
+ * @note   Set frequency and volume for sound of buzzer.
+ * @param  frequency: Number between 1..65535.
+ * @param  volume: Level of volume (VOLUME_1, VOLUME_2, VOLUME_3).
  * @retval None
  */
-static void TIM2_Set_volume(uint8_t volume) {
-  if (volume > 90) {
-    volume = 90;
-  }
+void start_buzzer_sound(uint16_t frequency, uint8_t volume) {
 
-  // uint32_t pulse = (volume * TIM2_PERIOD) / 100;
-  uint32_t pulse = (volume * TIM2->ARR) / 100;
-
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pulse);
-  // TIM2->CCR2 = pulse;
-}
-
-/**
- * @brief  Start PWM TIM2 for buzzer
- * @retval None
- */
-static void buzzer_start() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
-
-/**
- * @brief  Set frequency for sound of buzzer (turning on buzzer using TIM2)
- * @param  frequency: Number between 1..65535
- * @retval None
- */
-void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
-
-#if DOT_PIN
-
-#if 1
-  buzzer_start();
-  // uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
-  // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
-  // TIM2_Set_volume(volume);
-  // __HAL_TIM_SET_PRESCALER(&htim2, 64 - 1);
+  /* Запуск ШИМ для бузера, установка регистра переполнения (периода) */
+#if DOT_SPI
+  HAL_TIM_PWM_Start_IT(&htim1, TIM_CHANNEL_3);
+  TIM1->ARR = (1000000UL / frequency) - 1;
+#elif DOT_PIN
+  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
   TIM2->ARR = (1000000UL / frequency) - 1;
+#endif
 
   float k = 1.0;
 
@@ -99,7 +66,7 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
       break;
 
     case 1000:
-      k = 1.0; // 0.85;
+      k = 1.0;
       break;
 
     case 900:
@@ -133,22 +100,6 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
     default:
       break;
     }
-    // switch (frequency) {
-    // case 1000:
-    //   k = 1.0;
-    //   break;
-
-    // case 900:
-    //   k = 1.0;
-    //   break;
-
-    // case 800:
-    //   k = 0.8;
-    //   break;
-
-    // default:
-    //   break;
-    // }
 
     break;
 
@@ -169,22 +120,6 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
     default:
       break;
     }
-    // switch (frequency) {
-    // case 1000:
-    //   k = 1.0;
-    //   break;
-
-    // case 900:
-    //   k = 1.3;
-    //   break;
-
-    // case 800:
-    //   k = 1.9;
-    //   break;
-
-    // default:
-    //   break;
-    // }
 
     break;
 
@@ -193,51 +128,15 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
     break;
   }
 
-#if 0
-  if (frequency == 1319) {
-    TIM2->CCR2 = ((TIM2->ARR / 100) * volume * 1.7);
-  } else if (frequency == 900) {
-    TIM2->CCR2 = ((TIM2->ARR / 100) * volume * 1.7);
-  } else {
-    TIM2->CCR2 = ((TIM2->ARR / 100) * volume); // 75 73 70 3
-                                               // TIM2_Set_volume(volume);
-  }
-
-#endif
+#if DOT_SPI
+  TIM1->CCR3 = ((TIM1->ARR / 100) * volume * k);
+#elif DOT_PIN
   TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
-  // buzzer_start();
-#endif
-
-#elif DOT_SPI
-  set_active_buzzer_state(TURN_ON);
-#endif
-}
-
-/**
- * @brief  Stop buzzer PWM (TIM2)
- * @param  None
- * @retval None
- */
-static void TIM2_Stop_PWM() { HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2); }
-
-/**
- * @brief  Turn off the sound of buzzer.
- * @note   Stop bip using prescaler of TIM2
- * @retval None
- */
-void TIM2_Stop_bip() {
-  uint16_t prescaler = 0;
-  // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
-
-#if DOT_PIN
-  TIM2_Stop_PWM();
-#elif DOT_SPI
-  set_active_buzzer_state(TURN_OFF);
 #endif
 }
 
 /// TIM1 counter to control elapsed time in ms for bips of gong
-volatile uint32_t tim1_elapsed_ms = 0;
+volatile uint32_t sound_duration_ms = 0;
 
 /**
  * @brief  Stop TIM1
@@ -246,7 +145,7 @@ volatile uint32_t tim1_elapsed_ms = 0;
  * @retval None
  */
 void TIM1_Stop() {
-  tim1_elapsed_ms = 0;
+  sound_duration_ms = 0;
   HAL_TIM_Base_Stop_IT(&htim1);
   HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
 }
@@ -265,6 +164,21 @@ volatile uint32_t time_since_last_press_sec = 0;
 
 /// Counter for elapsed time in seconds to check interface connection
 volatile uint32_t connection_sec_is_elapsed = 0;
+
+/// Value of bip frequency for HAL_TIM_OC_DelayElapsedCallback
+static uint16_t _bip_freq = 0;
+
+/// Value of bip counter for HAL_TIM_OC_DelayElapsedCallback
+static uint8_t _bip_counter = 0;
+
+/// Value of bip duration for HAL_TIM_OC_DelayElapsedCallback
+static uint32_t _bip_duration_ms = 0;
+
+/// Value of bip volume for HAL_TIM_OC_DelayElapsedCallback
+static uint16_t _bip_volume = 0;
+
+static volatile bool is_start_indicator = true; // Флаг 1 мс
+static uint16_t tim4_ms_counter = 0;
 
 /**
  * @brief  Handle Interrupt by TIM's period is elapsed,
@@ -326,6 +240,53 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM4) {
     is_tim4_period_elapsed = true;
 
+    if (is_start_indicator) {
+      tim4_ms_counter += 1;
+      if (tim4_ms_counter >= 3000) {
+        tim4_ms_counter = 0;
+        is_start_indicator = false;
+      }
+    }
+
+#if DOT_SPI || DOT_PIN
+
+    /* Управление продолжительностью тонов гонга */
+    if (_bip_counter != 0) {
+
+      sound_duration_ms++;
+
+      if (sound_duration_ms == _bip_duration_ms) {
+
+        /* Включаем 2-ой бип */
+        start_buzzer_sound(900, _bip_volume);
+
+        /* Выключаем гонг, если кол-во бипов равно 1 */
+        if (_bip_counter == 1) {
+          stop_buzzer_sound();
+        }
+      }
+
+      if (sound_duration_ms == 2 * _bip_duration_ms) {
+
+        /* Включаем 3-ий бип */
+        start_buzzer_sound(800, _bip_volume);
+
+        /* Выключаем гонг, если кол-во бипов равно 2 */
+        if (_bip_counter == 2) {
+          stop_buzzer_sound();
+        }
+      }
+
+      if (sound_duration_ms == 3 * _bip_duration_ms) { // stop bip 3
+
+        /* Выключаем гонг, если кол-во бипов равно 3 */
+        if (_bip_counter == 3) {
+          stop_buzzer_sound();
+        }
+      }
+    }
+#endif
+
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
 
     if (matrix_state == MATRIX_STATE_WORKING) {
@@ -363,30 +324,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 }
 
-/// Value of bip frequency for HAL_TIM_OC_DelayElapsedCallback
-static uint16_t _bip_freq = 0;
-
-/// Value of bip counter for HAL_TIM_OC_DelayElapsedCallback
-static uint8_t _bip_counter = 0;
-
-/// Value of bip duration for HAL_TIM_OC_DelayElapsedCallback
-static uint32_t _bip_duration_ms = 0;
-
-/// Value of bip volume for HAL_TIM_OC_DelayElapsedCallback
-static uint16_t _bip_volume = 0;
-
 /**
- * @brief  Stop sound (PWM TIM2 and TIM1 for durations of bips)
- * @param  None
+ * @brief  Turn off the sound of buzzer.
  * @retval None
  */
 void stop_buzzer_sound() {
-  TIM1_Stop();
+  /* Выключаем ШИМ */
 #if DOT_PIN
-  TIM2_Stop_bip();
+  HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2);
 #elif DOT_SPI
-  set_active_buzzer_state(TURN_OFF);
+  HAL_TIM_PWM_Stop_IT(&htim1, TIM_CHANNEL_3);
 #endif
+  /* Сбрасываем счетчики для гонга:
+   * счетчик продолжительности тона и
+   * счетчик кол-ва тонов */
+  sound_duration_ms = 0;
   _bip_counter = 0;
 }
 
@@ -399,20 +351,21 @@ void stop_buzzer_sound() {
 extern matrix_state_t matrix_state;
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-
+#if 0
+#if DOT_PIN
   if (htim->Instance == TIM1) {
 
-    tim1_elapsed_ms++;
+    sound_duration_ms++;
 
-    // if (tim1_elapsed_ms == 1056 / 2) { // stop bip 1
-    if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
+    // if (sound_duration_ms == 1056 / 2) { // stop bip 1
+    if (sound_duration_ms == _bip_duration_ms) { // stop bip 1
 
       // TIM2_Stop_bip();
-      // TIM2_Start_bip(900, _bip_volume);
+      // start_buzzer_sound(900, _bip_volume);
 
 #if DOT_PIN
       TIM2_Stop_bip();
-      TIM2_Start_bip(900, _bip_volume);
+      start_buzzer_sound(900, _bip_volume);
 #elif DOT_SPI
       set_active_buzzer_state(TURN_OFF);
 #endif
@@ -423,21 +376,21 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
 #if DOT_SPI
-    if (tim1_elapsed_ms == BIP_OFFSET_MS + _bip_duration_ms) { // start bip 2
-      // TIM2_Start_bip(1200, _bip_volume);             // 1200      // 1319
+    if (sound_duration_ms == BIP_OFFSET_MS + _bip_duration_ms) { // start bip 2
+      // start_buzzer_sound(1200, _bip_volume);             // 1200      // 1319
       set_active_buzzer_state(TURN_ON);
     }
 #endif
-    //  if (tim1_elapsed_ms == 100 + 2 * _bip_duration_ms) { // stop bip 2
-    // if (tim1_elapsed_ms == (1048 + 1056) / 2) { // stop bip 2
-    if (tim1_elapsed_ms == BIP_OFFSET_MS + 2 * _bip_duration_ms) { // stop bip 2
+    //  if (sound_duration_ms == 100 + 2 * _bip_duration_ms) { // stop bip 2
+    // if (sound_duration_ms == (1048 + 1056) / 2) { // stop bip 2
+    if (sound_duration_ms == BIP_OFFSET_MS + 2 * _bip_duration_ms) { // stop bip 2
 
       // TIM2_Stop_bip();
-      // TIM2_Start_bip(800, _bip_volume);
+      // start_buzzer_sound(800, _bip_volume);
 
 #if DOT_PIN
       TIM2_Stop_bip();
-      TIM2_Start_bip(800, _bip_volume);
+      start_buzzer_sound(800, _bip_volume);
 
 #elif DOT_SPI
       set_active_buzzer_state(TURN_OFF);
@@ -448,15 +401,15 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 #if DOT_SPI
-    if (tim1_elapsed_ms ==
+    if (sound_duration_ms ==
         2 * BIP_OFFSET_MS + 2 * _bip_duration_ms) { // start bip 3
-      // TIM2_Start_bip(1300, _bip_volume);
+      // start_buzzer_sound(1300, _bip_volume);
       set_active_buzzer_state(TURN_ON);
     }
 #endif
-    //  if (tim1_elapsed_ms == 200 + 3 * _bip_duration_ms) { // stop bip 3
-    // if (tim1_elapsed_ms == (1048 + 1056 + 882) / 2) { // stop bip 3
-    if (tim1_elapsed_ms ==
+    //  if (sound_duration_ms == 200 + 3 * _bip_duration_ms) { // stop bip 3
+    // if (sound_duration_ms == (1048 + 1056 + 882) / 2) { // stop bip 3
+    if (sound_duration_ms ==
         2 * BIP_OFFSET_MS + 3 * _bip_duration_ms) { // stop bip 3
                                                     // TIM2_Stop_bip();
 
@@ -472,6 +425,9 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
   }
+#endif
+
+#endif
 }
 /* USER CODE END 0 */
 
@@ -707,6 +663,7 @@ void MX_TIM2_Init_1uS(void) {
 }
 
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *tim_baseHandle) {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   if (tim_baseHandle->Instance == TIM1) {
     /* USER CODE BEGIN TIM1_MspInit 0 */
 
@@ -763,7 +720,19 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *tim_baseHandle) {
 }
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *timHandle) {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if (timHandle->Instance == TIM2) {
+
+  if (timHandle->Instance == TIM1) {
+    /* Включаем тактирование GPIOA */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    /* Настройка PA10 (TIM1_CH3) в режим альтернативной функции */
+    GPIO_InitStruct.Pin = GPIO_PIN_10;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  } else
+
+      if (timHandle->Instance == TIM2) {
     /* USER CODE BEGIN TIM2_MspPostInit 0 */
 
     /* USER CODE END TIM2_MspPostInit 0 */
@@ -887,13 +856,8 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
   _bip_duration_ms = bip_duration_ms;
   _bip_volume = volume;
 
-  // start bip 1
-  //	is_gong_play = true;
-
-#if DOT_PIN
-  buzzer_start();
-#endif
-  TIM2_Start_bip(_bip_freq, volume);
+  /* Включаем 1-ый бип */
+  start_buzzer_sound(_bip_freq, volume);
 }
 
 /**
@@ -904,24 +868,14 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
  */
 void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
   is_tim4_period_elapsed = false;
+  is_start_indicator = true;
 
-  uint16_t tim4_ms_counter = 0;
-
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
-
-  while (tim4_ms_counter < time_ms) {
-    HAL_TIM_Base_Start_IT(&htim4);
-    is_tim4_period_elapsed = false;
-    while (!is_tim4_period_elapsed) {
+  while (is_start_indicator) {
 #if DOT_PIN
-      draw_string_on_matrix(str_symbols);
+    draw_string_on_matrix(str_symbols);
 #elif DOT_SPI
-      display_symbols_spi(str_symbols);
+    display_symbols_spi(str_symbols);
 #endif
-    }
-    HAL_TIM_Base_Stop_IT(&htim4);
-    tim4_ms_counter += TIM4_PERIOD;
   }
 }
 
@@ -964,9 +918,9 @@ void TIM3_Stop() { HAL_TIM_Base_Stop_IT(&htim3); }
  * @param  None
  * @retval None
  */
-void TIM4_Start() {
-  __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
+void TIM4_Start(uint16_t prescaler, uint16_t period) {
+  __HAL_TIM_SET_PRESCALER(&htim4, prescaler);
+  __HAL_TIM_SET_AUTORELOAD(&htim4, period);
   HAL_TIM_Base_Start_IT(&htim4);
 }
 

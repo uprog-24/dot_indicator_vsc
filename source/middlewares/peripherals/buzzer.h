@@ -23,6 +23,14 @@ typedef enum {
   VOLUME_3 = 55 // 55
 } volume_t;
 
+
+/**
+ * @brief  Stop sound (PWM TIM2 and TIM1 for durations of bips)
+ * @param  None
+ * @retval None
+ */
+void stop_buzzer_sound();
+
 /**
  * @brief Setting the state of an active buzzer.
  * @note  When state = TURN_ON - buzzer is turning on,

@@ -6,14 +6,26 @@
 #include "tim.h"
 
 #if DOT_PIN
-#define BIP_DURATION_MS 500 ///< Duration of 1 bip for gong
+#define BIP_DURATION_MS 1000 ///< Duration of 1 bip for gong
 
 #elif DOT_SPI
-#define BIP_DURATION_MS 350 ///< Duration of 1 bip for gong
+#define BIP_DURATION_MS 1000 ///< Duration of 1 bip for gong
 
 #endif
 
 #define GONG_BUZZER_FREQ 2500 ///< Frequency for buzzer's sound
+
+/// Value of bip frequency for HAL_TIM_OC_DelayElapsedCallback
+static uint16_t _bip_freq = 0;
+
+/// Value of bip counter for HAL_TIM_OC_DelayElapsedCallback
+static uint8_t _bip_counter = 0;
+
+/// Value of bip duration for HAL_TIM_OC_DelayElapsedCallback
+static uint32_t _bip_duration_ms = 0;
+
+/// Value of bip volume for HAL_TIM_OC_DelayElapsedCallback
+static uint16_t _bip_volume = 0;
 
 /**
  * @brief Setting the state of an active buzzer.
@@ -41,10 +53,10 @@ void set_active_buzzer_state(states_t state) {
  */
 void set_passive_buzzer_melody(uint16_t *freq_buff, uint8_t buff_size) {
   for (uint8_t ind_freq = 0; ind_freq < buff_size; ind_freq++) {
-    TIM2_Start_bip(freq_buff[ind_freq], VOLUME_1);
+    start_buzzer_sound(freq_buff[ind_freq], VOLUME_1);
     TIM3_Delay_ms(250);
   }
-  TIM2_Stop_bip();
+  stop_buzzer_sound();
 }
 
 /**
@@ -55,7 +67,6 @@ void set_passive_buzzer_melody(uint16_t *freq_buff, uint8_t buff_size) {
  * @retval None
  */
 void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume) {
-  TIM1_Start();
   TIM2_Set_pwm_sound(bip_frequency, bip_counter, BIP_DURATION_MS, volume);
 }
 
@@ -68,7 +79,7 @@ void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume) {
 void play_bip_for_menu(bool *is_volume_displayed, volume_t volume) {
   if (*is_volume_displayed == false) {
     *is_volume_displayed = true;
-    // play_gong(3, GONG_BUZZER_FREQ, volume);
+    stop_buzzer_sound();
     if (volume != VOLUME_0) {
       play_gong(3, 1000, volume);
     }

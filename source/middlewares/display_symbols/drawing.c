@@ -209,6 +209,8 @@ void display_symbols_spi(char *matrix_string) {
 
 #else
 
+extern volatile bool is_tim4_period_elapsed;
+
 /**
  * @brief  Draw the symbol on matrix starting with start_pos in range
  *         [MIN_POSITION_COLUMN, MAX_POSITION_COLUMN]
@@ -226,52 +228,55 @@ void display_symbols_spi(char *matrix_string) {
  */
 static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
                                   uint8_t shift) {
-  uint8_t *cur_symbol_code = NULL;
 
-  cur_symbol_code = get_symbol_code(symbol);
-
-  if (cur_symbol_code == NULL) {
+  uint8_t *cur_symbol_code = get_symbol_code(symbol);
+  if (cur_symbol_code == NULL)
     return;
+
+  static uint8_t current_row = 0;
+
+  // Включаем текущую строку
+  set_row_state(current_row, TURN_ON);
+
+  // Получаем значения для колонок текущей строки
+  uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
+  if (current_row + shift < ROWS) {
+    convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
+                                   binary_symbol_code_row,
+                                   BINARY_SYMBOL_CODE_SIZE);
+  } else {
+    memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
   }
 
-  for (uint8_t current_row = 0; current_row < ROWS; current_row++) {
-    for (uint8_t row = 0; row < ROWS; row++) {
-      if (row == current_row) {
-        set_row_state(current_row, TURN_ON);
-      } else {
-        set_row_state(row, TURN_OFF);
-      }
+  // Включаем колонку, если бит = 1
+  for (uint8_t i = 0; i < 7; i++) {
+    uint8_t current_col = BINARY_SYMBOL_CODE_SIZE - i;
+    if (binary_symbol_code_row[current_col] == 1) {
+      set_col_state(start_pos + i, TURN_ON);
     }
+  }
 
-    uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
-    uint8_t num_bit = BINARY_SYMBOL_CODE_SIZE;
+  /**
+   * Держим состояние строки с колонками, пока таймер не завершит
+   * отсчет (1000 мкс)
+   */
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
 
-    if (current_row + shift < ROWS) {
-      convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
-                                     binary_symbol_code_row,
-                                     BINARY_SYMBOL_CODE_SIZE);
-    } else {
-      memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
+    // Переходим к следующей строке
+    current_row++;
+
+    // Выключаем предыдущую строку
+    if (current_row) {
+      set_row_state(current_row - 1, TURN_OFF);
     }
-
-    uint8_t start_col = start_pos;
-    if (start_col <= MAX_POSITION_COLUMN) {
-      uint8_t end_col = start_col + FONT_WIDTH;
-      for (uint8_t col = start_col; col < end_col; col++) {
-        /* from index 6 to 6 - FONT_WIDTH = 6 - 5 = 1. Symbols from symbols[] in
-         font.c */
-        if (binary_symbol_code_row[num_bit] == 1) {
-          set_col_state(col, TURN_ON);
-        } else {
-          set_col_state(col, TURN_OFF);
-        }
-        num_bit--;
-      }
-    }
-    // set_all_cols_state(TURN_OFF);
-    set_all_rows_state(TURN_OFF);
+    // Выключаем все колонки
     set_all_cols_state(TURN_OFF);
-    // set_full_matrix_state(TURN_OFF);
+
+    // Завершаем проход по строкам
+    if (current_row >= ROWS) {
+      current_row = 0;
+    }
   }
 }
 
@@ -351,7 +356,12 @@ static void draw_special_symbols(char *matrix_string) {
       draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
     } else if (matrix_string[MSB] != '-') {
       draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      // "cKg" перегруз
+      if (matrix_string[MSB] == 'K' && matrix_string[LSB] == 'g') {
+        draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
+      } else {
+        draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      }
     }
 
     if (matrix_string[MSB] == '-' && matrix_string[LSB] != '-') {

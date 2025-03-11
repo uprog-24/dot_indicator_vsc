@@ -8,7 +8,6 @@
 #include "drawing.h"
 #include "tim.h"
 
-
 #include "string.h"
 
 #define NINE_BITS_MASK 0x1FF    ///< Mask for 9 bits with data by UEL protocol
@@ -165,7 +164,7 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       if ((code_msg_byte_w_1 & 0b00111111) == VOICE_CABIN_OVERLOAD) {
         is_cabin_overload = true;
 #if 1
-        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
+        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
 #endif
       }
       // next received bytes by CAN
@@ -179,7 +178,7 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
 #if 1
       if (matrix_settings.volume != VOLUME_0 &&
           matrix_settings.addr_id == MAIN_CABIN_ID) {
-        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
       }
 #endif
       is_cabin_overload_sound = true;
@@ -197,7 +196,7 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
 #if 1
         if (matrix_settings.volume != VOLUME_0 &&
             matrix_settings.addr_id == MAIN_CABIN_ID) {
-          TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+          start_buzzer_sound(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
         }
 //          play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
 #endif

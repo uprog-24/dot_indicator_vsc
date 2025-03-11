@@ -82,18 +82,13 @@ void TIM3_Delay_ms(uint16_t delay);
 void TIM3_Delay_us(uint16_t delay);
 
 /**
- * @brief  Set frequency for sound of buzzer (turning on buzzer using TIM2)
- * @param  frequency: Number between 1..65535
+ * @brief  Turn on the sound of buzzer.
+ * @note   Set frequency and volume for sound of buzzer.
+ * @param  frequency: Number between 1..65535.
+ * @param  volume: Level of volume (VOLUME_1, VOLUME_2, VOLUME_3).
  * @retval None
  */
-void TIM2_Start_bip(uint16_t frequency, uint8_t volume);
-
-/**
- * @brief  Turn off the sound of buzzer.
- * @note   Stop bip using prescaler of TIM2
- * @retval None
- */
-void TIM2_Stop_bip();
+void start_buzzer_sound(uint16_t frequency, uint8_t volume);
 
 /**
  * @brief  Display symbols on matrix (DEMO_MODE)
@@ -118,7 +113,7 @@ void TIM1_Start();
  * @param  None
  * @retval None
  */
-void TIM4_Start();
+void TIM4_Start(uint16_t prescaler, uint16_t period);
 
 /**
  * @brief  Stop TIM4.

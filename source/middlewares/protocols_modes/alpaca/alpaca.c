@@ -339,7 +339,7 @@ static uint8_t fire_disable_cnt = 0;
 
 static void setting_sound_alpaca(uint16_t current_location) {
   if (current_location == PR_IM_OVL_1) {
-    TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, matrix_settings.volume);
+    start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, matrix_settings.volume);
   }
 
   if (current_location == PR_IM_OVL_0 || current_location == PR_IM_GNG_0) {
@@ -348,7 +348,7 @@ static void setting_sound_alpaca(uint16_t current_location) {
 
   if (current_location == PR_IM_GNG_1) {
     // play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
-    TIM2_Start_bip(GONG_BUZZER_FREQ, matrix_settings.volume);
+    start_buzzer_sound(GONG_BUZZER_FREQ, matrix_settings.volume);
   }
 
   if (current_location == PR_IM_FRA) {
@@ -359,7 +359,7 @@ static void setting_sound_alpaca(uint16_t current_location) {
     // stop_buzzer_sound();
     fire_danger_cnt = 0;
 #if 1
-    TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+    start_buzzer_sound(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
 #endif
     is_fire_danger_sound = true;
     // }

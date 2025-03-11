@@ -117,7 +117,7 @@ int main(void) {
 
 #if DOT_PIN
   MX_GPIO_Init();
-  MX_TIM2_Init_1uS();
+  MX_TIM2_Init_1uS(); /* Инициализация таймера 2 для бузера */
 
 #elif DOT_SPI
   MX_GPIO_Init_SPI();
@@ -126,36 +126,38 @@ int main(void) {
                        MBI5026_SCK_PIN_GPIO_Port, MBI5026_SCK_PIN_Pin);
   LED_driver_set_pins(MBI5026_LE_PIN_GPIO_Port, MBI5026_LE_PIN_Pin,
                       MBI5026_NOE_PIN_GPIO_Port, MBI5026_NOE_PIN_Pin);
+
+  MX_TIM1_Init_1(); /* Инициализация таймера 1 для бузера */
 #endif
 
   MX_TIM3_Init();
   MX_TIM4_Init();
-  MX_TIM1_Init();
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-
-  /* USER CODE BEGIN 3 */
 
 #if TEST_MODE
   test_mode_start();
 #elif DEMO_MODE
-#include "test_Buzzer.h"
+
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
+
+  // start_buzzer_sound(5000, VOLUME_3); // 65
+  // start_buzzer_sound(7000, VOLUME_3); // 70
+  // start_buzzer_sound(3000, 55); // 70 работает
+
+  // start_buzzer_sound(3100, 55); // 73-78 !!!
+
+  // start_buzzer_sound(7500, 55); // для плоского бузера 75 дБ
+
+  play_gong(3, 1000, VOLUME_3);
 
   while (1) {
-#if DOT_PIN
-    demo_mode_start();
-#elif DOT_SPI
-    demo_mode_start();
-#endif
+    // demo_mode_start();
   }
 
 #else
 #include "conf.h"
 
 #if 1
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
   display_protocol_name(PROTOCOL_NAME);
   display_protocol_name(PROJECT_VER);
 #endif
@@ -182,7 +184,6 @@ int main(void) {
       switch (menu_state) {
       case MENU_STATE_OPEN:
         protocol_stop();
-        start_timer_menu();
         menu_state = MENU_STATE_WORKING;
         break;
 
@@ -191,7 +192,6 @@ int main(void) {
         break;
 
       case MENU_STATE_CLOSE:
-        stop_timer_menu();
         overwrite_settings(&matrix_settings);
         matrix_state = MATRIX_STATE_START;
         menu_state = MENU_STATE_OPEN;
@@ -244,11 +244,63 @@ void MX_GPIO_Init_SPI(void) {
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SW_IN_3_GPIO_Port, &GPIO_InitStruct);
 
+  GPIO_InitStruct.Pin = BUZZ_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BUZZ_GPIO_Port, &GPIO_InitStruct);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   // HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END MX_GPIO_Init_2 */
+}
+
+void MX_TIM1_Init_1(void) {
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 64 - 1; // freq tim = 1 000 000
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK) {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK) {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
 }
 #endif
 

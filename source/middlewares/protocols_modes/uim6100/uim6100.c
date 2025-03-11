@@ -131,12 +131,12 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     is_cabin_overload = true;
 #if 1
     if (matrix_settings.volume != VOLUME_0) {
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
     }
 #if DOT_PIN
-    matrix_string[DIRECTION] = 'K';
-    matrix_string[MSB] = 'g';
-    matrix_string[LSB] = 'c';
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
 #elif DOT_SPI
 
     matrix_string[DIRECTION] = 'c';
@@ -147,7 +147,7 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
   }
   // next received bytes by CAN
   else if (is_cabin_overload) {
-    TIM2_Stop_bip();
+    stop_buzzer_sound();
     is_cabin_overload = false;
   }
 
@@ -155,13 +155,13 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     is_fire_danger = true;
 #if 1
     if (matrix_settings.volume != VOLUME_0) {
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
     }
 #endif
   }
   // next received bytes by CAN
   else if (is_fire_danger) {
-    TIM2_Stop_bip();
+    stop_buzzer_sound();
     is_fire_danger = false;
   }
 }
@@ -239,8 +239,6 @@ static void transform_direction_to_common(direction_uim_6100_t direction) {
   }
 }
 
-// msg_t msg = {0, 0, 0, 0};
-
 /**
  * @brief  Process data using UIM6100 protocol
  * @note   1. Set drawing_data structure, process code message, setting gong
@@ -255,19 +253,14 @@ void process_data_uim(msg_t *msg) {
   /// Flag to control is data received by CAN
   extern volatile bool is_data_received;
 
-  // uint8_t code_msg = rx_data_can[BYTE_W_1];
-  // drawing_data.floor = rx_data_can[BYTE_W_2];
-
   uint8_t code_msg = msg->w1;
   drawing_data.floor = msg->w2 & CODE_FLOOR_W_2_MASK;
 
-  // transform_direction_to_common(rx_data_can[BYTE_W_3] & ARROW_MASK);
   transform_direction_to_common(msg->w3 & ARROW_MASK);
 
   setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
                   special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
-  // if (matrix_settings.volume != VOLUME_0) {
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
     process_code_msg(code_msg, matrix_settings.volume);
@@ -282,7 +275,6 @@ void process_data_uim(msg_t *msg) {
         setting_gong(msg->w3, matrix_settings.volume);
       }
     }
-    // }
   }
 
   // while new 6 data bytes are not received, draw str

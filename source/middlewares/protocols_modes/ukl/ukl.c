@@ -157,7 +157,7 @@ static void setting_sound_ukl(char *matrix_string,
       stop_buzzer_sound();
       cabin_overload_cnt = 0;
 #if 1
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
 #endif
       is_cabin_overload_sound = true;
     }
@@ -175,7 +175,7 @@ static void setting_sound_ukl(char *matrix_string,
       stop_buzzer_sound();
       fire_danger_cnt = 0;
 #if 1
-      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+      start_buzzer_sound(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
 #endif
       is_fire_danger_sound = true;
     }
