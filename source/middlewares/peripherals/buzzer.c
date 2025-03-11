@@ -185,6 +185,7 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
 void play_bip_for_menu(bool *is_volume_displayed, volume_t volume) {
   if (*is_volume_displayed == false) {
     *is_volume_displayed = true;
+    stop_buzzer_sound();
     if (volume != VOLUME_0) {
       play_gong(3, 1000, volume);
     }
@@ -310,7 +311,7 @@ void stop_buzzer_sound() {
 #if PROTOCOL_NKU
   if (buzzer_status.current_sound == SOUND_GONG) {
     buzzer_status.is_gong_sound_playing = false;
-    buzzer_status.current_sound = SOUND_NONE;
+    // buzzer_status.current_sound = SOUND_NONE;
   }
   if (buzzer_status.is_button_touched_sound_playing == SOUND_ORRDER_BUTTON) {
     buzzer_status.is_button_touched_sound_playing = false;

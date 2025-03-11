@@ -62,7 +62,8 @@ void SystemClock_Config(void);
 #if !DEMO_MODE && !TEST_MODE
 
 /// Settings of matrix: addr_id of matrix and level of volume for buzzer
-settings_t matrix_settings = {.addr_id = MAIN_CABIN_ID, .volume = VOLUME_1};
+settings_t matrix_settings = {
+    .addr_id = MAIN_CABIN_ID, .volume = VOLUME_1, .group_id = GROUP_ID_MIN};
 
 #endif
 
@@ -142,7 +143,7 @@ int main(void) {
 #if TEST_MODE
   test_mode_start();
 #elif DEMO_MODE
-  TIM3_Start(PRESCALER_FOR_US, 1000); // 1 мс
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
 
   while (1) {
     demo_mode_start();

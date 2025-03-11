@@ -64,6 +64,7 @@
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection
 #define BUFFER_SIZE_BYTES 6
+#define GROUP_ID_MIN 0
 
 #if DOT_SPI
 #define config_MU_IT_04_10
@@ -218,6 +219,7 @@
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection
 #define BUFFER_SIZE_BYTES 8
+#define GROUP_ID_MIN 0
 
 #else
 #error "Wrong configurations!"

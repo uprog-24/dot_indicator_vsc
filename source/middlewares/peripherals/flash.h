@@ -15,6 +15,7 @@
 typedef struct {
   uint8_t addr_id;
   volume_t volume;
+  uint8_t group_id;
 } settings_t;
 
 /**
@@ -39,7 +40,7 @@ void overwrite_settings(settings_t *settings);
  * @param  new_id:     New selected ID of matrix
  * @retval None
  */
-void update_structure(settings_t *settings, volume_t new_volume,
-                      uint8_t new_id);
+void update_structure(settings_t *settings, volume_t new_volume, uint8_t new_id,
+                      uint8_t new_group_id);
 
 #endif /*__ BUTTON_H__ */

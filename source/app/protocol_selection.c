@@ -28,9 +28,16 @@ void protocol_init() {
   bool is_id_from_flash_valid = matrix_settings.addr_id >= ADDR_ID_MIN &&
                                 matrix_settings.addr_id <= ADDR_ID_LIMIT;
 
+  bool is_group_id_from_flash_valid =
+      matrix_settings.group_id >= GROUP_ID_MIN && matrix_settings.group_id <= 4;
+
   if (!is_id_from_flash_valid) {
     matrix_settings.addr_id = MAIN_CABIN_ID;
     matrix_settings.volume = VOLUME_1;
+  }
+
+  if (!is_group_id_from_flash_valid) {
+    matrix_settings.group_id = GROUP_ID_MIN;
   }
 
 #if PROTOCOL_UIM_6100
@@ -125,6 +132,7 @@ void protocol_process_data() {
  */
 void protocol_stop() {
   is_interface_connected = false;
+  stop_buzzer_sound();
 
 #if PROTOCOL_UIM_6100 || PROTOCOL_NKU
   stop_can(&hcan);

@@ -206,7 +206,7 @@ void MX_TIM1_Init(void) {
   htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK) {
     Error_Handler();
   }
@@ -603,7 +603,8 @@ void TIM3_Start(uint16_t prescaler, uint16_t period) {
 }
 
 /**
- * @brief  Start TIM4 to draw symbols, control interface connection and matrix_state.
+ * @brief  Start TIM4 to draw symbols, control interface connection and
+ * matrix_state.
  * @note   Control connection of CAN/UART/DATA_Pin and MATRIX_STATE_MENU to
  *         MATRIX_STATE_START (20 seconds between button's click).
  *         Timer for 1 ms

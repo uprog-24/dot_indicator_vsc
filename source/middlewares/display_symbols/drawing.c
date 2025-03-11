@@ -309,7 +309,9 @@ static void draw_symbols(char *matrix_string) {
     }
 
     // draw MSB symbol
-    if (matrix_string[DIRECTION] == 'U' && matrix_string[MSB] == 'K') {
+    /* "IDG" - адрес группы для НКУ */
+    if (matrix_string[DIRECTION] == 'U' && matrix_string[MSB] == 'K' ||
+        matrix_string[DIRECTION] == 'I') {
       draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
     } else {
       draw_symbol_on_matrix(matrix_string[MSB], 6, 0);

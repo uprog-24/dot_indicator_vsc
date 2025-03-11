@@ -60,13 +60,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header,
                            last_received_message.rx_data_can) == HAL_OK) {
 
-    alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
-    is_interface_connected = true;
-    is_data_received = true;
+    if (rx_header.StdId == (rx_header.StdId | matrix_settings.group_id << 4)) {
 
-    last_received_message.std_id = rx_header.StdId;
-    last_received_message.dlc = rx_header.DLC;
-    last_received_message.is_data_received = true;
+      alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+      is_interface_connected = true;
+      is_data_received = true;
+
+      last_received_message.std_id = rx_header.StdId;
+      last_received_message.dlc = rx_header.DLC;
+      last_received_message.is_data_received = true;
+    }
   }
 #endif
 

@@ -19,6 +19,8 @@
         ///< (Alpaca)
 #define SETTINGS_MODE_ESC                                                      \
   "ESC" ///< String that displayed in settings_mode_t = ESC
+#define SETTINGS_MODE_ID_GROUP                                                 \
+  "IDG" ///< String that displayed in settings_mode_t = ESC
 
 #define LEVEL_VOLUME_0 "cL0" ///< String that displayed when level_volume = 0
 #define LEVEL_VOLUME_1 "cL1" ///< String that displayed when level_volume = 1
@@ -47,7 +49,7 @@ volatile bool is_button_pressed = false; // Flag for button state
 /**
  * Stores modes of settings
  */
-typedef enum { ID = 0, LEVEL_VOLUME, ESC } settings_mode_t;
+typedef enum { ID = 0, LEVEL_VOLUME, ESC, GROUP_ID } settings_mode_t;
 
 /// Flag to control first btn1 click
 volatile bool is_first_btn_clicked = true;
@@ -257,11 +259,15 @@ static uint8_t level_volume = 1;
 /// Current (temporary) id for interface CAN/UART
 static uint8_t id = 1;
 
+static uint8_t group_id;
+
 /// Selected level of volume
 static uint8_t selected_level_volume;
 
 /// Selected id for interface CAN/UART
 static uint8_t selected_id;
+
+static uint8_t selected_group_id;
 
 /// Structure for data that will be displayed on matrix
 static drawing_data_t drawing_data = {0, 0};
@@ -276,19 +282,23 @@ uint8_t shift_mode = 1;
  * @param selected_id Выбранный адрес индикатора.
  */
 void update_matrix_settings(uint8_t *selected_level_volume,
-                            uint8_t *selected_id) {
+                            uint8_t *selected_id, uint8_t *selected_group_id) {
   switch (*selected_level_volume) {
   case 0:
-    update_structure(&matrix_settings, VOLUME_0, *selected_id);
+    update_structure(&matrix_settings, VOLUME_0, *selected_id,
+                     *selected_group_id);
     break;
   case 1:
-    update_structure(&matrix_settings, VOLUME_1, *selected_id);
+    update_structure(&matrix_settings, VOLUME_1, *selected_id,
+                     *selected_group_id);
     break;
   case 2:
-    update_structure(&matrix_settings, VOLUME_2, *selected_id);
+    update_structure(&matrix_settings, VOLUME_2, *selected_id,
+                     *selected_group_id);
     break;
   case 3:
-    update_structure(&matrix_settings, VOLUME_3, *selected_id);
+    update_structure(&matrix_settings, VOLUME_3, *selected_id,
+                     *selected_group_id);
     break;
   }
 }
@@ -334,6 +344,84 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
  * @param  None
  * @retval None
  */
+
+typedef enum {
+  BUTTON_NONE = 0,
+  BUTTON_1_PRESSED,
+  BUTTON_2_PRESSED
+} button_state_t;
+
+typedef enum {
+  MENU_STATE_IDLE = 0, // Ожидание
+  MENU_STATE_VOLUME,   // Уровень громкости
+  MENU_STATE_ID,       // Настройка ID
+  MENU_STATE_GROUP_ID, // Настройка группы
+  MENU_STATE_EXIT      // Выход
+} menu_state_regimes_t;
+
+typedef struct {
+  menu_state_t current_state; // Текущее состояние меню
+  button_state_t button_1;    // Состояние кнопки 1
+  button_state_t button_2;    // Состояние кнопки 2
+} menu_context_t;
+
+menu_context_t menu = {.current_state = MENU_STATE_IDLE,
+                       .button_1 = BUTTON_NONE,
+                       .button_2 = BUTTON_NONE};
+
+void handle_button_press(menu_context_t *menu, button_state_t button) {
+  switch (menu->current_state) {
+  case MENU_STATE_IDLE:
+    if (button == BUTTON_1_PRESSED) {
+      menu->current_state = MENU_STATE_VOLUME;
+    }
+    break;
+
+  case MENU_STATE_VOLUME:
+    if (button == BUTTON_1_PRESSED) {
+      while (is_button_1_pressed == false && is_button_2_pressed == false) {
+        draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+      }
+
+      if (is_button_1_pressed) {
+        menu->current_state = MENU_STATE_ID;
+      }
+
+    } else if (button == BUTTON_2_PRESSED) {
+      // Изменение громкости
+      while (is_button_2_pressed == false) {
+        draw_string_on_matrix("cL1");
+      }
+    }
+    break;
+
+  case MENU_STATE_ID:
+    if (button == BUTTON_1_PRESSED) {
+      while (is_button_1_pressed == false) {
+        draw_string_on_matrix(SETTINGS_MODE_ID);
+      }
+      menu->current_state = MENU_STATE_GROUP_ID;
+    } else if (button == BUTTON_2_PRESSED) {
+      // Изменение ID
+    }
+    break;
+
+  case MENU_STATE_GROUP_ID:
+    if (button == BUTTON_1_PRESSED) {
+      menu->current_state = MENU_STATE_EXIT;
+    } else if (button == BUTTON_2_PRESSED) {
+      // Изменение группы
+    }
+    break;
+
+  case MENU_STATE_EXIT:
+    if (button == BUTTON_1_PRESSED) {
+      menu->current_state = MENU_STATE_IDLE; // Выход из меню
+    }
+    break;
+  }
+}
+
 void press_button() {
   /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING,
   /// MENU_STATE_CLOSE
@@ -348,11 +436,21 @@ void press_button() {
 
     btn_2_set_value_counter = 0;
 
+    /* Инициализация переменных для Адреса */
     bool is_id_from_flash_valid = matrix_settings.addr_id >= ADDR_ID_MIN &&
                                   matrix_settings.addr_id <= ADDR_ID_LIMIT;
 
     id = is_id_from_flash_valid ? matrix_settings.addr_id : MAIN_CABIN_ID;
 
+    /* Инициализация переменных для Адреса группы */
+    bool is_group_id_from_flash_valid =
+        matrix_settings.group_id >= GROUP_ID_MIN &&
+        matrix_settings.group_id <= 4;
+
+    group_id =
+        is_group_id_from_flash_valid ? matrix_settings.group_id : GROUP_ID_MIN;
+
+    /* Инициализация переменных для Уровня громкости */
     if (matrix_settings.volume != VOLUME_0 &&
         matrix_settings.volume != VOLUME_1 &&
         matrix_settings.volume != VOLUME_2 &&
@@ -377,15 +475,21 @@ void press_button() {
 
     selected_level_volume = level_volume;
     selected_id = id;
+    selected_group_id = group_id;
   }
 
   if (is_button_1_pressed) {
     is_button_1_pressed = false;
 
+    //  handle_button_press(&menu, BUTTON_1_PRESSED);
+#if 1
 #if DOT_PIN
     switch (btn_1_set_mode_counter) {
     case 1:
 
+      /* Режим меню: Уровень громкости (btn_1_settings_mode = LEVEL_VOLUME).
+       * Пока кнопка_1 нажата 1 раз,
+       *      кнопка_2 нажата 0 раз, отображаем строку SETTINGS_MODE_VOLUME */
       while (btn_1_set_mode_counter == 1 && btn_2_set_value_counter == 0) {
         draw_string_on_matrix(SETTINGS_MODE_VOLUME);
         btn_1_settings_mode = LEVEL_VOLUME;
@@ -394,20 +498,22 @@ void press_button() {
       break;
     case 2:
 
+      /* Режим меню: Адрес (btn_1_settings_mode = ID).
+       * Пока кнопка_1 нажата 2 раза,
+       *      кнопка_2 нажата 0 раз, отображаем строку SETTINGS_MODE_ID */
       while (btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 0) {
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_NKU
-
         draw_string_on_matrix(SETTINGS_MODE_ID);
-
 #elif PROTOCOL_ALPACA
         draw_string_on_matrix(SETTINGS_MODE_SFT);
 #endif
         btn_1_settings_mode = ID;
       }
 
-      // state after selection of value for LEVEL_VOLUME
+      /* Отображение VOL после возврата из режима выбора значения громкости */
       while (btn_1_settings_mode == LEVEL_VOLUME &&
              btn_1_set_mode_counter == 2 && btn_2_set_value_counter == 1) {
+        stop_buzzer_sound();
         draw_string_on_matrix(SETTINGS_MODE_VOLUME);
       }
 
@@ -424,6 +530,56 @@ void press_button() {
 
     case 3:
 
+#if PROTOCOL_NKU
+
+#if 1
+      if (btn_1_settings_mode == LEVEL_VOLUME) { // b1: 3; b2: 0
+        btn_2_set_value_counter = 0;
+        btn_1_set_mode_counter = 4; // ESC
+        level_volume = selected_level_volume;
+
+        /* Отображение ESC - режим меню Выход */
+        while (btn_1_set_mode_counter == 4 && btn_2_set_value_counter == 0) {
+          draw_string_on_matrix(SETTINGS_MODE_ESC);
+          btn_1_settings_mode = ESC;
+        }
+
+        /* Переход к режиму VOL. Состояние кнопок для отображения строки VOL */
+        if (btn_1_set_mode_counter == 5) {
+          btn_2_set_value_counter = 0;
+          btn_1_set_mode_counter = 1; // ESC
+        }
+      }
+
+#endif
+      /* Режим меню: Адрес группы (btn_1_settings_mode = GROUP_ID).
+       * Пока кнопка_1 нажата 3 раза,
+       *      кнопка_2 нажата 0 раз, отображаем строку SETTINGS_MODE_ID_GROUP */
+      while (btn_1_set_mode_counter == 3 && btn_2_set_value_counter == 0) {
+        draw_string_on_matrix(SETTINGS_MODE_ID_GROUP);
+        btn_1_settings_mode = GROUP_ID;
+      }
+
+      // if (btn_1_settings_mode == ID) {
+      //   btn_2_set_value_counter = 0;
+      //   id = selected_id;
+      // }
+
+      // state after selection of value for ID
+      while (btn_1_settings_mode == ID && btn_1_set_mode_counter == 3 &&
+             btn_2_set_value_counter == 1) {
+        draw_string_on_matrix(SETTINGS_MODE_ID);
+      }
+
+      // return to choose value ID
+      if (btn_2_set_value_counter == 2) {
+        btn_1_set_mode_counter = 2;
+        btn_2_set_value_counter = 1;
+        id = selected_id;
+      }
+
+#else
+
       // return to choose mode LEVEL_VOLUME
       if (btn_1_settings_mode == LEVEL_VOLUME) {
         btn_2_set_value_counter = 0;
@@ -432,6 +588,9 @@ void press_button() {
         reset_volume_flags();
       }
 
+      /* Режим меню: Выход с сохранением настроек (btn_1_settings_mode = ESC).
+       * Пока кнопка_1 нажата 3 раза,
+       *      кнопка_2 нажата 0 раз, отображаем строку SETTINGS_MODE_ESC */
       while (btn_1_set_mode_counter == 3 && btn_2_set_value_counter == 0) {
         draw_string_on_matrix(SETTINGS_MODE_ESC);
         btn_1_settings_mode = ESC;
@@ -440,7 +599,7 @@ void press_button() {
       if (btn_2_set_value_counter == 0) {
         btn_1_set_mode_counter = 1;
       } else {
-        // state after selection of value for ID
+        /* Отображение ID после возврата из режима выбора значения адреса */
         while (btn_1_settings_mode == ID && btn_1_set_mode_counter == 3 &&
                btn_2_set_value_counter == 1) {
           draw_string_on_matrix(SETTINGS_MODE_ID);
@@ -448,7 +607,7 @@ void press_button() {
 
         // return to choose mode ID
         if (btn_1_set_mode_counter == 4) {
-          btn_1_set_mode_counter = 1;
+          btn_1_set_mode_counter = 3; // ESC
           btn_2_set_value_counter = 0;
           id = selected_id;
         }
@@ -460,8 +619,51 @@ void press_button() {
           id = selected_id;
         }
       }
+#endif
 
       break;
+
+#if PROTOCOL_NKU
+    case 4:
+
+      if (btn_1_settings_mode == ID) { // b1: 4; b2: 0
+        btn_2_set_value_counter = 0;
+        id = selected_id;
+      }
+
+      /* Отображение ESC - режим меню Выход */
+      while (btn_1_set_mode_counter == 4 && btn_2_set_value_counter == 0) {
+        draw_string_on_matrix(SETTINGS_MODE_ESC);
+        btn_1_settings_mode = ESC;
+      }
+
+      /* Переход к первому режиму меню: VOL */
+      if (btn_2_set_value_counter == 0) {
+        btn_1_set_mode_counter = 1;
+      } else {
+        /* Отображение IDG после возврата из режима выбора значения адреса
+         * группы */
+        while (btn_1_settings_mode == GROUP_ID && btn_1_set_mode_counter == 4 &&
+               btn_2_set_value_counter == 1) {
+          draw_string_on_matrix("IDG");
+        }
+
+        // return to choose mode GROUP_ID
+        if (btn_1_set_mode_counter == 5) {
+          btn_1_set_mode_counter = 4; // 1;
+          btn_2_set_value_counter = 0;
+          group_id = selected_group_id;
+        }
+
+        // return to choose value for mode = GROUP_ID
+        if (btn_2_set_value_counter == 2) {
+          btn_1_set_mode_counter = 3;
+          btn_2_set_value_counter = 1;
+          group_id = selected_group_id;
+        }
+      }
+      break;
+#endif
     }
 
 #elif DOT_SPI
@@ -543,11 +745,15 @@ void press_button() {
 #endif
     }
 #endif
+
+#endif
   }
 
   if (is_button_2_pressed) {
     is_button_2_pressed = false;
+    // handle_button_press(&menu, BUTTON_2_PRESSED);
 
+#if 1
 #if DOT_PIN
     switch (btn_2_set_value_counter) {
     case 1:
@@ -587,6 +793,8 @@ void press_button() {
           if (level_volume > VOLUME_LEVEL_LIMIT) {
             level_volume = 0;
           }
+
+          reset_volume_flags();
           break;
 
         case ID:
@@ -693,20 +901,46 @@ void press_button() {
 #endif
           break;
 
+#if PROTOCOL_NKU
+        case GROUP_ID:
+
+          drawing_data.floor = group_id;
+          setting_symbols(matrix_string, &drawing_data, 4, NULL, 0);
+
+          selected_group_id = group_id;
+          while (btn_1_settings_mode == GROUP_ID &&
+                 btn_2_set_value_counter == 1 && btn_1_set_mode_counter == 3) {
+            draw_string_on_matrix(matrix_string);
+          }
+
+          if (group_id == 4) {
+            group_id = GROUP_ID_MIN;
+          } else {
+            group_id++;
+          }
+
+          break;
+
+#endif
+
         case ESC:
 
           switch (selected_level_volume) {
           case 0:
-            update_structure(&matrix_settings, VOLUME_0, selected_id);
+            update_structure(&matrix_settings, VOLUME_0, selected_id,
+                             selected_group_id);
             break;
           case 1:
-            update_structure(&matrix_settings, VOLUME_1, selected_id);
+            update_structure(&matrix_settings, VOLUME_1, selected_id,
+                             selected_group_id);
             break;
           case 2:
-            update_structure(&matrix_settings, VOLUME_2, selected_id);
+            update_structure(&matrix_settings, VOLUME_2, selected_id,
+                             selected_group_id);
             break;
           case 3:
-            update_structure(&matrix_settings, VOLUME_3, selected_id);
+            update_structure(&matrix_settings, VOLUME_3, selected_id,
+                             selected_group_id);
             break;
           }
 
@@ -727,6 +961,8 @@ void press_button() {
         break;
       }
     }
+#endif
+
 #endif
   }
 

@@ -118,31 +118,6 @@ typedef enum SYMBOLS {
   SYMBOL_T = 37                        // Символ T
 } symbols_t;
 
-/**
- * Stores values of byte W2 (code floor)
- */
-typedef enum CODE_FLOOR {
-  FLOOR_MINUS_1 = 41,
-  FLOOR_MINUS_2 = 42,
-  FLOOR_MINUS_3 = 43,
-  FLOOR_MINUS_4 = 44,
-  FLOOR_MINUS_5 = 45,
-  FLOOR_MINUS_6 = 46,
-  FLOOR_MINUS_7 = 47,
-  FLOOR_MINUS_8 = 48,
-  FLOOR_MINUS_9 = 49,
-  RESERVE = 50,
-  SEISMIC_DANGER = 51,
-  LIFT_NOT_WORK = 52,
-  TRANSFER_FIREFIGHTERS = 53,
-  CODE_FLOOR_54 = 54,
-  SERVICE = 55,
-  EVACUATION = 56,
-  FIRE_DANGER = 57,
-  FAULT_IBP = 58,
-  LOADING = 59
-} code_floor_t;
-
 /// Buffer with code location and it's symbols
 static const code_location_symbols_t
     special_symbols_code_location[SPECIAL_SYMBOLS_BUFF_SIZE] = {
@@ -261,10 +236,9 @@ static void setting_gong(msg_nku_t *rx_data_nku, volume_t volume) {
   gong[1] = gong[0];
 }
 
-uint8_t cb = 0;
 static void setting_sounds_nku() {
 
-  /* Если беззвучный режим, то выходим из функции */
+  /* Если беззвучный режим VOLUME_0, то выходим из функции */
   if (matrix_settings.volume == VOLUME_0) {
     buzzer_status.current_sound = SOUND_NONE;
     stop_buzzer_sound();
@@ -293,8 +267,10 @@ static void setting_sounds_nku() {
       /* Если бузер свободен (не отрабатывает другие типы звуков из
        * перречисления типа sound_types_t), и не отрабатывается нажатие кнопки
        * приказа, то озвучивает нажатие кнопки */
-      if (buzzer_status.current_sound == SOUND_NONE &&
-          !buzzer_status.is_button_touched_sound_playing) {
+      if (
+          //  buzzer_status.current_sound == SOUND_NONE &&
+          // !buzzer_status.is_button_touched_sound_playing
+          buzzer_status.current_sound != SOUND_ORRDER_BUTTON) {
         buzzer_status.is_button_touched_sound_playing = true;
         buzzer_status.current_sound = SOUND_ORRDER_BUTTON;
         play_gong(1, 1000, matrix_settings.volume);
@@ -323,13 +299,12 @@ static void setting_sounds_nku() {
 
     if (is_cabin_overload) {
       if (buzzer_status.current_sound != SOUND_CABIN_OVERLOAD) {
-        cb++;
         buzzer_status.current_sound = SOUND_CABIN_OVERLOAD;
         TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
       }
     }
 
-    // Не проходит условие - стоп за счет is_fire_danger в MESSAGE_TYPE_4
+    // Не проходит условие - стоп засчет is_fire_danger в MESSAGE_TYPE_4
     if (!is_cabin_overload &&
         buzzer_status.current_sound == SOUND_CABIN_OVERLOAD) {
       stop_buzzer_sound();
@@ -349,21 +324,22 @@ void process_data_nku() {
     reset_value_data_received();
 
     CAN_Data_Message_t *received_msg = get_received_data_by_can();
+    uint8_t addr = matrix_settings.group_id;
 
-    // Проверяем ID сообщения
-    switch (received_msg->std_id) {
-    case 0x506:
+    // if (received_msg->std_id ==
+    //     (received_msg->std_id | matrix_settings.group_id << 4)) {
+
+    //   // alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+    //   // is_interface_connected = true;
+    // }
+
+    // Определяем тип сообщения по его ID
+    if (received_msg->std_id == (0x506 | (addr << 4))) {
       nku_parametrs.message_type = MESSAGE_TYPE_3;
-      break;
-    case 0x508:
+    } else if (received_msg->std_id == (0x508 | (addr << 4))) {
       nku_parametrs.message_type = MESSAGE_TYPE_4;
-      break;
-    case 0x50B:
+    } else if (received_msg->std_id == (0x50B | (addr << 4))) {
       nku_parametrs.message_type = MESSAGE_TYPE_5;
-      break;
-
-    default:
-      break;
     }
 
     // Копируем 8 байт из массива received_msg.rx_data_can в структуру
@@ -376,16 +352,18 @@ void process_data_nku() {
     case MESSAGE_TYPE_1:
 
       break;
+
     case MESSAGE_TYPE_2:
 
       break;
+
     case MESSAGE_TYPE_3:
       /* Индикация стрелки дисплея */
       transform_direction_to_common(nku_parametrs.rx_data_nku.data7 &
                                     ARROW_MASK);
       set_direction_symbol(matrix_string, drawing_data.direction);
-
       break;
+
     case MESSAGE_TYPE_4:
       first_symbol_code = nku_parametrs.rx_data_nku.data5 & SYMBOL_MASK;
       second_symbol_code = nku_parametrs.rx_data_nku.data6 & SYMBOL_MASK;
@@ -401,11 +379,9 @@ void process_data_nku() {
           matrix_string[LSB] = convert_int_to_char(third_symbol_code);
         }
 
-        set_direction_symbol(matrix_string, drawing_data.direction);
       } else if (second_symbol_code == SYMBOL_MINUS) {
         matrix_string[MSB] = '-';
         matrix_string[LSB] = convert_int_to_char(third_symbol_code);
-        set_direction_symbol(matrix_string, drawing_data.direction);
       } else {
         /* Однозначные значения этажей */
         if (second_symbol_code == SYMBOL_EMPTY) {
@@ -427,6 +403,7 @@ void process_data_nku() {
       }
 
       break;
+
     case MESSAGE_TYPE_5:
       is_cabin_overload = nku_parametrs.rx_data_nku.data6 & BIT_6_MASK;
 
