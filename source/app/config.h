@@ -32,6 +32,12 @@
 ///< SETTINGS mode of matrix
 
 #endif
+
+/*===== Выбор стрелки ======*/
+#define __ARROW_ORDINAR
+// #define __ARROW_DOUBLE
+/*===== Завершение: Выбор стрелки ======*/
+
 /* Protocol UEL (UART) */
 #if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
     !DEMO_MODE && !TEST_MODE
@@ -65,6 +71,7 @@
   3000 ///< Time in ms to check interface connection
 #define BUFFER_SIZE_BYTES 6
 #define GROUP_ID_MIN 0
+#define GROUP_ID_MAX 4
 
 #if DOT_SPI
 #define config_MU_IT_04_10
@@ -174,6 +181,7 @@
 #elif PROTOCOL_UKL && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&                   \
     !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE
 
+#include "can.h"
 #include "protocol_selection.h"
 #include "ukl.h"
 
@@ -181,9 +189,13 @@
 #define ADDR_ID_MIN 0
 #define ADDR_ID_LIMIT 63
 #define MAX_POSITIVE_NUMBER_LOCATION 55
-#define MAIN_CABIN_ID 0
+#define MAIN_CABIN_ID ADDR_ID_MIN
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   1000 ///< Time in ms to check interface connection
+
+#define GROUP_ID_MIN 0
+#define GROUP_ID_MAX 4
+#define BUFFER_SIZE_BYTES 1
 
 /* Protocol ALPACA (CAN) */
 #elif PROTOCOL_ALPACA && !PROTOCOL_UKL && !PROTOCOL_UIM_6100 &&                \
@@ -220,6 +232,7 @@
   3000 ///< Time in ms to check interface connection
 #define BUFFER_SIZE_BYTES 8
 #define GROUP_ID_MIN 0
+#define GROUP_ID_MAX 4
 
 #else
 #error "Wrong configurations!"

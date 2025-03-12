@@ -144,6 +144,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 #if !DEMO_MODE && !TEST_MODE
 
+    /* Счетчик для проверки подключения интерфейса */
     if (matrix_state == MATRIX_STATE_WORKING) {
       connection_sec_is_elapsed += 1;
       if (connection_sec_is_elapsed >= TIME_SEC_FOR_INTERFACE_CONNECTION) {
@@ -154,6 +155,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
+    /* Счетчик для проверки подключения интерфейса */
     if (matrix_state == MATRIX_STATE_MENU) {
       time_since_last_press_sec += 1;
       if (time_since_last_press_sec >= PERIOD_SEC_FOR_SETTINGS) {
@@ -163,15 +165,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         is_time_sec_for_settings_elapsed = true;
         return;
 #endif
-        /* Для выхода из меню БЕЗ сохранением настроек в памяти устройства */
-        time_since_last_press_sec = 0;
-
-        btn_1_set_mode_counter = 0;
-        btn_2_set_value_counter = 0;
-        is_first_btn_clicked = true;
-
-        matrix_state = MATRIX_STATE_START;
-        menu_state = MENU_STATE_OPEN;
+        /* Флаг для выхода из меню по истечении времени бездействия:
+         * PERIOD_SEC_FOR_SETTINGS секунд */
+        is_time_sec_for_settings_elapsed = true;
       }
     }
 
