@@ -9,14 +9,6 @@
 #include <stdint.h>
 
 /**
- * @brief  Start TIM4 for counting 20 seconds between click buttons when
- *         matrix_state = MATRIX_STATE_MENU
- * @param  None
- * @retval None
- */
-void start_timer_menu();
-
-/**
  * @brief  Handle pressing BUTTON_1 and BUTTON_2.
  * @note   When BUTTON_1 is pressed 1st time - matrix_state = MATRIX_STATE_MENU,
  *         BUTTON_1 allows to select settings_mode_t: ID, VOLUME, ESCAPE
@@ -25,12 +17,5 @@ void start_timer_menu();
  * @retval None
  */
 void press_button();
-
-/**
- * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU
- * @param  None
- * @retval None
- */
-void stop_timer_menu();
 
 #endif /*__ BUTTON_H__ */

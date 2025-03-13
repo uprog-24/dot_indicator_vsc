@@ -235,30 +235,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 #endif
 }
 
-/**
- * @brief  Start TIM4 for counting PERIOD_SEC_FOR_SETTINGS seconds between click
- * buttons when matrix_state = MATRIX_STATE_MENU.
- * @param  None
- * @retval None
- */
-void start_timer_menu() {
-  // TIM4_Start();
-}
-
-/**
- * @brief  Stop TIM4 when matrix_state = MATRIX_STATE_MENU.
- * @param  None
- * @retval None
- */
-void stop_timer_menu() { TIM4_Stop(); }
-
 /// Current (temporary) level of volume
-static uint8_t level_volume = 1;
+static uint8_t flash_level_volume = 1;
 
 /// Current (temporary) id for interface CAN/UART
-static uint8_t id = 1;
+static uint8_t flash_id = 1;
 
-static uint8_t group_id;
+/* Адрес группы из flash */
+static uint8_t flash_group_id;
 
 /// Selected level of volume
 static uint8_t selected_level_volume;
@@ -334,6 +318,94 @@ typedef struct {
 static menu_context_t menu = {.current_state = MENU_STATE_IDLE,
                               .button_1 = BUTTON_NONE,
                               .button_2 = BUTTON_NONE};
+
+void set_new_selected_id(uint8_t *selected_id) {
+#if PROTOCOL_UIM_6100
+  if (selected_id == 47) {
+    selected_id = 1;
+  } else if (selected_id == 40) {
+    selected_id = MAIN_CABIN_ID;
+  } else {
+    selected_id++;
+  }
+
+#elif PROTOCOL_UKL
+  if (selected_id == ADDR_ID_LIMIT) {
+    selected_id = ADDR_ID_MIN;
+  } else if (selected_id == 55) {
+    selected_id = 57;
+  } else {
+    selected_id++;
+  }
+#elif PROTOCOL_NKU
+  if (*selected_id == ADDR_ID_LIMIT) {
+    *selected_id = ADDR_ID_MIN;
+  } else {
+    (*selected_id)++;
+  }
+#elif PROTOCOL_ALPACA
+  selected_id++;
+  if (selected_id > ADDR_ID_LIMIT) {
+    selected_id = ADDR_ID_MIN;
+  }
+#endif
+}
+
+void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
+#if PROTOCOL_UKL
+  if (selected_id >= 57 && selected_id <= 59) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'p';
+    matrix_string[LSB] =
+        (selected_id == 57) ? 'c' : convert_int_to_char(selected_id % 10 - 7);
+  } else if (selected_id >= 60 && selected_id <= 63) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = '-';
+    matrix_string[LSB] = convert_int_to_char(selected_id % 10 + 1);
+  } else
+
+#elif PROTOCOL_ALPACA
+  if (selected_id == ADDR_ID_MIN) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = '0';
+    matrix_string[LSB] = 'c';
+  } else if (selected_id <= MAX_P_FLOOR_ID) {
+    // id = 1...9
+    if (selected_id < MAX_P_FLOOR_ID) {
+      matrix_string[DIRECTION] = 'c';
+      matrix_string[MSB] = 'p';
+      matrix_string[LSB] = convert_int_to_char(selected_id);
+    } else {
+      // id = 10
+      matrix_string[DIRECTION] = 'p';
+      matrix_string[MSB] = convert_int_to_char(selected_id / 10);
+      matrix_string[LSB] = convert_int_to_char(selected_id % 10);
+    }
+  } else if (selected_id >= MIN_MINUS_FLOOR_ID &&
+             selected_id <= ADDR_ID_LIMIT) {
+    // id = 11...19 -> -10 -> 1...9
+    if (selected_id <= 19) {
+      matrix_string[DIRECTION] = '-';
+      matrix_string[MSB] = convert_int_to_char(selected_id - 10);
+      matrix_string[LSB] = 'c';
+    } else {
+      // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
+      matrix_string[DIRECTION] = '-';
+      matrix_string[MSB] = convert_int_to_char((selected_id - 10) / 10);
+      matrix_string[LSB] = convert_int_to_char((selected_id - 10) % 10);
+    }
+  }
+#endif
+
+      if (*selected_id == MAIN_CABIN_ID) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'c';
+  } else {
+    drawing_data->floor = *selected_id;
+    setting_symbols(matrix_string, drawing_data, ADDR_ID_LIMIT, NULL, 0);
+  }
+}
 
 /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING,
 /// MENU_STATE_CLOSE
@@ -424,7 +496,8 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
        * если кнопка нажата НЕ 1-ый раз, то изменяем счетчик текущего выбранного
        * уровня. */
       if (is_button_2_pressed_first) {
-        selected_level_volume = level_volume; // Показываем сохранённый уровень
+        selected_level_volume =
+            flash_level_volume; // Показываем сохранённый уровень
       } else {
         selected_level_volume++; // Увеличиваем уровень
         if (selected_level_volume > VOLUME_LEVEL_LIMIT) {
@@ -466,7 +539,8 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
       }
 
       if (!is_button_2_pressed_first) {
-        level_volume = selected_level_volume; // Сохраняем выбранное значение
+        flash_level_volume =
+            selected_level_volume; // Сохраняем выбранное значение
       }
       is_button_2_pressed_first = false;
       reset_volume_flags();
@@ -499,96 +573,14 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
        * если кнопка нажата НЕ 1-ый раз, то изменяем счетчик текущего выбранного
        * адреса. */
       if (is_button_2_pressed_first) {
-        selected_id = id; // Показываем сохранённый адрес
+        selected_id = flash_id; // Показываем сохранённый адрес
       } else {
-
-#if PROTOCOL_UIM_6100
-        if (selected_id == 47) {
-          selected_id = 1;
-        } else if (selected_id == 40) {
-          selected_id = MAIN_CABIN_ID;
-        } else {
-          selected_id++;
-        }
-
-#elif PROTOCOL_UKL
-        if (selected_id == ADDR_ID_LIMIT) {
-          selected_id = ADDR_ID_MIN;
-        } else if (selected_id == 55) {
-          selected_id = 57;
-        } else {
-          selected_id++;
-        }
-#elif PROTOCOL_NKU
-        if (selected_id == ADDR_ID_LIMIT) {
-          selected_id = ADDR_ID_MIN;
-        } else {
-          selected_id++;
-        }
-#elif PROTOCOL_ALPACA
-        selected_id++;
-        if (selected_id > ADDR_ID_LIMIT) {
-          selected_id = ADDR_ID_MIN;
-        }
-#endif
+        /* Сохраняем новое значение адреса в переменную selected_id */
+        set_new_selected_id(&selected_id);
       }
 
-/*============== Настройка символов для отображения ID ===================*/
-#if PROTOCOL_UKL
-      if (selected_id >= 57 && selected_id <= 59) {
-        matrix_string[DIRECTION] = 'c';
-        matrix_string[MSB] = 'p';
-        matrix_string[LSB] = (selected_id == 57)
-                                 ? 'c'
-                                 : convert_int_to_char(selected_id % 10 - 7);
-      } else if (selected_id >= 60 && selected_id <= 63) {
-        matrix_string[DIRECTION] = 'c';
-        matrix_string[MSB] = '-';
-        matrix_string[LSB] = convert_int_to_char(selected_id % 10 + 1);
-      } else
-
-#elif PROTOCOL_ALPACA
-      if (selected_id == ADDR_ID_MIN) {
-        matrix_string[DIRECTION] = 'c';
-        matrix_string[MSB] = '0';
-        matrix_string[LSB] = 'c';
-      } else if (selected_id <= MAX_P_FLOOR_ID) {
-        // id = 1...9
-        if (selected_id < MAX_P_FLOOR_ID) {
-          matrix_string[DIRECTION] = 'c';
-          matrix_string[MSB] = 'p';
-          matrix_string[LSB] = convert_int_to_char(selected_id);
-        } else {
-          // id = 10
-          matrix_string[DIRECTION] = 'p';
-          matrix_string[MSB] = convert_int_to_char(selected_id / 10);
-          matrix_string[LSB] = convert_int_to_char(selected_id % 10);
-        }
-      } else if (selected_id >= MIN_MINUS_FLOOR_ID && id <= ADDR_ID_LIMIT) {
-        // id = 11...19 -> -10 -> 1...9
-        if (selected_id <= 19) {
-          matrix_string[DIRECTION] = '-';
-          matrix_string[MSB] = convert_int_to_char(selected_id - 10);
-          matrix_string[LSB] = 'c';
-        } else {
-          // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
-          matrix_string[DIRECTION] = '-';
-          matrix_string[MSB] = convert_int_to_char((selected_id - 10) / 10);
-          matrix_string[LSB] = convert_int_to_char((selected_id - 10) % 10);
-        }
-      }
-#endif
-
-          if (selected_id == MAIN_CABIN_ID) {
-        matrix_string[DIRECTION] = 'c';
-        matrix_string[MSB] = 'K';
-        matrix_string[LSB] = 'c';
-      } else {
-        drawing_data.floor = selected_id;
-        setting_symbols(matrix_string, &drawing_data, ADDR_ID_LIMIT, NULL, 0);
-      }
-      /*=== Завершение: Настройка символов для отображения ID
-       * ===================*/
+      /* Настройка символов для отображения ID */
+      set_symbols_id(&selected_id, &drawing_data);
 
       /* Отображаем текущий выбранный/сохраненный адрес */
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
@@ -597,7 +589,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
       }
 
       if (!is_button_2_pressed_first) {
-        id = selected_id; // Сохраняем выбранное значение
+        flash_id = selected_id; // Сохраняем выбранное значение
       }
       is_button_2_pressed_first = false;
     }
@@ -610,6 +602,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       is_button_2_pressed_first = true;
 
+      /* Отображаем текущий выбранный/сохраненный адрес группы */
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
         draw_string_on_matrix(SETTINGS_MODE_ID_GROUP);
@@ -625,7 +618,8 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
        * если кнопка нажата НЕ 1-ый раз, то изменяем счетчик текущего выбранного
        * адреса. */
       if (is_button_2_pressed_first) {
-        selected_group_id = group_id; // Показываем сохранённый адрес группы
+        selected_group_id =
+            flash_group_id; // Показываем сохранённый адрес группы
       } else {
 
 #if PROTOCOL_NKU
@@ -649,7 +643,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
       }
 
       if (!is_button_2_pressed_first) {
-        group_id = selected_group_id; // Сохраняем выбранное значение
+        flash_group_id = selected_group_id; // Сохраняем выбранное значение
       }
       is_button_2_pressed_first = false;
     }
@@ -714,14 +708,14 @@ void press_button() {
     bool is_id_from_flash_valid = matrix_settings.addr_id >= ADDR_ID_MIN &&
                                   matrix_settings.addr_id <= ADDR_ID_LIMIT;
 
-    id = is_id_from_flash_valid ? matrix_settings.addr_id : MAIN_CABIN_ID;
+    flash_id = is_id_from_flash_valid ? matrix_settings.addr_id : MAIN_CABIN_ID;
 
     /* Инициализация переменных для Адреса группы */
     bool is_group_id_from_flash_valid =
         matrix_settings.group_id >= GROUP_ID_MIN &&
         matrix_settings.group_id <= 4;
 
-    group_id =
+    flash_group_id =
         is_group_id_from_flash_valid ? matrix_settings.group_id : GROUP_ID_MIN;
 
     /* Инициализация переменных для Уровня громкости */
@@ -729,27 +723,27 @@ void press_button() {
         matrix_settings.volume != VOLUME_1 &&
         matrix_settings.volume != VOLUME_2 &&
         matrix_settings.volume != VOLUME_3) {
-      level_volume = 1;
+      flash_level_volume = 1;
     } else {
       switch (matrix_settings.volume) {
       case VOLUME_0:
-        level_volume = 0;
+        flash_level_volume = 0;
         break;
       case VOLUME_1:
-        level_volume = 1;
+        flash_level_volume = 1;
         break;
       case VOLUME_2:
-        level_volume = 2;
+        flash_level_volume = 2;
         break;
       case VOLUME_3:
-        level_volume = 3;
+        flash_level_volume = 3;
         break;
       }
     }
 
-    selected_level_volume = level_volume;
-    selected_id = id;
-    selected_group_id = group_id;
+    selected_level_volume = flash_level_volume;
+    selected_id = flash_id;
+    selected_group_id = flash_group_id;
   }
 
   /*===== Нажатие кнопки 1 =====*/

@@ -183,20 +183,8 @@ set(COMMON_PROTOCOL_SOURCES
     ${PROJECT_DIR}/app/protocol_selection.c
     ${PROJECT_DIR}/middlewares/peripherals/flash.c
     ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
-    # ${PROJECT_DIR}/middlewares/peripherals/test_Buzzer.c
     ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
 )
-
-# # List of source files to compile
-# file(GLOB_RECURSE STM32CUBEMX_SOURCES
-#     ${CMAKE_CURRENT_SOURCE_DIR}/Core/*.c
-#     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/*.c)
-# file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
-#     # ${PROJECT_DIR}/*.cpp
-#     ${PROJECT_DIR}/*.c
-# )
-
-
 
 # Executable files
 add_executable(${EXECUTABLE}
@@ -217,7 +205,6 @@ target_compile_definitions(${EXECUTABLE} PRIVATE
 target_include_directories(${EXECUTABLE} PRIVATE
     ${PROJECT_INCLUDE_DIRECTORIES}
     ${CUBEMX_INCLUDE_DIRECTORIES}
-    # ${PROJECT_INCLUDE_DIRECTORIES}
 )
 
 # Compiler and linker options
