@@ -13,9 +13,12 @@
 //                       ИНДИКАЦИЯ МЕСТОПОЛОЖЕНИЯ
 //==============================================================================
 // ------------------------ Направление движения -------------------------------
+#define PR_IM_AR_DN 9999 // Направление вниз, стрелка вниз
 #define PR_IM_AR_NA 10000 // Нет направления, стрелка неактивна
 #define PR_IM_AR_UP 10001 // Направление вверх, стрелка вверх
-#define PR_IM_AR_DN 10002 // Направление вниз, стрелка вниз
+
+#define PR_CM_BP_00 10098 //Гонг
+
 // -------------------------- Индикация этажа ----------------------------------
 #define PR_IM_FL_NA 10003 // Этаж не определен
 #define PR_IM_FL_01 10004 // Индикация этажа №1
@@ -115,17 +118,9 @@
 #define SPECIAL_SYMBOLS_BUFF_SIZE 4 ///< Number of special symbols
 #define GONG_BUZZER_FREQ 3000       ///< Frequency of bip for ARRIVAL gong
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
-  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+  3000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
 #define BUZZER_FREQ_FIRE_DANGER                                                \
   BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
-
-/**
- * Stores indexes of bytes of UIM6100 protocol
- */
-typedef enum ALPACA_PACKET_BYTES {
-  BYTE_0,
-  BYTE_1,
-} alpaca_packet_bytes_t;
 
 /**
  * Stores direction of movement (ALPACA)
@@ -135,6 +130,32 @@ typedef enum {
   ALPACA_MOVE_DOWN = PR_IM_AR_DN,
   ALPACA_NO_MOVE = PR_IM_AR_NA
 } direction_alpaca_t;
+
+typedef struct {
+  uint8_t byte1;
+  uint8_t byte2;
+} msg_alpaca_t;
+
+typedef enum {
+  MESSAGE_ARROW,
+  MESSAGE_FLOOR,
+  MESSAGE_MODE,
+  MESSAGE_GONG,
+  MESSAGE_NONE
+} message_type_t;
+
+typedef struct alpaca_parametrs {
+  msg_alpaca_t rx_data_alpaca;
+  message_type_t message_type;
+  bool is_messge_received;
+} nku_parametrs_struct;
+
+nku_parametrs_struct alpaca_parametrs = {.rx_data_alpaca =
+                                             {
+                                                 0x00,
+                                             },
+                                         .message_type = MESSAGE_NONE,
+                                         .is_messge_received = false};
 
 /// Buffer with code location and it's symbols
 static const code_location_symbols_t
@@ -196,20 +217,47 @@ static void process_code_location() {
     is_drawing_data_floor_special = false;
   }
 
+  switch (alpaca_parametrs.message_type) {
+  case MESSAGE_ARROW:
+    if (matrix_string[DIRECTION] != '-' && matrix_string[DIRECTION] != 'p') {
+      transform_direction_to_common(data);
+      set_direction_symbol(matrix_string, drawing_data.direction);
+    } else { // periodic change direction and symbol "p"/"-"
+    }
+    break;
+
+  case MESSAGE_FLOOR:
+
+    break;
+
+  case MESSAGE_MODE:
+
+    break;
+
+  case MESSAGE_GONG:
+
+    break;
+
+  default:
+    break;
+  }
+
+#if 1
   switch (data) {
-  case PR_IM_AR_NA:
-    direction = ALPACA_NO_MOVE;
-    break;
+    // case PR_IM_AR_NA:
+    //   direction = ALPACA_NO_MOVE;
+    //   break;
 
-  case PR_IM_AR_UP:
-    direction = ALPACA_MOVE_UP;
-    break;
+    // case PR_IM_AR_UP:
+    //   direction = ALPACA_MOVE_UP;
+    //   break;
 
-  case PR_IM_AR_DN:
-    direction = ALPACA_MOVE_DOWN;
-    break;
+    // case PR_IM_AR_DN:
+    //   direction = ALPACA_MOVE_DOWN;
+    //   break;
 
     // special symbols
+    /* Режим погрузки */
   case PR_IM_LD_ON:
     drawing_data.floor = PR_IM_LD_ON;
     is_drawing_data_floor_special = true;
@@ -229,48 +277,58 @@ static void process_code_location() {
     // current_floor = 0;
     break;
   }
+#endif
 
   if (is_drawing_data_floor_special) {
     set_floor_symbols(matrix_string, drawing_data.floor,
                       MAX_POSITIVE_NUMBER_LOCATION,
                       special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
   } else {
-    if (matrix_settings.addr_id <= 10
+    if (matrix_settings.group_id <= 10
         // MAX_P_FLOOR_ID
     ) {
 
-      if (drawing_data.floor > matrix_settings.addr_id) {
+      /* Если текущий этаж от СУЛ больше установленного значения сдвига
+       * matrix_settings.group_id, то из значения этажа вычетаем значение сдвига
+       */
+      if (drawing_data.floor > matrix_settings.group_id) {
         set_floor_symbols(
-            matrix_string, drawing_data.floor - matrix_settings.addr_id,
+            matrix_string, drawing_data.floor - matrix_settings.group_id,
             MAX_POSITIVE_NUMBER_LOCATION, special_symbols_code_location,
             SPECIAL_SYMBOLS_BUFF_SIZE);
 
       } else {
 
-        shifted_floor = matrix_settings.addr_id - drawing_data.floor + 1;
-        if (shifted_floor <= 9) {
-          matrix_string[DIRECTION] = 'c';
-          matrix_string[MSB] = 'p';
-          matrix_string[LSB] = convert_int_to_char(shifted_floor);
-        } else {
-          matrix_string[DIRECTION] = 'p';
-          matrix_string[MSB] = convert_int_to_char(shifted_floor / 10);
-          matrix_string[LSB] = convert_int_to_char(shifted_floor % 10);
-        }
+        /* Если текущий этаж меньше или равен сдвигу
+         * matrix_settings.group_id, то из значения сдвига вычетаем значение
+         * этажа от СУЛ и прибавляем единицу.
+         * Например, этаж 1, сдвиг 3 -> отображаемый этаж: -3/П3.
+         */
+        shifted_floor = matrix_settings.group_id - drawing_data.floor + 1;
+
+        /* Этажи П1...П9 и П10 */
+        matrix_string[DIRECTION] = (shifted_floor <= 9) ? 'c' : 'p';
+        matrix_string[MSB] = (shifted_floor <= 9)
+                                 ? 'p'
+                                 : convert_int_to_char(shifted_floor / 10);
+        matrix_string[LSB] = (shifted_floor <= 9)
+                                 ? convert_int_to_char(shifted_floor)
+                                 : convert_int_to_char(shifted_floor % 10);
       }
 
-    } else if (matrix_settings.addr_id >= 11
+      /* Если сдвиг в диапазоне 11..73 -> -1..-63 */
+    } else if (matrix_settings.group_id >= 11
                // MIN_MINUS_FLOOR_ID
-               && matrix_settings.addr_id <= ADDR_ID_LIMIT) {
+               && matrix_settings.group_id <= ADDR_ID_LIMIT) {
 
-      if (drawing_data.floor > matrix_settings.addr_id - 10) {
+      if (drawing_data.floor > matrix_settings.group_id - 10) {
         set_floor_symbols(
-            matrix_string, drawing_data.floor - (matrix_settings.addr_id - 10),
+            matrix_string, drawing_data.floor - (matrix_settings.group_id - 10),
             MAX_POSITIVE_NUMBER_LOCATION, special_symbols_code_location,
             SPECIAL_SYMBOLS_BUFF_SIZE);
       } else {
 
-        shifted_floor = matrix_settings.addr_id - drawing_data.floor - 10 + 1;
+        shifted_floor = matrix_settings.group_id - drawing_data.floor - 10 + 1;
 
         if (shifted_floor <= 9) {
           matrix_string[DIRECTION] = 'c';
@@ -318,11 +376,11 @@ static void process_code_location() {
   }
 #endif
 
-  if (matrix_string[DIRECTION] != '-' && matrix_string[DIRECTION] != 'p') {
-    transform_direction_to_common(direction);
-    set_direction_symbol(matrix_string, drawing_data.direction);
-  } else { // periodic change direction and symbol "p"/"-"
-  }
+  // if (matrix_string[DIRECTION] != '-' && matrix_string[DIRECTION] != 'p') {
+  //   transform_direction_to_common(direction);
+  //   set_direction_symbol(matrix_string, drawing_data.direction);
+  // } else { // periodic change direction and symbol "p"/"-"
+  // }
 }
 
 /// Flag to control if cabin is overloaded
@@ -390,23 +448,58 @@ static void setting_sound_alpaca(uint16_t current_location) {
   }
 }
 
-void process_data_alpaca(uint8_t *rx_data_can) {
+void process_data_alpaca() {
+
+  // if (is_can_data_received()) {
+  reset_value_data_received();
+
+  CAN_Data_Message_t *received_msg = get_received_data_by_can();
+  uint8_t shift_value = matrix_settings.group_id;
+
+  // Определяем тип сообщения по его ID
+
+  // Копируем 8 байт из массива received_msg.rx_data_can в структуру
+  // alpaca_parametrs.rx_data_alpaca
+  memcpy(&alpaca_parametrs.rx_data_alpaca, received_msg->rx_data_can,
+         sizeof(msg_alpaca_t));
+
+  /* Отображаем символы в зависимости от типа сообщения */
 
   /// Flag to control is data received by CAN
   extern volatile bool is_data_received;
 
-  uint8_t first_byte = rx_data_can[BYTE_0];
-  uint8_t second_byte = rx_data_can[BYTE_1];
+  uint8_t first_byte = alpaca_parametrs.rx_data_alpaca.byte1;  // MSB
+  uint8_t second_byte = alpaca_parametrs.rx_data_alpaca.byte2; // LSB
 
   data = (first_byte << 8) | second_byte;
 
+  switch (data) {
+  case PR_IM_AR_DN ... PR_IM_AR_UP:
+    alpaca_parametrs.message_type = MESSAGE_ARROW;
+    break;
+
+  case PR_IM_FL_NA ... PR_IM_FL_64:
+    alpaca_parametrs.message_type = MESSAGE_FLOOR;
+    break;
+
+  case PR_IM_LD_ON ... PR_IM_EVQ_PRESS:
+    alpaca_parametrs.message_type = MESSAGE_MODE;
+    break;
+
+  case PR_CM_BP_00:
+    alpaca_parametrs.message_type = MESSAGE_GONG;
+    break;
+
+  default:
+    break;
+  }
+
   process_code_location();
 
-  // if (matrix_settings.volume != VOLUME_0) {
   setting_sound_alpaca(data);
-  // }
 
   //  while (is_data_received == false && is_interface_connected == true) {
   draw_string_on_matrix(matrix_string);
+  // }
   // }
 }

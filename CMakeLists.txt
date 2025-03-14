@@ -116,6 +116,7 @@ if(USE_DOT_PIN)
         ${PROJECT_DIR}/middlewares/protocols_modes/ukl/ukl.c
         ${PROJECT_DIR}/middlewares/protocols_modes/uel/uel.c
         ${PROJECT_DIR}/middlewares/protocols_modes/nku/nku.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/alpaca/alpaca.c
     )
 
     file(GLOB_RECURSE STM32CUBEMX_SOURCES

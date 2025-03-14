@@ -29,7 +29,8 @@ void protocol_init() {
                                 matrix_settings.addr_id <= ADDR_ID_LIMIT;
 
   bool is_group_id_from_flash_valid =
-      matrix_settings.group_id >= GROUP_ID_MIN && matrix_settings.group_id <= 4;
+      matrix_settings.group_id >= GROUP_ID_MIN &&
+      matrix_settings.group_id <= GROUP_ID_MAX;
 
   if (!is_id_from_flash_valid) {
     matrix_settings.addr_id = MAIN_CABIN_ID;
@@ -107,7 +108,8 @@ void protocol_process_data() {
 #elif PROTOCOL_UKL
     process_data_pin();
 #elif PROTOCOL_ALPACA
-    process_data_from_can();
+    process_data_from_can(); // send data
+    process_data_alpaca();
 #elif PROTOCOL_NKU
     process_data_nku();
 #endif
@@ -134,7 +136,7 @@ void protocol_stop() {
   is_interface_connected = false;
   stop_buzzer_sound();
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_NKU
+#if PROTOCOL_UIM_6100 || PROTOCOL_NKU || PROTOCOL_ALPACA
   stop_can(&hcan);
 #elif PROTOCOL_UEL
 

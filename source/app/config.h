@@ -17,8 +17,8 @@
 #define PROTOCOL_UIM_6100 0
 #define PROTOCOL_UEL 0
 #define PROTOCOL_UKL 0
-#define PROTOCOL_ALPACA 0
-#define PROTOCOL_NKU 1
+#define PROTOCOL_ALPACA 1
+#define PROTOCOL_NKU 0
 
 #if DOT_PIN
 #define PERIOD_SEC_FOR_SETTINGS                                                \
@@ -211,10 +211,14 @@
 #define MAX_POSITIVE_NUMBER_LOCATION 64
 #define MAIN_CABIN_ID 0
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1 ///< Time in ms to check interface connection
+  1000 ///< Time in ms to check interface connection
 
 #define MAX_P_FLOOR_ID 10
 #define MIN_MINUS_FLOOR_ID 11
+
+#define BUFFER_SIZE_BYTES 1
+#define GROUP_ID_MIN 0 // shift: 0, П1 - П10
+#define GROUP_ID_MAX ADDR_ID_LIMIT
 
 #elif PROTOCOL_NKU && !PROTOCOL_UEL && !PROTOCOL_UKL && !PROTOCOL_ALPACA &&    \
     !DEMO_MODE && !TEST_MODE && !PROTOCOL_UIM_6100

@@ -14,7 +14,7 @@
   "V0L" ///< String that displayed in settings_mode_t = VOL
 #define SETTINGS_MODE_ID                                                       \
   "cID" ///< String that displayed in settings_mode_t = ID
-#define SETTINGS_MODE_SFT                                                      \
+#define SETTINGS_MODE_SHFT                                                     \
   "SHF" ///< String that displayed in mode ID when shift for floor location
         ///< (Alpaca)
 #define SETTINGS_MODE_ESC                                                      \
@@ -337,17 +337,17 @@ void set_new_selected_id(uint8_t *selected_id) {
   } else {
     selected_id++;
   }
-#elif PROTOCOL_NKU
+#elif PROTOCOL_NKU || PROTOCOL_ALPACA
   if (*selected_id == ADDR_ID_LIMIT) {
     *selected_id = ADDR_ID_MIN;
   } else {
     (*selected_id)++;
   }
 #elif PROTOCOL_ALPACA
-  selected_id++;
-  if (selected_id > ADDR_ID_LIMIT) {
-    selected_id = ADDR_ID_MIN;
-  }
+  // selected_id++;
+  // if (selected_id > ADDR_ID_LIMIT) {
+  //   selected_id = ADDR_ID_MIN;
+  // }
 #endif
 }
 
@@ -365,36 +365,38 @@ void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
   } else
 
 #elif PROTOCOL_ALPACA
-  if (selected_id == ADDR_ID_MIN) {
+#if 0
+  if (*selected_id == ADDR_ID_MIN) {
     matrix_string[DIRECTION] = 'c';
     matrix_string[MSB] = '0';
     matrix_string[LSB] = 'c';
-  } else if (selected_id <= MAX_P_FLOOR_ID) {
+  } else if (*selected_id <= MAX_P_FLOOR_ID) {
     // id = 1...9
-    if (selected_id < MAX_P_FLOOR_ID) {
+    if (*selected_id < MAX_P_FLOOR_ID) {
       matrix_string[DIRECTION] = 'c';
       matrix_string[MSB] = 'p';
-      matrix_string[LSB] = convert_int_to_char(selected_id);
+      matrix_string[LSB] = convert_int_to_char(*selected_id);
     } else {
       // id = 10
       matrix_string[DIRECTION] = 'p';
-      matrix_string[MSB] = convert_int_to_char(selected_id / 10);
-      matrix_string[LSB] = convert_int_to_char(selected_id % 10);
+      matrix_string[MSB] = convert_int_to_char((*selected_id) / 10);
+      matrix_string[LSB] = convert_int_to_char((*selected_id) % 10);
     }
-  } else if (selected_id >= MIN_MINUS_FLOOR_ID &&
-             selected_id <= ADDR_ID_LIMIT) {
+  } else if (*selected_id >= MIN_MINUS_FLOOR_ID &&
+             *selected_id <= ADDR_ID_LIMIT) {
     // id = 11...19 -> -10 -> 1...9
-    if (selected_id <= 19) {
+    if (*selected_id <= 19) {
       matrix_string[DIRECTION] = '-';
-      matrix_string[MSB] = convert_int_to_char(selected_id - 10);
+      matrix_string[MSB] = convert_int_to_char((*selected_id) - 10);
       matrix_string[LSB] = 'c';
     } else {
       // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
       matrix_string[DIRECTION] = '-';
-      matrix_string[MSB] = convert_int_to_char((selected_id - 10) / 10);
-      matrix_string[LSB] = convert_int_to_char((selected_id - 10) % 10);
+      matrix_string[MSB] = convert_int_to_char(((*selected_id) - 10) / 10);
+      matrix_string[LSB] = convert_int_to_char(((*selected_id) - 10) % 10);
     }
   }
+#endif
 #endif
 
       if (*selected_id == MAIN_CABIN_ID) {
@@ -405,6 +407,47 @@ void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
     drawing_data->floor = *selected_id;
     setting_symbols(matrix_string, drawing_data, ADDR_ID_LIMIT, NULL, 0);
   }
+}
+
+void set_symbols_extra_mode(uint8_t *selected_group_id,
+                            drawing_data_t *drawing_data) {
+#if PROTOCOL_ALPACA
+  if (*selected_group_id == ADDR_ID_MIN) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = '0';
+    matrix_string[LSB] = 'c';
+  } else if (*selected_group_id <= MAX_P_FLOOR_ID) {
+    // id = 1...9
+    if (*selected_group_id < MAX_P_FLOOR_ID) {
+      matrix_string[DIRECTION] = 'c';
+      matrix_string[MSB] = 'p';
+      matrix_string[LSB] = convert_int_to_char(*selected_group_id);
+    } else {
+      // id = 10
+      matrix_string[DIRECTION] = 'p';
+      matrix_string[MSB] = convert_int_to_char((*selected_group_id) / 10);
+      matrix_string[LSB] = convert_int_to_char((*selected_group_id) % 10);
+    }
+  } else if (*selected_group_id >= MIN_MINUS_FLOOR_ID &&
+             *selected_group_id <= ADDR_ID_LIMIT) {
+    // id = 11...19 -> -10 -> 1...9
+    if (*selected_group_id <= 19) {
+      matrix_string[DIRECTION] = '-';
+      matrix_string[MSB] = convert_int_to_char((*selected_group_id) - 10);
+      matrix_string[LSB] = 'c';
+    } else {
+      // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
+      matrix_string[DIRECTION] = '-';
+      matrix_string[MSB] =
+          convert_int_to_char(((*selected_group_id) - 10) / 10);
+      matrix_string[LSB] =
+          convert_int_to_char(((*selected_group_id) - 10) % 10);
+    }
+  }
+#elif PROTOCOL_NKU
+  drawing_data->floor = *selected_group_id;
+  setting_symbols(matrix_string, drawing_data, ADDR_ID_LIMIT, NULL, 0);
+#endif
 }
 
 /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING,
@@ -433,7 +476,7 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
 
   case SAVE_SETTINGS:
 /* Обновление структуры с данными о настройках */
-#if PROTOCOL_NKU
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
     update_matrix_settings(&selected_level_volume, &selected_id,
                            &selected_group_id);
 #else
@@ -561,7 +604,9 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       /* Переход к следующему режиму меню */
       if (is_button_1_pressed) {
-#if PROTOCOL_NKU /* Для НКУ следующий режим: Адрес группы */
+#if PROTOCOL_NKU ||                                                                                           \
+    PROTOCOL_ALPACA /* Для НКУ следующий режим: Адрес группы \ \ \ \ \ \ \ \ \ \
+                     */
         menu->current_state = MENU_STATE_GROUP_ID;
 #else /* Для остальных протоколов следующий режим: Выход */
         menu->current_state = MENU_STATE_EXIT;
@@ -605,7 +650,11 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
       /* Отображаем текущий выбранный/сохраненный адрес группы */
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
+#if PROTOCOL_NKU
         draw_string_on_matrix(SETTINGS_MODE_ID_GROUP);
+#elif PROTOCOL_ALPACA
+        draw_string_on_matrix(SETTINGS_MODE_SHFT);
+#endif
       }
 
       /* Переход к следующему режиму меню */
@@ -622,19 +671,17 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
             flash_group_id; // Показываем сохранённый адрес группы
       } else {
 
-#if PROTOCOL_NKU
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
         if (selected_group_id == GROUP_ID_MAX) {
           selected_group_id = GROUP_ID_MIN;
         } else {
           selected_group_id++;
         }
-#elif PROTOCOL_ALPACA
-
 #endif
       }
 
-      drawing_data.floor = selected_group_id;
-      setting_symbols(matrix_string, &drawing_data, GROUP_ID_MAX, NULL, 0);
+      /* Настройка символов для отображения GROUP_ID (НКУ), SHIFT (Альпака) */
+      set_symbols_extra_mode(&selected_group_id, &drawing_data);
 
       /* Отображаем текущий выбранный/сохраненный адрес группы */
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
@@ -713,7 +760,7 @@ void press_button() {
     /* Инициализация переменных для Адреса группы */
     bool is_group_id_from_flash_valid =
         matrix_settings.group_id >= GROUP_ID_MIN &&
-        matrix_settings.group_id <= 4;
+        matrix_settings.group_id <= GROUP_ID_MAX;
 
     flash_group_id =
         is_group_id_from_flash_valid ? matrix_settings.group_id : GROUP_ID_MIN;

@@ -19,6 +19,6 @@
  * @param  rx_data_can: Pointer to the buffer with received data by CAN
  * @retval None
  */
-void process_data_alpaca(uint8_t *rx_data_can);
+void process_data_alpaca();
 
 #endif // UIM6100_H

@@ -73,6 +73,24 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
   }
 #endif
 
+#if PROTOCOL_ALPACA
+
+  if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header,
+                           last_received_message.rx_data_can) == HAL_OK) {
+
+    if (rx_header.DLC == 2) {
+
+      alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+      is_interface_connected = true;
+      is_data_received = true;
+
+      last_received_message.std_id = rx_header.StdId;
+      last_received_message.dlc = rx_header.DLC;
+      last_received_message.is_data_received = true;
+    }
+  }
+#endif
+
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
       HAL_OK) {
 
@@ -124,9 +142,24 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
     }
 
 #elif PROTOCOL_ALPACA
-    alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
-    is_interface_connected = true;
-    is_data_received = true;
+    // if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header,
+    //                          last_received_message.rx_data_can) == HAL_OK) {
+
+    //   if (rx_header.DLC == 2) {
+
+    //     alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+    //     is_interface_connected = true;
+    //     is_data_received = true;
+
+    //     last_received_message.std_id = rx_header.StdId;
+    //     last_received_message.dlc = rx_header.DLC;
+    //     last_received_message.is_data_received = true;
+    //   }
+    // }
+
+    // alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+    // is_interface_connected = true;
+    // is_data_received = true;
 #endif
   }
 }
@@ -134,7 +167,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 /// Counter to control CAN errors
 volatile uint8_t cnt = 0;
 
-// Функция для получения последнего пакета данных
+// Функция для получения сообщения
 CAN_Data_Message_t *get_received_data_by_can(void) {
 
   // if (last_received_message.is_data_received) {
@@ -458,8 +491,8 @@ void CAN_TxData(uint32_t stdId) {
   tx_header.TransmitGlobalTime = 0;
 
   uint16_t number_to_send = stdId;
-  tx_data_can[0] = (number_to_send >> 8) & 0xFF;
-  tx_data_can[1] = number_to_send & 0xFF;
+  tx_data_can[0] = (number_to_send >> 8) & 0xFF; // LSB
+  tx_data_can[1] = number_to_send & 0xFF;        // MSB
 
   if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
     HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data_can, &tx_mailbox);
@@ -482,15 +515,15 @@ uint8_t v = 0;
 void process_data_from_can() {
 
 #if PROTOCOL_ALPACA
-// движения нет
-// CAN_TxData(10000);
-// движение вверх
-// CAN_TxData(10001);
-// CAN_TxData(10006); // 3 floor
-// CAN_TxData(10003);
+  // движения нет
+  // CAN_TxData(10000);
+  // движение вверх
+  CAN_TxData(10001);
+  CAN_TxData(10006); // 3 floor
+  // CAN_TxData(10003);
 
-// Перегрузка кабины
-// CAN_TxData(10738);
+  // Перегрузка кабины
+  // CAN_TxData(10738);
 
 // Погрузка
 // CAN_TxData(10735);
@@ -523,7 +556,8 @@ void process_data_from_can() {
 #if PROTOCOL_UIM_6100
     process_data_uim(&msg);
 #elif PROTOCOL_ALPACA
-    process_data_alpaca(rx_data_can);
+    // process_data_alpaca(rx_data_can);
+    // process_data_alpaca();
 #endif
   }
 }
