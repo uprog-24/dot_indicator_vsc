@@ -62,8 +62,15 @@ void SystemClock_Config(void);
 #if !DEMO_MODE && !TEST_MODE
 
 /// Settings of matrix: addr_id of matrix and level of volume for buzzer
+
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
+
 settings_t matrix_settings = {
     .addr_id = MAIN_CABIN_ID, .volume = VOLUME_1, .group_id = GROUP_ID_MIN};
+#else
+settings_t matrix_settings = {
+    .addr_id = MAIN_CABIN_ID, .volume = VOLUME_1, .group_id = 0};
+#endif
 
 #endif
 
@@ -145,13 +152,20 @@ int main(void) {
 #elif DEMO_MODE
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
 
+#if 0
+ TIM2_Start_bip(3000, VOLUME_3);
+  play_gong(3, 1000, VOLUME_1);
+  play_gong(3, 1000, VOLUME_2);
+  play_gong(3, 1000, VOLUME_3);
+#endif
+
   while (1) {
     demo_mode_start();
   }
 
 #else
 #include "conf.h"
-
+  uint8_t tt = 0;
 #if 1
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс, таймер для отображения символов
   // display_protocol_name(PROTOCOL_NAME);
@@ -160,19 +174,44 @@ int main(void) {
 
   read_settings(&matrix_settings);
   protocol_init();
-
   while (1) {
-#if PROTOCOL_ALPACA
-    is_interface_connected = true;
-#endif
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();
+#if PROTOCOL_ALPACA
+      // CAN_TxData(PR_IM_AR_NA);
+      // CAN_TxData(PR_IM_FL_02);
+
+      if (tt == 0) {
+        // CAN_TxData(PR_IM_LD_ON);
+        CAN_TxData(PR_IM_ERR_PRESS);
+        // CAN_TxData(PR_IM_OVL_1);
+        // CAN_TxData(PR_IM_EVQ_PRESS);
+        // CAN_TxData(PR_IM_FRA);
+        tt++;
+
+      } else {
+
+        // CAN_TxData(PR_IM_OVL_0);
+        // CAN_TxData(PR_IM_LD_OFF);
+
+        // CAN_TxData(PR_IM_AR_NA);
+        // CAN_TxData(PR_IM_FL_02);
+
+        // CAN_TxData(PR_IM_LD_ON);
+        // CAN_TxData(PR_IM_ERR_PRESS);
+        // CAN_TxData(PR_IM_OVL_1);
+        // CAN_TxData(PR_IM_EVQ_PRESS);
+        // CAN_TxData(PR_IM_FRA);
+      }
+#endif
       matrix_state = MATRIX_STATE_WORKING;
       break;
 
     case MATRIX_STATE_WORKING:
       protocol_process_data();
+      // HAL_Delay(2000);
+
       break;
 
     case MATRIX_STATE_MENU:

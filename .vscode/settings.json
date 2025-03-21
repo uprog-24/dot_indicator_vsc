@@ -32,6 +32,7 @@
     "flash.h": "c",
     "conf.h": "c",
     "cmath": "c",
-    "nku.h": "c"
+    "nku.h": "c",
+    "alpaca.h": "c"
   }
 }

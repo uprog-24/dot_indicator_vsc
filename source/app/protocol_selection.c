@@ -28,18 +28,22 @@ void protocol_init() {
   bool is_id_from_flash_valid = matrix_settings.addr_id >= ADDR_ID_MIN &&
                                 matrix_settings.addr_id <= ADDR_ID_LIMIT;
 
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
   bool is_group_id_from_flash_valid =
       matrix_settings.group_id >= GROUP_ID_MIN &&
       matrix_settings.group_id <= GROUP_ID_MAX;
+#endif
 
   if (!is_id_from_flash_valid) {
     matrix_settings.addr_id = MAIN_CABIN_ID;
     matrix_settings.volume = VOLUME_1;
   }
 
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
   if (!is_group_id_from_flash_valid) {
     matrix_settings.group_id = GROUP_ID_MIN;
   }
+#endif
 
 #if PROTOCOL_UIM_6100
   MX_CAN_Init();
@@ -57,7 +61,6 @@ void protocol_init() {
 
 #elif PROTOCOL_ALPACA
   MX_CAN_Init();
-
 #elif PROTOCOL_NKU
   MX_CAN_Init();
 
@@ -89,6 +92,14 @@ void protocol_start() {
 #elif PROTOCOL_ALPACA
 
   start_can(&hcan, 0);
+  is_interface_connected = true;
+
+#if DOT_PIN
+  matrix_string[DIRECTION] = 'c';
+  matrix_string[MSB] = 'c';
+  matrix_string[LSB] = 'c';
+
+#endif
 
 #endif
 }
@@ -108,7 +119,7 @@ void protocol_process_data() {
 #elif PROTOCOL_UKL
     process_data_pin();
 #elif PROTOCOL_ALPACA
-    process_data_from_can(); // send data
+    // process_data_from_can(); // send data
     process_data_alpaca();
 #elif PROTOCOL_NKU
     process_data_nku();

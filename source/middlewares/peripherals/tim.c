@@ -13,7 +13,9 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
+#if PROTOCOL_UKL
 #include "ukl.h"
+#endif
 
 #define TIM4_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM4
 #define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec
@@ -150,8 +152,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       if (connection_sec_is_elapsed >= TIME_SEC_FOR_INTERFACE_CONNECTION) {
         connection_sec_is_elapsed = 0;
 
+#if !PROTOCOL_ALPACA
         is_interface_connected = (alive_cnt[0] == alive_cnt[1]) ? false : true;
         alive_cnt[1] = alive_cnt[0];
+#endif
       }
     }
 

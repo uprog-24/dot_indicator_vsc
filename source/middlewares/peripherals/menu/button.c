@@ -321,21 +321,21 @@ static menu_context_t menu = {.current_state = MENU_STATE_IDLE,
 
 void set_new_selected_id(uint8_t *selected_id) {
 #if PROTOCOL_UIM_6100
-  if (selected_id == 47) {
-    selected_id = 1;
-  } else if (selected_id == 40) {
-    selected_id = MAIN_CABIN_ID;
+  if (*selected_id == 47) {
+    *selected_id = 1;
+  } else if (*selected_id == 40) {
+    *selected_id = MAIN_CABIN_ID;
   } else {
-    selected_id++;
+    (*selected_id)++;
   }
 
 #elif PROTOCOL_UKL
-  if (selected_id == ADDR_ID_LIMIT) {
-    selected_id = ADDR_ID_MIN;
-  } else if (selected_id == 55) {
-    selected_id = 57;
+  if (*selected_id == ADDR_ID_LIMIT) {
+    *selected_id = ADDR_ID_MIN;
+  } else if (*selected_id == 55) {
+    *selected_id = 57;
   } else {
-    selected_id++;
+    (*selected_id)++;
   }
 #elif PROTOCOL_NKU || PROTOCOL_ALPACA
   if (*selected_id == ADDR_ID_LIMIT) {
@@ -353,50 +353,20 @@ void set_new_selected_id(uint8_t *selected_id) {
 
 void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
 #if PROTOCOL_UKL
-  if (selected_id >= 57 && selected_id <= 59) {
+  if (*selected_id >= 57 && *selected_id <= 59) {
     matrix_string[DIRECTION] = 'c';
     matrix_string[MSB] = 'p';
-    matrix_string[LSB] =
-        (selected_id == 57) ? 'c' : convert_int_to_char(selected_id % 10 - 7);
-  } else if (selected_id >= 60 && selected_id <= 63) {
+    matrix_string[LSB] = (*selected_id == 57)
+                             ? 'c'
+                             : convert_int_to_char((*selected_id) % 10 - 7);
+  } else if (*selected_id >= 60 && *selected_id <= 63) {
     matrix_string[DIRECTION] = 'c';
     matrix_string[MSB] = '-';
-    matrix_string[LSB] = convert_int_to_char(selected_id % 10 + 1);
+    matrix_string[LSB] = convert_int_to_char((*selected_id) % 10 + 1);
   } else
 
 #elif PROTOCOL_ALPACA
-#if 0
-  if (*selected_id == ADDR_ID_MIN) {
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = '0';
-    matrix_string[LSB] = 'c';
-  } else if (*selected_id <= MAX_P_FLOOR_ID) {
-    // id = 1...9
-    if (*selected_id < MAX_P_FLOOR_ID) {
-      matrix_string[DIRECTION] = 'c';
-      matrix_string[MSB] = 'p';
-      matrix_string[LSB] = convert_int_to_char(*selected_id);
-    } else {
-      // id = 10
-      matrix_string[DIRECTION] = 'p';
-      matrix_string[MSB] = convert_int_to_char((*selected_id) / 10);
-      matrix_string[LSB] = convert_int_to_char((*selected_id) % 10);
-    }
-  } else if (*selected_id >= MIN_MINUS_FLOOR_ID &&
-             *selected_id <= ADDR_ID_LIMIT) {
-    // id = 11...19 -> -10 -> 1...9
-    if (*selected_id <= 19) {
-      matrix_string[DIRECTION] = '-';
-      matrix_string[MSB] = convert_int_to_char((*selected_id) - 10);
-      matrix_string[LSB] = 'c';
-    } else {
-      // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
-      matrix_string[DIRECTION] = '-';
-      matrix_string[MSB] = convert_int_to_char(((*selected_id) - 10) / 10);
-      matrix_string[LSB] = convert_int_to_char(((*selected_id) - 10) % 10);
-    }
-  }
-#endif
+
 #endif
 
       if (*selected_id == MAIN_CABIN_ID) {
@@ -416,33 +386,32 @@ void set_symbols_extra_mode(uint8_t *selected_group_id,
     matrix_string[DIRECTION] = 'c';
     matrix_string[MSB] = '0';
     matrix_string[LSB] = 'c';
-  } else if (*selected_group_id <= MAX_P_FLOOR_ID) {
-    // id = 1...9
-    if (*selected_group_id < MAX_P_FLOOR_ID) {
-      matrix_string[DIRECTION] = 'c';
-      matrix_string[MSB] = 'p';
-      matrix_string[LSB] = convert_int_to_char(*selected_group_id);
-    } else {
-      // id = 10
-      matrix_string[DIRECTION] = 'p';
-      matrix_string[MSB] = convert_int_to_char((*selected_group_id) / 10);
-      matrix_string[LSB] = convert_int_to_char((*selected_group_id) % 10);
-    }
-  } else if (*selected_group_id >= MIN_MINUS_FLOOR_ID &&
-             *selected_group_id <= ADDR_ID_LIMIT) {
-    // id = 11...19 -> -10 -> 1...9
-    if (*selected_group_id <= 19) {
-      matrix_string[DIRECTION] = '-';
-      matrix_string[MSB] = convert_int_to_char((*selected_group_id) - 10);
-      matrix_string[LSB] = 'c';
-    } else {
-      // id = 20...ADDR_ID_LIMIT -> -10 -> 10...63
-      matrix_string[DIRECTION] = '-';
-      matrix_string[MSB] =
-          convert_int_to_char(((*selected_group_id) - 10) / 10);
-      matrix_string[LSB] =
-          convert_int_to_char(((*selected_group_id) - 10) % 10);
-    }
+  } else if (*selected_group_id <= MAX_P_FLOOR_SHIFT_INDEX) {
+    /* shift = group_id = 1...9 и 10 -> П1..П9 и П10 */
+    matrix_string[DIRECTION] =
+        (*selected_group_id < MAX_P_FLOOR_SHIFT_INDEX) ? 'c' : 'p';
+    matrix_string[MSB] = (*selected_group_id < MAX_P_FLOOR_SHIFT_INDEX)
+                             ? 'p'
+                             : convert_int_to_char((*selected_group_id) / 10);
+    matrix_string[LSB] = (*selected_group_id < MAX_P_FLOOR_SHIFT_INDEX)
+                             ? convert_int_to_char(*selected_group_id)
+                             : convert_int_to_char((*selected_group_id) % 10);
+  } else if (*selected_group_id >= MIN_MINUS_FLOOR_SHIFT_INDEX) {
+    /* shift = group_id = 11... -> вычитаем MAX_P_FLOOR_SHIFT_INDEX 
+    * (тк от 0 до 10 идут этажи П1..П10) -> -1... */
+
+    matrix_string[DIRECTION] = '-';
+    matrix_string[MSB] =
+        (*selected_group_id <= 19)
+            ? convert_int_to_char((*selected_group_id) -
+                                  MAX_P_FLOOR_SHIFT_INDEX)
+            : convert_int_to_char(
+                  ((*selected_group_id) - MAX_P_FLOOR_SHIFT_INDEX) / 10);
+    matrix_string[LSB] =
+        (*selected_group_id <= 19)
+            ? 'c'
+            : convert_int_to_char(
+                  ((*selected_group_id) - MAX_P_FLOOR_SHIFT_INDEX) % 10);
   }
 #elif PROTOCOL_NKU
   drawing_data->floor = *selected_group_id;
@@ -468,6 +437,10 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
 
     is_first_btn_clicked = true;
     time_since_last_press_sec = 0;
+
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'c';
+    matrix_string[LSB] = 'c';
 
     matrix_state = MATRIX_STATE_START;
     *menu_state = MENU_STATE_OPEN;
@@ -604,9 +577,8 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       /* Переход к следующему режиму меню */
       if (is_button_1_pressed) {
-#if PROTOCOL_NKU ||                                                                                           \
-    PROTOCOL_ALPACA /* Для НКУ следующий режим: Адрес группы \ \ \ \ \ \ \ \ \ \
-                     */
+      /* Для НКУ следующий режим: Адрес группы; для Альпака - Сдвиг */
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
         menu->current_state = MENU_STATE_GROUP_ID;
 #else /* Для остальных протоколов следующий режим: Выход */
         menu->current_state = MENU_STATE_EXIT;
@@ -718,7 +690,9 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
     /*===== Завершение: Режим меню ESC (Выход) =====*/
   }
 
-  /* Выход из меню по истечении PERIOD_SEC_FOR_SETTINGS секунд бездействия в
+#if 0
+  /* Выход из меню по истечении PERIOD_SEC_FOR_SETTINGS секунд бездействия
+  в
    * меню (БЕЗ сохранения настроек) */
   if (is_time_sec_for_settings_elapsed) {
     is_time_sec_for_settings_elapsed = false;
@@ -729,6 +703,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
     menu_exit(&menu_state, SAVE_SETTINGS);
 #endif
   }
+#endif
 }
 
 void press_button() {
@@ -757,13 +732,15 @@ void press_button() {
 
     flash_id = is_id_from_flash_valid ? matrix_settings.addr_id : MAIN_CABIN_ID;
 
-    /* Инициализация переменных для Адреса группы */
+/* Инициализация переменных для Адреса группы */
+#if PROTOCOL_NKU || PROTOCOL_ALPACA
     bool is_group_id_from_flash_valid =
         matrix_settings.group_id >= GROUP_ID_MIN &&
         matrix_settings.group_id <= GROUP_ID_MAX;
 
     flash_group_id =
         is_group_id_from_flash_valid ? matrix_settings.group_id : GROUP_ID_MIN;
+#endif
 
     /* Инициализация переменных для Уровня громкости */
     if (matrix_settings.volume != VOLUME_0 &&
@@ -792,6 +769,20 @@ void press_button() {
     selected_id = flash_id;
     selected_group_id = flash_group_id;
   }
+
+#if 1
+  /* Выход из меню по истечении PERIOD_SEC_FOR_SETTINGS секунд бездействия в
+   * меню (БЕЗ сохранения настроек) */
+  if (is_time_sec_for_settings_elapsed) {
+    is_time_sec_for_settings_elapsed = false;
+
+#if DOT_PIN
+    menu_exit(&menu_state, NOT_SAVE_SETTINGS);
+#elif DOT_SPI
+    menu_exit(&menu_state, SAVE_SETTINGS);
+#endif
+  }
+#endif
 
   /*===== Нажатие кнопки 1 =====*/
   if (is_button_1_pressed) {

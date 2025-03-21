@@ -17,7 +17,8 @@
 
         // "${workspaceFolder}/source/middlewares/protocols_modes/demo_mode",
         // "${workspaceFolder}/source/middlewares/display_symbols"
-      ]
+      ],
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json"
     }
   ]
 }

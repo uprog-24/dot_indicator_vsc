@@ -23,9 +23,11 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
-#include "uim6100.h"
 
+#if PROTOCOL_UIM_6100
+#include "uim6100.h"
 msg_t msg = {0, 0, 0, 0};
+#endif
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -96,7 +98,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 
 #if PROTOCOL_UIM_6100
 
-#if 1
     if ((matrix_settings.addr_id == rx_header.StdId) &&
         (rx_header.StdId >= 46) && (rx_header.StdId != 49)) {
       if (rx_header.DLC == 2) {
@@ -121,7 +122,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
         }
       }
     }
-#endif
 
     if (rx_header.DLC == 6 && rx_data_can[0] == 0x81 &&
         rx_data_can[1] == 0x00) {
@@ -135,31 +135,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
       msg.w3 = rx_data_can[5];
     }
 
-#elif TEST_MODE
+#endif
 
+#if TEST_MODE
     if (rx_header.StdId == TEST_MODE_STD_ID) {
       is_data_received = true;
     }
-
-#elif PROTOCOL_ALPACA
-    // if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header,
-    //                          last_received_message.rx_data_can) == HAL_OK) {
-
-    //   if (rx_header.DLC == 2) {
-
-    //     alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
-    //     is_interface_connected = true;
-    //     is_data_received = true;
-
-    //     last_received_message.std_id = rx_header.StdId;
-    //     last_received_message.dlc = rx_header.DLC;
-    //     last_received_message.is_data_received = true;
-    //   }
-    // }
-
-    // alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
-    // is_interface_connected = true;
-    // is_data_received = true;
 #endif
   }
 }
@@ -512,14 +493,18 @@ uint8_t v = 0;
  * @param  None
  * @retval None
  */
+uint8_t is_send = 0;
 void process_data_from_can() {
 
 #if PROTOCOL_ALPACA
   // движения нет
   // CAN_TxData(10000);
   // движение вверх
-  CAN_TxData(10001);
-  CAN_TxData(10006); // 3 floor
+
+  // CAN_TxData(PR_IM_OVL_0);
+
+  // CAN_TxData(PR_IM_FL_01);
+  // CAN_TxData(10006); // 3 floor
   // CAN_TxData(10003);
 
   // Перегрузка кабины
