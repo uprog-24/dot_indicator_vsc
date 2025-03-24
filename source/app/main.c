@@ -183,8 +183,9 @@ int main(void) {
       // CAN_TxData(PR_IM_FL_02);
 
       if (tt == 0) {
+        // CAN_TxData(PR_CM_BP_00);
         // CAN_TxData(PR_IM_LD_ON);
-        CAN_TxData(PR_IM_ERR_PRESS);
+        // CAN_TxData(PR_IM_ERR_PRESS);
         // CAN_TxData(PR_IM_OVL_1);
         // CAN_TxData(PR_IM_EVQ_PRESS);
         // CAN_TxData(PR_IM_FRA);
@@ -195,8 +196,9 @@ int main(void) {
         // CAN_TxData(PR_IM_OVL_0);
         // CAN_TxData(PR_IM_LD_OFF);
 
-        // CAN_TxData(PR_IM_AR_NA);
-        // CAN_TxData(PR_IM_FL_02);
+        CAN_TxData(PR_IM_AR_NA); // gong
+        CAN_TxData(PR_IM_FL_02);
+        CAN_TxData(PR_CM_BP_00);
 
         // CAN_TxData(PR_IM_LD_ON);
         // CAN_TxData(PR_IM_ERR_PRESS);
