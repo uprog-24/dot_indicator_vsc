@@ -63,14 +63,16 @@ static void TIM2_Set_volume(uint8_t volume) {
  * @brief  Start PWM TIM2 for buzzer
  * @retval None
  */
-static void TIM2_Start_PWM() {
-#if DEMO_MODE
-  // HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
-  Test_BuzzerStart();
-#else
-  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
-#endif
-}
+// static void TIM2_Start_PWM() {
+// #if DEMO_MODE
+//   // HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
+//   Test_BuzzerStart();
+// #else
+//   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
+// #endif
+// }
+
+static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
 
 /**
  * @brief  Set frequency for sound of buzzer (turning on buzzer using TIM2)
@@ -84,11 +86,11 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
   // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
   // TIM2_Set_volume(volume);
   // __HAL_TIM_SET_PRESCALER(&htim2, 64 - 1);
-  #if DEMO_MODE
-  TIM1->ARR = (1000000UL / frequency) - 1;
-  #else
+  // #if DEMO_MODE
+  // TIM1->ARR = (1000000UL / frequency) - 1;
+  // #else
   TIM2->ARR = (1000000UL / frequency) - 1;
-  #endif
+  // #endif
   float k = 1.0;
 
   switch (volume) {
@@ -205,12 +207,12 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
 
 #endif
 
-#if DEMO_MODE
-TIM1->CCR3 = ((TIM1->ARR / 100) * volume * k);
-#else
-TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
-#endif
-  
+  // #if DEMO_MODE
+  // TIM1->CCR3 = ((TIM1->ARR / 100) * volume * k);
+  // #else
+  TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
+  // #endif
+
   // TIM2_Start_PWM();
 #endif
 }
