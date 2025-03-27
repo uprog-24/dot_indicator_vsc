@@ -389,16 +389,16 @@ void set_symbols_extra_mode(uint8_t *selected_group_id,
   } else if (*selected_group_id <= MAX_P_FLOOR_SHIFT_INDEX) {
     /* shift = group_id = 1...9 и 10 -> П1..П9 и П10 */
     matrix_string[DIRECTION] =
-        (*selected_group_id < MAX_P_FLOOR_SHIFT_INDEX) ? 'c' : 'p';
-    matrix_string[MSB] = (*selected_group_id < MAX_P_FLOOR_SHIFT_INDEX)
+        (*selected_group_id <= MAX_P_FLOOR_SHIFT_INDEX) ? 'c' : 'p';
+    matrix_string[MSB] = (*selected_group_id <= MAX_P_FLOOR_SHIFT_INDEX)
                              ? 'p'
                              : convert_int_to_char((*selected_group_id) / 10);
-    matrix_string[LSB] = (*selected_group_id < MAX_P_FLOOR_SHIFT_INDEX)
+    matrix_string[LSB] = (*selected_group_id <= MAX_P_FLOOR_SHIFT_INDEX)
                              ? convert_int_to_char(*selected_group_id)
                              : convert_int_to_char((*selected_group_id) % 10);
   } else if (*selected_group_id >= MIN_MINUS_FLOOR_SHIFT_INDEX) {
-    /* shift = group_id = 11... -> вычитаем MAX_P_FLOOR_SHIFT_INDEX 
-    * (тк от 0 до 10 идут этажи П1..П10) -> -1... */
+    /* shift = group_id = 11... -> вычитаем MAX_P_FLOOR_SHIFT_INDEX
+     * (тк от 0 до 10 идут этажи П1..П10) -> -1... */
 
     matrix_string[DIRECTION] = '-';
     matrix_string[MSB] =
@@ -577,7 +577,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       /* Переход к следующему режиму меню */
       if (is_button_1_pressed) {
-      /* Для НКУ следующий режим: Адрес группы; для Альпака - Сдвиг */
+        /* Для НКУ следующий режим: Адрес группы; для Альпака - Сдвиг */
 #if PROTOCOL_NKU || PROTOCOL_ALPACA
         menu->current_state = MENU_STATE_GROUP_ID;
 #else /* Для остальных протоколов следующий режим: Выход */

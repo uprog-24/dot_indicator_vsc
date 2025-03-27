@@ -54,7 +54,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
 
 #if DOT_PIN
-      TIM2_Stop_bip();
+      // TIM2_Stop_bip();
       TIM2_Start_bip(900, _bip_volume);
 #elif DOT_SPI
       set_active_buzzer_state(TURN_OFF);
@@ -74,7 +74,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     if (tim1_elapsed_ms == BIP_OFFSET_MS + 2 * _bip_duration_ms) { // stop bip 2
 
 #if DOT_PIN
-      TIM2_Stop_bip();
+      // TIM2_Stop_bip();
       TIM2_Start_bip(800, _bip_volume);
 #elif DOT_SPI
       set_active_buzzer_state(TURN_OFF);

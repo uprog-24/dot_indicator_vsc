@@ -92,12 +92,12 @@ void protocol_start() {
 #elif PROTOCOL_ALPACA
 
   start_can(&hcan, 0);
-  is_interface_connected = true;
+  // is_interface_connected = true;
 
 #if DOT_PIN
   matrix_string[DIRECTION] = 'c';
-  matrix_string[MSB] = 'c';
-  matrix_string[LSB] = 'c';
+  matrix_string[MSB] = '-';
+  matrix_string[LSB] = '-';
 
 #endif
 
@@ -127,9 +127,9 @@ void protocol_process_data() {
   } else {
 
 #if DOT_PIN
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'c';
-    matrix_string[LSB] = 'c';
+    // matrix_string[DIRECTION] = 'c';
+    // matrix_string[MSB] = 'c';
+    // matrix_string[LSB] = 'c';
 
     draw_string_on_matrix("c--");
 #elif DOT_SPI

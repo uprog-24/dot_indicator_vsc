@@ -192,18 +192,18 @@
 
 #define PROTOCOL_NAME "ALP"
 #define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 40 // 73
+#define ADDR_ID_LIMIT 64 // 73
 #define MAX_POSITIVE_NUMBER_LOCATION 64
 #define MAIN_CABIN_ID 0
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection
 
-#define MAX_P_FLOOR_SHIFT_INDEX 10
-#define MIN_MINUS_FLOOR_SHIFT_INDEX 11
+#define MAX_P_FLOOR_SHIFT_INDEX 9      // 10
+#define MIN_MINUS_FLOOR_SHIFT_INDEX 10 // 11
 
 #define BUFFER_SIZE_BYTES 1
 #define GROUP_ID_MIN 0  // shift: 0, П1 - П10
-#define GROUP_ID_MAX 20 // ADDR_ID_LIMIT
+#define GROUP_ID_MAX 18 // 20 // ADDR_ID_LIMIT
 
 #elif PROTOCOL_NKU && !PROTOCOL_UEL && !PROTOCOL_UKL && !PROTOCOL_ALPACA &&    \
     !DEMO_MODE && !TEST_MODE && !PROTOCOL_UIM_6100

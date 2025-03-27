@@ -93,10 +93,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
   }
 #endif
 
+#if PROTOCOL_UIM_6100
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
       HAL_OK) {
 
-#if PROTOCOL_UIM_6100
+// #if PROTOCOL_UIM_6100
 
     if ((matrix_settings.addr_id == rx_header.StdId) &&
         (rx_header.StdId >= 46) && (rx_header.StdId != 49)) {
@@ -134,7 +135,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
       msg.w2 = rx_data_can[4];
       msg.w3 = rx_data_can[5];
     }
-
+  }
 #endif
 
 #if TEST_MODE
@@ -142,7 +143,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
       is_data_received = true;
     }
 #endif
-  }
+  // }
 }
 
 /// Counter to control CAN errors
@@ -194,7 +195,8 @@ void MX_CAN_Init(void) {
   hcan.Init.Mode = CAN_MODE_LOOPBACK;
 #elif PROTOCOL_ALPACA
   hcan.Init.Prescaler = 16; // 125 kbit/s
-  hcan.Init.Mode = CAN_MODE_LOOPBACK;
+  // hcan.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan.Init.Mode = CAN_MODE_NORMAL;
 
 #elif PROTOCOL_NKU
   hcan.Init.Prescaler = 16; // 125 kbit/s

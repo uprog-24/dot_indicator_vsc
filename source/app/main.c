@@ -90,7 +90,7 @@ volatile matrix_state_t matrix_state = MATRIX_STATE_START;
 menu_state_t menu_state = MENU_STATE_OPEN;
 
 /// String that will be displayed on matrix
-char matrix_string[3];
+char matrix_string[3] = {'c', '-', '-'};
 
 volatile bool is_saved_settings = 0;
 
@@ -178,7 +178,7 @@ int main(void) {
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();
-#if PROTOCOL_ALPACA
+#if 0
       // CAN_TxData(PR_IM_AR_NA);
       // CAN_TxData(PR_IM_FL_02);
 
@@ -197,8 +197,9 @@ int main(void) {
         // CAN_TxData(PR_IM_LD_OFF);
 
         CAN_TxData(PR_IM_AR_NA); // gong
-        CAN_TxData(PR_IM_FL_02);
+        CAN_TxData(PR_IM_FL_01);
         CAN_TxData(PR_CM_BP_00);
+        // CAN_TxData(PR_IM_ABT_PRESS);
 
         // CAN_TxData(PR_IM_LD_ON);
         // CAN_TxData(PR_IM_ERR_PRESS);
@@ -212,7 +213,8 @@ int main(void) {
 
     case MATRIX_STATE_WORKING:
       protocol_process_data();
-      // HAL_Delay(2000);
+      // CAN_TxData(PR_IM_ABT_PRESS);
+      // // HAL_Delay(2000);
 
       break;
 

@@ -11,7 +11,8 @@
 #include <stdbool.h>
 
 #define SPECIAL_SYMBOLS_BUFF_SIZE 6 ///< Number of special symbols
-#define GONG_BUZZER_FREQ 3000       ///< Frequency of bip for ARRIVAL gong
+#define GONG_BUZZER_FREQ                                                       \
+  1000 // 3000       ///< Frequency of bip for ARRIVAL gong
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
   3000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
 #define BUZZER_FREQ_FIRE_DANGER                                                \
@@ -109,21 +110,21 @@ static uint8_t gong[2] = {
  */
 static void setting_gong(direction_alpaca_t direction_data, uint8_t volume) {
 
-  switch (drawing_data.direction) {
-  case DIRECTION_UP:
-    play_gong(1, GONG_BUZZER_FREQ, volume);
-    break;
-  case DIRECTION_DOWN:
-    play_gong(2, GONG_BUZZER_FREQ, volume);
-    break;
-  case NO_DIRECTION:
-    play_gong(3, GONG_BUZZER_FREQ, volume);
-    break;
-  default:
-    __NOP();
-    play_gong(3, GONG_BUZZER_FREQ, volume);
-    break;
-  }
+  // switch (drawing_data.direction) {
+  // case DIRECTION_UP:
+  //   play_gong(1, GONG_BUZZER_FREQ, volume);
+  //   break;
+  // case DIRECTION_DOWN:
+  //   play_gong(2, GONG_BUZZER_FREQ, volume);
+  //   break;
+  // case NO_DIRECTION:
+  //   play_gong(3, GONG_BUZZER_FREQ, volume);
+  //   break;
+  // default:
+  //   __NOP();
+  play_gong(3, GONG_BUZZER_FREQ, volume);
+  //   break;
+  // }
 }
 
 static uint16_t data;
@@ -251,24 +252,35 @@ static void process_code_location(uint16_t current_location) {
 
   //================================ Настройка matrix_string для отображения
   /* Если спец. режим */
+  // if (alpaca_parametrs.message_type == MESSAGE_FLOOR ||
+  //     alpaca_parametrs.message_type == MESSAGE_MODE) {
   if (is_drawing_data_floor_special) {
 
-    if (is_disable_mode_signal) {
-      matrix_string[DIRECTION] = 'c';
-      matrix_string[MSB] = 'c';
-      matrix_string[LSB] = 'c';
-    } else {
-      set_floor_symbols(
-          matrix_string, drawing_data.floor, MAX_POSITIVE_NUMBER_LOCATION,
-          special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-    }
+    // if (is_disable_mode_signal) {
+    //   matrix_string[DIRECTION] = 'c';
+    //   matrix_string[MSB] = 'c';
+    //   matrix_string[LSB] = 'c';
+    // } else {
+    set_floor_symbols(matrix_string, drawing_data.floor,
+                      MAX_POSITIVE_NUMBER_LOCATION,
+                      special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+    // }
 
   } else {
     /* Если этаж */
-    if (matrix_settings.group_id <= MAX_P_FLOOR_SHIFT_INDEX) {
+
+    if (matrix_settings.group_id == 0) {
+      shifted_floor = drawing_data.floor;
+      set_floor_symbols(
+          matrix_string, shifted_floor, MAX_POSITIVE_NUMBER_LOCATION,
+          special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+    } else
+
+        if (matrix_settings.group_id <= MAX_P_FLOOR_SHIFT_INDEX) {
 
       /* Если текущий этаж от СУЛ больше установленного значения сдвига
-       * matrix_settings.group_id, то из значения этажа вычетаем значение сдвига
+       * matrix_settings.group_id, то из значения этажа вычетаем значение
+       * сдвига
        */
       if (drawing_data.floor > matrix_settings.group_id) {
         shifted_floor = drawing_data.floor - matrix_settings.group_id;
@@ -286,7 +298,9 @@ static void process_code_location(uint16_t current_location) {
         shifted_floor = matrix_settings.group_id - drawing_data.floor + 1;
 
         /* Этажи П1...П9 и П10 */
-        matrix_string[MSB] = (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX - 1)
+        // matrix_string[DIRECTION] =
+        //     (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX - 1) ? 'c' : 'p';
+        matrix_string[MSB] = (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX)
                                  ? 'p'
                                  : convert_int_to_char(shifted_floor / 10);
         matrix_string[LSB] = (shifted_floor <= 9)
@@ -322,17 +336,29 @@ static void process_code_location(uint16_t current_location) {
         }
       }
     }
+    // }
   }
 }
 
 /// Flag to control if cabin is overloaded
 static bool is_cabin_overload_sound = false;
 
+/// Flag to control if cabin is overloaded
+static bool is_btn_cancel_pressed = false;
+
 /// Counter for number received data (fire danger)
 static uint8_t fire_danger_cnt = 0;
 
 /// Flag to control fire danger
 static bool is_fire_danger_sound = false;
+
+static bool is_gong = false;
+
+/// Counter for number received data (order button is pressed)
+static uint8_t order_button_cnt = 0;
+
+/// Counter for number received data (order button is disable sound)
+static uint8_t button_disable_cnt = 0;
 
 /// Counter for number received data (fire danger is disable sound)
 static uint8_t fire_disable_cnt = 0;
@@ -363,11 +389,52 @@ static void setting_sound_alpaca(uint16_t current_location) {
 
   case MESSAGE_MODE:
 
+#if 0
+  if (!is_fire_danger_sound && !is_cabin_overload_sound) {
+    if (current_location == PR_IM_ABT_PRESS) {
+      is_btn_cancel_pressed = true;
+      play_gong(1, 1000, matrix_settings.volume);
+    }
+  }
+#endif
+
+#if 1
+    if (!is_fire_danger_sound && !is_cabin_overload_sound) {
+      /* Нажатие кнопки приказа */
+      if (current_location == PR_IM_ABT_PRESS) {
+
+        if (button_disable_cnt == 0) {
+
+          stop_buzzer_sound();
+          order_button_cnt = 0;
+
+          if (matrix_settings.volume != VOLUME_0) {
+            play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+            is_btn_cancel_pressed = true;
+          }
+        }
+
+        /** Не воспроизводить последующие нажатия в течение 230 ms * n, n = 3;
+         * продолжительность BIP_DURATION_MS 500
+         */
+        if (is_btn_cancel_pressed) {
+          button_disable_cnt++;
+          if (button_disable_cnt == 5) { // // 230 ms * n
+            button_disable_cnt = 0;
+            is_btn_cancel_pressed = false;
+          }
+        }
+      }
+    }
+#endif
+
 #if 1
     /* Начало режима Перегрузка кабины */
-    if (current_location == PR_IM_OVL_1) {
-      is_cabin_overload_sound = true;
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_1);
+    if (!is_fire_danger_sound) {
+      if (current_location == PR_IM_OVL_1) {
+        is_cabin_overload_sound = true;
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
     }
 
     /* Завершение режима Перегрузка кабины */
@@ -396,7 +463,7 @@ static void setting_sound_alpaca(uint16_t current_location) {
 
     /* Пожарная опасность/сейсмическая активность или эвакуация */
     if (current_location == PR_IM_FRA || current_location == PR_IM_EVQ_PRESS) {
-      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_2);
+      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
       is_fire_danger_sound = true;
     }
 
@@ -419,7 +486,7 @@ void process_data_alpaca() {
   //========== Запись новых полученных данных в alpaca_parametrs.rx_data_alpaca
   if (is_can_data_received()) {
     reset_value_data_received();
-
+    // FIXME: возвращать данные
     CAN_Data_Message_t *received_msg = get_received_data_by_can();
     uint8_t shift_value = matrix_settings.group_id;
 
@@ -465,34 +532,48 @@ void process_data_alpaca() {
     break;
   }
 
-  /* Если пришли некорректные данные/данных нет (data = 0),
-   * то отображаем -- */
-  if (alpaca_parametrs.message_type == MESSAGE_NONE) {
-    draw_string_on_matrix("c--");
-  } else {
-    /* Если данные корректны */
-
-    /* Обработка символов для отображения */
+/* Если пришли некорректные данные/данных нет (data = 0),
+ * то отображаем -- */
+// if (alpaca_parametrs.message_type == MESSAGE_NONE) {
+//   draw_string_on_matrix("c--");
+// } else {
+/* Если данные корректны */
+#if 1
+  /* Обработка символов для отображения */
+  if (alpaca_parametrs.message_type == MESSAGE_FLOOR ||
+      alpaca_parametrs.message_type == MESSAGE_ARROW ||
+      (alpaca_parametrs.message_type == MESSAGE_MODE &&
+       (data != PR_IM_OPD && data != PR_IM_CLD && data != PR_IM_ABT_PRESS))) {
     process_code_location(data);
+  }
 
-    /* Обработка звуковых сигналов */
-    /* Кабинный индикатор */
-    if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-      setting_sound_alpaca(data);
-    } else {
-      /*  Этажный индикатор */
-      // if (matrix_settings.addr_id == drawing_data.floor) {
-      if (matrix_settings.addr_id == drawing_data.floor) {
-        if (matrix_settings.volume != VOLUME_0) {
-          if (alpaca_parametrs.message_type == MESSAGE_GONG) {
-            setting_gong(data, matrix_settings.volume);
-          }
+  /* Обработка звуковых сигналов */
+  /* Кабинный индикатор */
+
+  if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+    setting_sound_alpaca(data);
+  } else {
+    /*  Этажный индикатор */
+    // if (matrix_settings.addr_id == drawing_data.floor) {
+    if (matrix_settings.addr_id == drawing_data.floor) {
+      if (matrix_settings.volume != VOLUME_0) {
+        if (alpaca_parametrs.message_type == MESSAGE_GONG) {
+          setting_gong(data, matrix_settings.volume);
         }
       }
     }
-
-    while (is_data_received == false && is_interface_connected == true) {
-      draw_string_on_matrix(matrix_string);
-    }
   }
+
+  // while (is_data_received == false && is_interface_connected == true) {
+  // while (is_can_data_received() && is_interface_connected == true) {
+#endif
+
+  if ((data == 0)) {
+    draw_string_on_matrix("c--");
+  } else {
+    draw_string_on_matrix(matrix_string);
+  }
+
+  // }
+  // }
 }
