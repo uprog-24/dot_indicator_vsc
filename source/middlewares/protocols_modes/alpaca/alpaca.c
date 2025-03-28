@@ -63,6 +63,11 @@ static const code_location_symbols_t
         {.code_location = PR_IM_FRA, .symbols = "F"},
         {.code_location = PR_IM_OVL_1, .symbols = "Kg"}};
 
+const uint8_t floor_remap_table[42] = {
+    0,  1,  3,  5,  7,  9,  11, 13, 15, 17, 19, 21, 23, 25,
+    27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53,
+    55, 57, 59, 61, 63, 65, 67, 69, 71, 72, 73, 74, 75};
+
 /// Structure for data that will be displayed on matrix
 static drawing_data_t drawing_data = {0, NO_DIRECTION};
 
@@ -163,7 +168,15 @@ static void process_code_location(uint16_t current_location) {
 
     /* Этажи с 1 по 64 */
     if (data >= PR_IM_FL_01 && data <= PR_IM_FL_64) {
+
       drawing_data.floor = data % 100 - 3;
+
+      if (drawing_data.floor < 42) {
+        drawing_data.floor = floor_remap_table[drawing_data.floor];
+      } else {
+        drawing_data.floor = floor_remap_table[0];
+      }
+
       is_drawing_data_floor_special = false;
     }
 
@@ -269,74 +282,79 @@ static void process_code_location(uint16_t current_location) {
   } else {
     /* Если этаж */
 
-    if (matrix_settings.group_id == 0) {
-      shifted_floor = drawing_data.floor;
-      set_floor_symbols(
-          matrix_string, shifted_floor, MAX_POSITIVE_NUMBER_LOCATION,
-          special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-    } else
+    if (drawing_data.floor != 0) { // если в структуре этаж заполнен
 
-        if (matrix_settings.group_id <= MAX_P_FLOOR_SHIFT_INDEX) {
-
-      /* Если текущий этаж от СУЛ больше установленного значения сдвига
-       * matrix_settings.group_id, то из значения этажа вычетаем значение
-       * сдвига
-       */
-      if (drawing_data.floor > matrix_settings.group_id) {
-        shifted_floor = drawing_data.floor - matrix_settings.group_id;
+      if (matrix_settings.group_id == 0) {
+        shifted_floor = drawing_data.floor;
+        // if (shifted_floor != 0) {
         set_floor_symbols(
             matrix_string, shifted_floor, MAX_POSITIVE_NUMBER_LOCATION,
             special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+        // }
 
-      } else {
+      } else
 
-        /* Если текущий этаж меньше или равен сдвигу
-         * matrix_settings.group_id, то из значения сдвига вычетаем значение
-         * этажа от СУЛ и прибавляем единицу.
-         * Например, этаж 1, сдвиг 3 -> отображаемый этаж: -3/П3.
+          if (matrix_settings.group_id <= MAX_P_FLOOR_SHIFT_INDEX) {
+
+        /* Если текущий этаж от СУЛ больше установленного значения сдвига
+         * matrix_settings.group_id, то из значения этажа вычетаем значение
+         * сдвига
          */
-        shifted_floor = matrix_settings.group_id - drawing_data.floor + 1;
+        if (drawing_data.floor > matrix_settings.group_id) {
+          shifted_floor = drawing_data.floor - matrix_settings.group_id;
+          set_floor_symbols(
+              matrix_string, shifted_floor, MAX_POSITIVE_NUMBER_LOCATION,
+              special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
-        /* Этажи П1...П9 и П10 */
-        // matrix_string[DIRECTION] =
-        //     (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX - 1) ? 'c' : 'p';
-        matrix_string[MSB] = (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX)
-                                 ? 'p'
-                                 : convert_int_to_char(shifted_floor / 10);
-        matrix_string[LSB] = (shifted_floor <= 9)
-                                 ? convert_int_to_char(shifted_floor)
-                                 : convert_int_to_char(shifted_floor % 10);
-      }
-
-      /* Если сдвиг в диапазоне от MIN_MINUS_FLOOR_SHIFT_INDEX = 11
-       * до ADDR_ID_LIMIT = 73 -> -1..-63 */
-    } else if (matrix_settings.group_id >= MIN_MINUS_FLOOR_SHIFT_INDEX &&
-               matrix_settings.group_id <= ADDR_ID_LIMIT) {
-
-      if (drawing_data.floor >
-          matrix_settings.group_id - MAX_P_FLOOR_SHIFT_INDEX) {
-        shifted_floor = drawing_data.floor -
-                        (matrix_settings.group_id - MAX_P_FLOOR_SHIFT_INDEX);
-        set_floor_symbols(
-            matrix_string, shifted_floor, MAX_POSITIVE_NUMBER_LOCATION,
-            special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-      } else {
-
-        shifted_floor = matrix_settings.group_id - drawing_data.floor -
-                        MAX_P_FLOOR_SHIFT_INDEX + 1;
-
-        if (shifted_floor <= 9) {
-          // matrix_string[DIRECTION] = 'c';
-          matrix_string[MSB] = '-';
-          matrix_string[LSB] = convert_int_to_char(shifted_floor);
         } else {
-          // matrix_string[DIRECTION] = '-';
-          matrix_string[MSB] = convert_int_to_char(shifted_floor / 10);
-          matrix_string[LSB] = convert_int_to_char(shifted_floor % 10);
+
+          /* Если текущий этаж меньше или равен сдвигу
+           * matrix_settings.group_id, то из значения сдвига вычетаем значение
+           * этажа от СУЛ и прибавляем единицу.
+           * Например, этаж 1, сдвиг 3 -> отображаемый этаж: -3/П3.
+           */
+          shifted_floor = matrix_settings.group_id - drawing_data.floor + 1;
+
+          /* Этажи П1...П9 и П10 */
+          // matrix_string[DIRECTION] =
+          //     (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX - 1) ? 'c' : 'p';
+          matrix_string[MSB] = (shifted_floor <= MAX_P_FLOOR_SHIFT_INDEX)
+                                   ? 'p'
+                                   : convert_int_to_char(shifted_floor / 10);
+          matrix_string[LSB] = (shifted_floor <= 9)
+                                   ? convert_int_to_char(shifted_floor)
+                                   : convert_int_to_char(shifted_floor % 10);
+        }
+
+        /* Если сдвиг в диапазоне от MIN_MINUS_FLOOR_SHIFT_INDEX = 11
+         * до ADDR_ID_LIMIT = 73 -> -1..-63 */
+      } else if (matrix_settings.group_id >= MIN_MINUS_FLOOR_SHIFT_INDEX &&
+                 matrix_settings.group_id <= ADDR_ID_LIMIT) {
+
+        if (drawing_data.floor >
+            matrix_settings.group_id - MAX_P_FLOOR_SHIFT_INDEX) {
+          shifted_floor = drawing_data.floor -
+                          (matrix_settings.group_id - MAX_P_FLOOR_SHIFT_INDEX);
+          set_floor_symbols(
+              matrix_string, shifted_floor, MAX_POSITIVE_NUMBER_LOCATION,
+              special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+        } else {
+
+          shifted_floor = matrix_settings.group_id - drawing_data.floor -
+                          MAX_P_FLOOR_SHIFT_INDEX + 1;
+
+          if (shifted_floor <= 9) {
+            // matrix_string[DIRECTION] = 'c';
+            matrix_string[MSB] = '-';
+            matrix_string[LSB] = convert_int_to_char(shifted_floor);
+          } else {
+            // matrix_string[DIRECTION] = '-';
+            matrix_string[MSB] = convert_int_to_char(shifted_floor / 10);
+            matrix_string[LSB] = convert_int_to_char(shifted_floor % 10);
+          }
         }
       }
     }
-    // }
   }
 }
 
@@ -352,7 +370,7 @@ static uint8_t fire_danger_cnt = 0;
 /// Flag to control fire danger
 static bool is_fire_danger_sound = false;
 
-static bool is_gong = false;
+bool is_gong_alpaca_play = false;
 
 /// Counter for number received data (order button is pressed)
 static uint8_t order_button_cnt = 0;
@@ -373,6 +391,8 @@ uint32_t gong_edge[2] = {
     0,
 };
 
+static is_worked = false;
+
 static void setting_sound_alpaca(uint16_t current_location) {
 
   if (matrix_settings.volume == VOLUME_0) {
@@ -384,6 +404,7 @@ static void setting_sound_alpaca(uint16_t current_location) {
   case MESSAGE_GONG:
     if (!is_fire_danger_sound) {
       setting_gong(current_location, matrix_settings.volume);
+      is_gong_alpaca_play = true;
     }
     break;
 
@@ -396,6 +417,19 @@ static void setting_sound_alpaca(uint16_t current_location) {
       play_gong(1, 1000, matrix_settings.volume);
     }
   }
+#endif
+
+/* Открытие/закрытие дверей */
+#if 0
+    if (!is_fire_danger_sound && !is_cabin_overload_sound &&
+        !is_gong_alpaca_play) {
+      if (current_location == PR_IM_OPD || current_location == PR_IM_CLD) {
+        if (!is_worked) {
+          is_worked = true;
+          play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+        }
+      }
+    }
 #endif
 
 #if 1
@@ -504,6 +538,7 @@ void process_data_alpaca() {
 
   data = (first_byte << 8) | second_byte;
 
+  // TODO: to special mode
   previous_mode = current_mode;
   current_mode = data;
 
@@ -532,11 +567,6 @@ void process_data_alpaca() {
     break;
   }
 
-/* Если пришли некорректные данные/данных нет (data = 0),
- * то отображаем -- */
-// if (alpaca_parametrs.message_type == MESSAGE_NONE) {
-//   draw_string_on_matrix("c--");
-// } else {
 /* Если данные корректны */
 #if 1
   /* Обработка символов для отображения */
@@ -549,7 +579,6 @@ void process_data_alpaca() {
 
   /* Обработка звуковых сигналов */
   /* Кабинный индикатор */
-
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
     setting_sound_alpaca(data);
   } else {
@@ -564,16 +593,13 @@ void process_data_alpaca() {
     }
   }
 
-  // while (is_data_received == false && is_interface_connected == true) {
   // while (is_can_data_received() && is_interface_connected == true) {
 #endif
 
-  if ((data == 0)) {
-    draw_string_on_matrix("c--");
-  } else {
-    draw_string_on_matrix(matrix_string);
-  }
+  // if ((data == 0)) {
+  //   draw_string_on_matrix("c--");
+  // } else {
+  // }
 
-  // }
-  // }
+  draw_string_on_matrix(matrix_string);
 }

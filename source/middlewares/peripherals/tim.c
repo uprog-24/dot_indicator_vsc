@@ -113,6 +113,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 
   if (htim->Instance == TIM3) {
+    is_tim3_period_elapsed = true; // для TEST_MODE
 
 #if PROTOCOL_UKL
 

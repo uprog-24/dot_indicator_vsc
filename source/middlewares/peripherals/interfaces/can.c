@@ -97,7 +97,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
       HAL_OK) {
 
-// #if PROTOCOL_UIM_6100
+    // #if PROTOCOL_UIM_6100
 
     if ((matrix_settings.addr_id == rx_header.StdId) &&
         (rx_header.StdId >= 46) && (rx_header.StdId != 49)) {
@@ -139,11 +139,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 #endif
 
 #if TEST_MODE
+  if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
+      HAL_OK) {
     if (rx_header.StdId == TEST_MODE_STD_ID) {
       is_data_received = true;
     }
+  }
 #endif
-  // }
 }
 
 /// Counter to control CAN errors
@@ -441,8 +443,6 @@ void stop_can(CAN_HandleTypeDef *hcan) { HAL_CAN_Stop(hcan); }
 void CAN_TxData(uint32_t stdId) {
 
 #if TEST_MODE
-  /// String OK
-  char *str_ok = "0K";
 
   /// Mailbox for transmitted data
   uint32_t tx_mailbox = 0;
@@ -450,15 +450,6 @@ void CAN_TxData(uint32_t stdId) {
   set_frame(stdId);
   if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
     HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data_can, &tx_mailbox);
-  }
-
-  if (is_data_received) {
-    is_data_received = false;
-#if DOT_PIN
-    draw_string_on_matrix(str_ok);
-#elif DOT_SPI
-    display_symbols_spi("c0K");
-#endif
   }
 
 #elif PROTOCOL_ALPACA

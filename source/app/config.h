@@ -162,7 +162,7 @@
 
 #include "test_mode.h"
 
-#define BUFFER_SIZE_BYTES 1
+#define BUFFER_SIZE_BYTES 8
 
 /* Protocol UKL (DATA_Pin) */
 #elif PROTOCOL_UKL && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&                   \
@@ -192,8 +192,8 @@
 
 #define PROTOCOL_NAME "ALP"
 #define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 64 // 73
-#define MAX_POSITIVE_NUMBER_LOCATION 64
+#define ADDR_ID_LIMIT 64                // 73
+#define MAX_POSITIVE_NUMBER_LOCATION 75 // 64
 #define MAIN_CABIN_ID 0
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection

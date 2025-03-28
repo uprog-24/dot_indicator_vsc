@@ -303,6 +303,7 @@ void TIM2_Stop_bip() {
  * @brief  Остановка звука (PWM TIM2 и TIM1 для длительности бипов).
  * @retval None
  */
+extern bool is_gong_alpaca_play;
 void stop_buzzer_sound() {
   TIM1_Stop();
 #if DOT_PIN
@@ -322,4 +323,5 @@ void stop_buzzer_sound() {
   set_active_buzzer_state(TURN_OFF);
 #endif
   _bip_counter = 0;
+  // is_gong_alpaca_play = false;
 }

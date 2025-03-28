@@ -139,6 +139,8 @@ int main(void) {
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM1_Init();
+
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс, таймер для отображения символов
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -150,8 +152,6 @@ int main(void) {
 #if TEST_MODE
   test_mode_start();
 #elif DEMO_MODE
-  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
-
 #if 0
  TIM2_Start_bip(3000, VOLUME_3);
   play_gong(3, 1000, VOLUME_1);
@@ -167,9 +167,10 @@ int main(void) {
 #include "conf.h"
   uint8_t tt = 0;
 #if 1
-  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс, таймер для отображения символов
-  // display_protocol_name(PROTOCOL_NAME);
-  // display_protocol_name(PROJECT_VER);
+  // TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс, таймер для отображения
+  // символов
+  display_protocol_name(PROTOCOL_NAME);
+  display_protocol_name(PROJECT_VER);
 #endif
 
   read_settings(&matrix_settings);
