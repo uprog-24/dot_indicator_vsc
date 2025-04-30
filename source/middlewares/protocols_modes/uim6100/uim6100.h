@@ -1,20 +1,18 @@
 /**
  * @file    uim6100.h
- * @brief   This file contains all the function prototypes for
- *          the uim6100.c file
+ * @brief   Этот файл содержит прототипы функций для файла uim6100.c
  */
 #ifndef UIM6100_H
 #define UIM6100_H
 
 #include <stdint.h>
 
-#define UIM6100_DLC 6                ///< Length of data (6 bit)
-#define UIM6100_MAIN_CABIN_CAN_ID 46 ///< ID of the main cabin
-#define BYTE_CODE_OPERATION_0_VALUE                                            \
-  0x81 ///< Value of BYTE_CODE_OPERATION_0 byte
-#define BYTE_CODE_OPERATION_1_VALUE                                            \
-  0x00 ///< Value of BYTE_CODE_OPERATION_1 byte
+#define UIM6100_DLC 6 ///< Длина сообщения (6 байт)
+#define UIM6100_MAIN_CABIN_CAN_ID 46 ///< ID кабинного индикатора
 
+/*
+ * Структура для сохранения полученных байтов по CAN.
+ */
 typedef struct {
   uint8_t w0;
   uint8_t w1;
@@ -23,12 +21,12 @@ typedef struct {
 } msg_t;
 
 /**
- * @brief  Process data using UIM6100 protocol
- * @note   1. Set drawing_data structure, process code message, setting gong
- *            and symbols;
- *         2. Display matrix_string while next data is not received and
- *            interface is connected.
- * @param  rx_data_can: Pointer to the buffer with received data by CAN
+ * @brief  Обработка данных по протоколу UIM6100 (ШК6000).
+ * @note   1. Установка структуры drawing_data, обработка code message,
+ *            воспроизведение гонга и отображение символов;
+ *         2. Отображение matrix_string пока следующие данные не получены и
+ *            интерфейс CAN подключен.
+ * @param  msg: Указатель на структуру полученных данных.
  * @retval None
  */
 void process_data_uim(msg_t *msg);

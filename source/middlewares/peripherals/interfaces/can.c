@@ -22,30 +22,29 @@
 
 /* USER CODE BEGIN 0 */
 #include "config.h"
-#include "drawing.h"
 
 #if PROTOCOL_UIM_6100
-#include "uim6100.h"
 msg_t msg = {0, 0, 0, 0};
 #endif
 
 #include <stdbool.h>
 #include <stdio.h>
 
-#define FILTER_11_BIT_ID_OFFSET 5 ///< Offset for Standard frame ID filter
+#define FILTER_11_BIT_ID_OFFSET                                                \
+  5 ///< Смещение для стандартного фильтра идентификации кадра.
 
-/// Structure of Header for receiving data
+/// Структура заголовка для получения данных.
 static CAN_RxHeaderTypeDef rx_header;
 
-/// Buffer for receiving data
+/// Буфер для полученных данных.
 static uint8_t rx_data_can[BUFFER_SIZE_BYTES] = {
     0x00,
 };
 
-/// Flag to control is data received by CAN
+/// Флаг для контроля полученных данных по CAN.
 volatile bool is_data_received = false;
 
-/// Structure of Header for transmitting data
+/// Структура заголовка для отправленных данных.
 static CAN_TxHeaderTypeDef tx_header;
 
 /**
@@ -71,11 +70,11 @@ static void can_send_answer(uint32_t stdId, uint8_t dlc, uint8_t *buffer) {
 }
 
 /**
- * @brief  Handle Interrupt by receiving data after transmitting by CAN,
- *         setting is_data_received flag when data with StdId is received.
- *         Set the counter alive_cnt[0] to control interface connection (set
- * alive_cnt[1] and comparison in tim.c TIM4)
- * @param  hcan: Pointer to a CAN_HandleTypeDef structure
+ * @brief  Обработка прерывания: получение данных по CAN.
+ *         Устанавливаем флаг is_data_received при получении данных.
+ *         Для протоколов: устанавливаем счетчик alive_cnt[0] для проверки
+ *         подключения интерфейса (устанавливаем alive_cnt[1] в tim.c TIM4).
+ * @param  hcan: Указатель на структуру CAN_HandleTypeDef.
  * @retval None
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
@@ -130,20 +129,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
       is_data_received = true;
     }
 
-#elif PROTOCOL_ALPACA
-    alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
-    is_interface_connected = true;
-    is_data_received = true;
 #endif
   }
 }
 
-/// Counter to control CAN errors
-volatile uint8_t cnt = 0;
+/// Счетчик для контроля ошибок для CAN.
+static volatile uint8_t cnt = 0;
 
 /**
- * @brief  Handle Interrupt by CAN errors.
- * @param  hcan: Structure of CAN
+ * @brief  Обработка прерывания для ошибок по CAN.
+ * @param  hcan: Указатель на структуру CAN_HandleTypeDef.
  * @retval None
  */
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan) {
@@ -170,9 +165,6 @@ void MX_CAN_Init(void) {
 #elif TEST_MODE
   hcan.Init.Prescaler = 4;
   hcan.Init.Mode = CAN_MODE_LOOPBACK;
-#elif PROTOCOL_ALPACA
-  hcan.Init.Prescaler = 16; // 125 kbit/s
-  hcan.Init.Mode = CAN_MODE_LOOPBACK;
 #endif
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
@@ -188,7 +180,7 @@ void MX_CAN_Init(void) {
     Error_Handler();
   }
 
-#if TEST_MODE || PROTOCOL_ALPACA
+#if TEST_MODE
   CAN_FilterTypeDef canFilterConfig;
 
   canFilterConfig.FilterBank = 0;
@@ -274,14 +266,14 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *canHandle) {
 
 /* USER CODE BEGIN 1 */
 
-/// Buffer for transmitting data
+/// Буфер с данными для отправки по CAN.
 static uint8_t tx_data_can[8] = {
     0,
 };
 
 /**
- * @brief  Setting frame for transmitting TxData by CAN
- * @param  stdId: The standard ID of the frame
+ * @brief  Настройка кадра для передачи tx_data_can по CAN.
+ * @param  stdId: Стандартный ID сообщения.
  * @retval None
  */
 static void set_frame(uint32_t stdId) {
@@ -298,11 +290,11 @@ static void set_frame(uint32_t stdId) {
 }
 
 /**
- * @brief  Set filter for frame ID
- * @param  id: Standard ID of frame
+ * @brief  Установка фильтра для сообщений по ID.
+ * @param  id: Стандартный ID сообщения.
  * @retval None
  */
-void CAN_SetFilterId(uint8_t id) {
+static void CAN_SetFilterId(uint8_t id) {
   CAN_FilterTypeDef canFilterConfig;
 
   canFilterConfig.FilterBank = 0;
@@ -324,10 +316,9 @@ void CAN_SetFilterId(uint8_t id) {
 }
 
 /**
- * @brief  Start CAN
- * @note   Set filter for frame ID, activate notifications for
- *         interrupt callback
- * @param  hcan: Pointer to the CAN_HandleTypeDef structure
+ * @brief  Запуск интерфейса CAN.
+ * @note   Установка фильтра для ID, включение нотификаций для колбека.
+ * @param  hcan: Указатель на структуру CAN_HandleTypeDef.
  * @retval None
  */
 void start_can(CAN_HandleTypeDef *hcan, uint32_t stdId) {
@@ -342,23 +333,23 @@ void start_can(CAN_HandleTypeDef *hcan, uint32_t stdId) {
 }
 
 /**
- * @brief  Stop CAN
- * @param  hcan: Pointer to the CAN_HandleTypeDef structure
+ * @brief  Завершение работы CAN.
+ * @param  hcan: Указатель на структуру CAN_HandleTypeDef.
  * @retval None
  */
 void stop_can(CAN_HandleTypeDef *hcan) { HAL_CAN_Stop(hcan); }
 
 /**
- * @brief  Transmit data by CAN.
- * @note   If transmitted data is received then set symbols to matrix
- * @param  stdId: Standard ID of frame
+ * @brief  Отправка данных по CAN (для TEST_MODE, loopback).
+ * @note   Если отправленные данные получены, то отобразить строку.
+ * @param  stdId: ID сообщения.
  * @retval None
  */
 void CAN_TxData(uint32_t stdId) {
 
 #if TEST_MODE
 
-  /// Mailbox for transmitted data
+  /// Mailbox для отправляемых данных
   uint32_t tx_mailbox = 0;
 
   set_frame(stdId);
@@ -366,32 +357,13 @@ void CAN_TxData(uint32_t stdId) {
     HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data_can, &tx_mailbox);
   }
 
-#elif PROTOCOL_ALPACA
-
-  /// Mailbox for transmitted data
-  uint32_t tx_mailbox = 0;
-
-  tx_header.StdId = stdId;
-  tx_header.ExtId = 0;
-  tx_header.RTR = CAN_RTR_DATA;
-  tx_header.IDE = CAN_ID_STD;
-  tx_header.DLC = 2;
-  tx_header.TransmitGlobalTime = 0;
-
-  uint16_t number_to_send = stdId;
-  tx_data_can[0] = (number_to_send >> 8) & 0xFF;
-  tx_data_can[1] = number_to_send & 0xFF;
-
-  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
-    HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data_can, &tx_mailbox);
-  }
 #endif
 }
 
 /**
- * @brief  Process data received by CAN.
- * @note   If transmitted data by UIM6100 protocol is received then process
- * data
+ * @brief  Обработка данных, полученных по CAN.
+ * @note   Если получены данные от станции управления (СУЛ), то начать обработку
+ *         по протоколу.
  * @param  None
  * @retval None
  */
@@ -402,8 +374,6 @@ void process_data_from_can() {
 
 #if PROTOCOL_UIM_6100
     process_data_uim(&msg);
-#elif PROTOCOL_ALPACA
-    process_data_alpaca(rx_data_can);
 #endif
   }
 }

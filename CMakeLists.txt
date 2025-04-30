@@ -19,9 +19,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Поддерживаемые режимы/протоколы
 set(MODES
     USE_PROTOCOL_UIM_6100
-    USE_PROTOCOL_UEL
-    USE_PROTOCOL_UKL
-    USE_PROTOCOL_ALPACA
     USE_DEMO_MODE
     USE_TEST_MODE
 )
@@ -94,7 +91,7 @@ set(PROJECT_SOURCES
     ${PROJECT_DIR}/middlewares/display_symbols/drawing.c
     ${PROJECT_DIR}/middlewares/display_symbols/font.c
 
-    ${PROJECT_DIR}/middlewares/peripherals/interfaces/usart.c
+    # ${PROJECT_DIR}/middlewares/peripherals/interfaces/usart.c
     ${PROJECT_DIR}/middlewares/peripherals/interfaces/can.c
     ${PROJECT_DIR}/middlewares/peripherals/tim.c
     ${PROJECT_DIR}/middlewares/peripherals/gpio.c
@@ -112,39 +109,6 @@ set(COMMON_PROTOCOL_SOURCES
     ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
     ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
 )
-
-# Функция для добавления 1-ого файла в сборку (файл протокола/режима)
-# function(setup_protocol PROTOCOL_NAME PROTOCOL_FOLDER PROTOCOL_SOURCE_FILE)
-#     message(STATUS "${PROTOCOL_NAME} is enabled")
-
-#     # Add include derictories for PROTOCOL
-#     list(APPEND PROJECT_INCLUDE_DIRECTORIES
-#         ${PROJECT_DIR}/middlewares/protocols_modes/${PROTOCOL_FOLDER}
-#     )
-
-#     set(PROJECT_INCLUDE_DIRECTORIES "${PROJECT_INCLUDE_DIRECTORIES}" PARENT_SCOPE)
-
-#     # Add source files for PROTOCOL
-#     list(APPEND PROJECT_SOURCES
-#         ${PROJECT_DIR}/middlewares/protocols_modes/${PROTOCOL_FOLDER}/${PROTOCOL_SOURCE_FILE}
-#     )
-
-#     if(NOT PROTOCOL_NAME STREQUAL "TEST_MODE" AND NOT PROTOCOL_NAME STREQUAL "DEMO_MODE")
-#         list(APPEND PROJECT_SOURCES ${COMMON_PROTOCOL_SOURCES})
-#     endif()
-
-#     if(PROTOCOL_NAME STREQUAL "TEST_MODE")
-#         list(APPEND PROJECT_SOURCES
-#             ${PROJECT_DIR}/middlewares/peripherals/buzzer.c
-#         )
-#     endif()
-
-#     set(PROJECT_SOURCES "${PROJECT_SOURCES}" PARENT_SCOPE)
-
-#     # Set define for target_compile_definitions()
-#     set(PROTOCOL_MODE ${PROTOCOL_NAME}=1 PARENT_SCOPE)
-
-# endfunction()
 
 # Функция для добавления N файлов в сборку (файлы протокола/режима)
 function(setup_protocol PROTOCOL_NAME PROTOCOL_FOLDER PROTOCOL_SOURCE_FILES)
@@ -178,21 +142,6 @@ if(USE_PROTOCOL_UIM_6100)
         "middlewares/protocols_modes/uim6100/uim6100.c"
     )
     # setup_protocol("PROTOCOL_UIM_6100" "uim6100" "uim6100.c")
-elseif(USE_PROTOCOL_UEL)
-    # setup_protocol("PROTOCOL_UEL" "uel" "uel.c")
-    setup_protocol("PROTOCOL_UEL" "uel"
-        "middlewares/protocols_modes/uel/uel.c"
-    )
-elseif(USE_PROTOCOL_UKL)
-    # setup_protocol("PROTOCOL_UKL" "ukl" "ukl.c")
-    setup_protocol("PROTOCOL_UKL" "ukl"
-        "middlewares/protocols_modes/ukl/ukl.c"
-    )
-elseif(USE_PROTOCOL_ALPACA)
-    # setup_protocol("PROTOCOL_ALPACA" "alpaca" "alpaca.c")
-    setup_protocol("PROTOCOL_ALPACA" "alpaca"
-        "middlewares/protocols_modes/alpaca/alpaca.c"
-    )
 elseif(USE_DEMO_MODE)
     # setup_protocol("DEMO_MODE" "demo_mode" "demo_mode.c")
 
@@ -265,27 +214,26 @@ add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${EXECUTABLE}>
     ${EXECUTABLE}.bin)
 
-
 # Flash the device using openocd (--targrt flash)
-set(OPENOCD_PATH "C:/Program Files (x86)/OpenOCD-20240916-0.12.0")
-set(OPENOCD_INTERFACE_PATH "${OPENOCD_PATH}/share/openocd/scripts/interface/stlink.cfg")
-set(OPENOCD_TARGET_PATH "${OPENOCD_PATH}/share/openocd/scripts/target/stm32f1x.cfg")
-set(FLASH_COMMAND "openocd")
-set(FLASH_OPTIONS "-f \"${OPENOCD_INTERFACE_PATH}\" -f \"${OPENOCD_TARGET_PATH}\"")
+# Поиск openocd в PATH
+find_program(OPENOCD_EXECUTABLE openocd)
 
+if(NOT OPENOCD_EXECUTABLE)
+    message(FATAL_ERROR "OpenOCD not found in PATH. Please install it or add to PATH.")
+else()
+    message(STATUS "Found OpenOCD: ${OPENOCD_EXECUTABLE}")
+endif()
+
+# Пути к конфигурационным скриптам (доступны глобально в OpenOCD)
+set(OPENOCD_INTERFACE_PATH interface/stlink.cfg)
+set(OPENOCD_TARGET_PATH target/stm32f1x.cfg)
+
+# Настройка команды прошивки
 add_custom_target(flash
-    COMMAND ${FLASH_COMMAND} ${FLASH_OPTIONS} -c "program ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.elf verify reset exit"
+    COMMAND ${OPENOCD_EXECUTABLE}
+    -f ${OPENOCD_INTERFACE_PATH}
+    -f ${OPENOCD_TARGET_PATH}
+    -c "program ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.elf verify reset exit"
     DEPENDS ${PROJECT_NAME}.elf
     COMMENT "Flashing STM32 device with ST-Link"
-)
-
-# Clear build directory (--targrt clean-build)
-set(BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build")
-
-add_custom_target(clean-build
-
-    COMMAND rm -rf ${BUILD_DIR}/*
-    COMMAND rm -rf ${BUILD_DIR}/.*
-
-    COMMENT "Remove build files"
 )

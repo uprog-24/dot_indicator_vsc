@@ -1,94 +1,51 @@
-/* USER CODE BEGIN Header */
 /**
- ******************************************************************************
  * @file    tim.c
- * @brief   This file provides code for the configuration
- *          of the TIM instances.
- ******************************************************************************
- * @attention
- *
- * Copyright (c) 2024 STMicroelectronics.
- * All rights reserved.
- *
- * This software is licensed under terms that can be found in the LICENSE file
- * in the root directory of this software component.
- * If no LICENSE file comes with this software, it is provided AS-IS.
- *
- ******************************************************************************
  */
-/* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
 #include "config.h"
-#include "drawing.h"
 
-#if PROTOCOL_UKL
-#include "ukl.h"
+#define TIM4_FREQ TIM2_FREQ ///< Частота линии APB1 для TIM4
+
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
+#define TIME_DISPLAY_STRING_DURING_MS                                          \
+  3000 ///< Время в мс, в течение которого отображается строка при подаче
+       ///< питания
+
+#elif DEMO_MODE
+#define TIME_DISPLAY_STRING_DURING_MS                                          \
+  2000 ///< Время в мс, в течение которого отображается строка
+
 #endif
 
-#define TIM4_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM4
-#define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec
-#define DISPLAY_STR_DURING_MS                                                  \
-  2000 ///< Time in ms to display string on matrix (TEST_MODE)
-
 /**
- * @brief  Get prescaler for TIM2 (PWM) by current frequency.
- * @note   Prescaler = tim_freq / (tim_period_ARR * buzz_signal_freq)
- * @param  frequency: Number between 1..65535
- * @retval prescaler
- */
-static uint16_t TIM2_get_prescaler_frequency(uint16_t frequency) {
-  if (frequency == 0)
-    return 0;
-  return ((TIM2_FREQ / (TIM2_PERIOD * frequency)) - 1);
-}
-
-/**
- * @brief  Set buzzer volume using PWM duty cycle (0 to 100 percent)
- * @param  volume: Volume level percentage (0 to 100)
- * @retval None
- */
-static void TIM2_Set_volume(uint8_t volume) {
-  if (volume > 90) {
-    volume = 90;
-  }
-
-  // uint32_t pulse = (volume * TIM2_PERIOD) / 100;
-  uint32_t pulse = (volume * TIM2->ARR) / 100;
-
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pulse);
-  // TIM2->CCR2 = pulse;
-}
-
-/**
- * @brief  Start PWM TIM2 for buzzer
+ * @brief  Запуск таймера 2 на 2-ом канале в режиме ШИМ (для пассивного бузера).
  * @retval None
  */
 static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
 
-void Test_BuzzerStart(void) { HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2); }
-
 /**
- * @brief  Set frequency for sound of buzzer (turning on buzzer using TIM2)
- * @param  frequency: Number between 1..65535
+ * @brief  Включение тона пассивного бузера (подключен к таймеру 2).
+ * @param  frequency: Значение частоты 1..65535.
+ * @param  volume:    Уровень громкости (volume_t из buzzer.h).
  * @retval None
  */
 void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
-#if 1
+
   TIM2_Start_PWM();
-  // uint16_t prescaler = TIM2_get_prescaler_frequency(frequency);
-  // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
-  // TIM2_Set_volume(volume);
-  // __HAL_TIM_SET_PRESCALER(&htim2, 64 - 1);
-  // #if DEMO_MODE
-  // TIM1->ARR = (1000000UL / frequency) - 1;
-  // #else
-  TIM2->ARR = (1000000UL / frequency) - 1;
-  // #endif
+  /* Инициализация таймера 2 на 1 мкс, поэтому используем 1000000UL */
+  TIM2->ARR = (1000000UL / frequency) - 1; //
+
   float k = 1.0;
 
+  /* Устанавливаем коэффициенты для уравновешивания уровней громкостей при
+   * подаче разных частот гонга:
+   * 1000 Гц, 900 Гц, 800 Гц - частоты тонов для гонга;
+   * 3000 Гц - частота для режима Перегруз кабины и Пожар (максимальная
+   * громкость, 80 дБ на расстоянии в 1 м). HC0905A (горизонтальный дот). */
   switch (volume) {
   case VOLUME_3:
     switch (frequency) {
@@ -97,7 +54,7 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
       break;
 
     case 1000:
-      k = 1.0; // 0.85;
+      k = 1.0;
       break;
 
     case 900:
@@ -131,22 +88,6 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
     default:
       break;
     }
-    // switch (frequency) {
-    // case 1000:
-    //   k = 1.0;
-    //   break;
-
-    // case 900:
-    //   k = 1.0;
-    //   break;
-
-    // case 800:
-    //   k = 0.8;
-    //   break;
-
-    // default:
-    //   break;
-    // }
 
     break;
 
@@ -167,22 +108,6 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
     default:
       break;
     }
-    // switch (frequency) {
-    // case 1000:
-    //   k = 1.0;
-    //   break;
-
-    // case 900:
-    //   k = 1.3;
-    //   break;
-
-    // case 800:
-    //   k = 1.9;
-    //   break;
-
-    // default:
-    //   break;
-    // }
 
     break;
 
@@ -191,38 +116,19 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
     break;
   }
 
-#if 0
-  if (frequency == 1319) {
-    TIM2->CCR2 = ((TIM2->ARR / 100) * volume * 1.7);
-  } else if (frequency == 900) {
-    TIM2->CCR2 = ((TIM2->ARR / 100) * volume * 1.7);
-  } else {
-    TIM2->CCR2 = ((TIM2->ARR / 100) * volume); // 75 73 70 3
-                                               // TIM2_Set_volume(volume);
-  }
-
-#endif
-
-  // #if DEMO_MODE
-  // TIM1->CCR3 = ((TIM1->ARR / 100) * volume * k);
-  // #else
+  /* Установка громкости */
   TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
-  // #endif
-
-  // TIM2_Start_PWM();
-#endif
 }
 
 /**
- * @brief  Stop buzzer PWM (TIM2)
+ * @brief  Остановка пассивного бузера (ШИМ TIM2).
  * @param  None
  * @retval None
  */
 static void TIM2_Stop_PWM() { HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2); }
 
 /**
- * @brief  Turn off the sound of buzzer.
- * @note   Stop bip using prescaler of TIM2
+ * @brief  Выключение тона бузера.
  * @retval None
  */
 void TIM2_Stop_bip() {
@@ -231,12 +137,12 @@ void TIM2_Stop_bip() {
   TIM2_Stop_PWM();
 }
 
-/// TIM1 counter to control elapsed time in ms for bips of gong
+/// Счетчик для подсчета продолжительности тонов гонга.
 volatile uint32_t tim1_elapsed_ms = 0;
 
 /**
- * @brief  Stop TIM1
- * @note   Reset counter (duration for bips)
+ * @brief  Остановка TIM1.
+ * @note   Сброс счетчика для подсчета продолжительности тонов гонга.
  * @param  None
  * @retval None
  */
@@ -246,61 +152,52 @@ static void TIM1_Stop() {
   HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
 }
 
-/// Flag to control if period of TIM2 is elapsed
-volatile bool is_tim2_period_elapsed = false;
-
-/// Flag to control if period of TIM3 is elapsed
+/// Флаг для контроля завершения периода TIM3
 volatile bool is_tim3_period_elapsed = false;
 
-/// Flag to control if period of TIM4 is elapsed
+/// Флаг для удержания состояния строки в темение 1 мс (максимвльная яркость,
+/// частота обновления матрицы 125 Гц).
 volatile bool is_tim4_period_elapsed = false;
 
-/// Counter for elapsed time in seconds between pressing of buttons
-volatile uint32_t time_since_last_press_sec = 0;
+/// Счетчик прошедшего в мс времени между последними нажатиями кнопок.
+volatile uint32_t time_since_last_press_ms = 0;
 
-/// Counter for elapsed time in seconds to check interface connection
-volatile uint32_t connection_sec_is_elapsed = 0;
+/// Счетчик прошедшего в мс времени для проверки подключения интерфейса (CAN,
+/// USART)
+volatile uint32_t connection_ms_is_elapsed = 0;
 
-static volatile bool is_start_indicator = true; // Флаг 1 мс
+/// Флаг для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
+volatile bool is_time_ms_for_display_str_elapsed = false;
+
+/// Счетчик времени отображения строки при запуске индикатора в мс
 static uint16_t tim4_ms_counter = 0;
 
 /**
- * @brief  Handle Interrupt by TIM's period is elapsed,
- *         setting the state of the flags.
- * @note   When matrix_state = MATRIX_STATE_WORKING: TIM4 control interface
- *         connection, when matrix_state = MATRIX_STATE_MENU: TIM4 count 20 sec
- *         between clicks of btn1 and btn2 (change matrix_state to
- *         MATRIX_STATE_START).
- *         TIM3 is used for UKL protocol to read bit by ukl_timings[] and for
- *         Delay_ms() in TEST_MODE and DEMO_MODE.
- *         TIM2 is used for PWM (buzzer).
- *         TIM1 is used for count duration of bip and its quantity
- * @param  htim: TIM structure
+ * @brief  Обработка прерываний по завершении периода таймеров.
+ * @param  htim: Указатель на структуру таймера.
  * @retval None
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  /// Flag to control first btn1 click
+  /// Флаг для детектирования первого нажатия кнопки 1 (вход в меню - считывание
+  /// настроек из flash-памяти).
   extern bool is_first_btn_clicked;
 
-  /// Counter for pressing of BUTTON_1
+  /// Счетчик кол-ва нажатий BUTTON_1
   extern uint8_t btn_1_set_mode_counter;
 
-  /// Counter for pressing of BUTTON_2
+  /// Счетчик кол-ва нажатий BUTTON_2
   extern uint8_t btn_2_set_value_counter;
 
-  /// Current matrix state: MATRIX_STATE_START, MATRIX_STATE_WORKING,
+  /// Текущее состояние индикатора: MATRIX_STATE_START, MATRIX_STATE_WORKING,
   /// MATRIX_STATE_MENU
   extern matrix_state_t matrix_state;
 
-  /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING, MENU_STATE_CLOSE
+  /// Текущее состояние меню: MENU_STATE_OPEN, MENU_STATE_WORKING,
+  /// MENU_STATE_CLOSE
   extern menu_state_t menu_state;
 
-  if (htim->Instance == TIM2) {
-    is_tim2_period_elapsed = true;
-  }
-
   if (htim->Instance == TIM3) {
-    is_tim3_period_elapsed = true;
+    is_tim3_period_elapsed = true; // для TEST_MODE
 
 #if PROTOCOL_UKL
 
@@ -310,33 +207,43 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 
   if (htim->Instance == TIM4) {
+    /* Флаг для отсчета 1 мс (время удержания состояния одной строки с
+     * колонками) для отображения символов */
     is_tim4_period_elapsed = true;
 
-    if (is_start_indicator) {
+/* Счетчик для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
+ * для протоколов: название протокола и номер версии ПО при запуске
+ * индикатора; для DEMO_MODE: отображение строки */
+#if !TEST_MODE
+    if (!is_time_ms_for_display_str_elapsed) {
       tim4_ms_counter += 1;
-      if (tim4_ms_counter >= 3000) {
+      if (tim4_ms_counter >= TIME_DISPLAY_STRING_DURING_MS) {
         tim4_ms_counter = 0;
-        is_start_indicator = false;
+        is_time_ms_for_display_str_elapsed = true;
       }
     }
+#endif
 
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
 
+    /* Счетчик для проверки подключения интерфейса */
     if (matrix_state == MATRIX_STATE_WORKING) {
-      connection_sec_is_elapsed += 1;
-      if (connection_sec_is_elapsed >= TIME_SEC_FOR_INTERFACE_CONNECTION) {
-        connection_sec_is_elapsed = 0;
+      connection_ms_is_elapsed += 1;
+      if (connection_ms_is_elapsed >= TIME_MS_FOR_INTERFACE_CONNECTION) {
+        connection_ms_is_elapsed = 0;
 
         is_interface_connected = (alive_cnt[0] == alive_cnt[1]) ? false : true;
         alive_cnt[1] = alive_cnt[0];
       }
     }
 
+    /* Счетчик для проверки бездействия кнопок в течение TIME_MS_FOR_SETTINGS
+     * мс */
     if (matrix_state == MATRIX_STATE_MENU) {
-      time_since_last_press_sec += 1;
+      time_since_last_press_ms += 1;
 
-      if (time_since_last_press_sec >= PERIOD_SEC_FOR_SETTINGS) {
-        time_since_last_press_sec = 0;
+      if (time_since_last_press_ms >= TIME_MS_FOR_SETTINGS) {
+        time_since_last_press_ms = 0;
 
         btn_1_set_mode_counter = 0;
         btn_2_set_value_counter = 0;
@@ -350,20 +257,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 }
 
-/// Value of bip frequency for HAL_TIM_OC_DelayElapsedCallback
+/// Знвчение частоты тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint16_t _bip_freq = 0;
 
-/// Value of bip counter for HAL_TIM_OC_DelayElapsedCallback
+/// Кол-во тонов гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint8_t _bip_counter = 0;
 
-/// Value of bip duration for HAL_TIM_OC_DelayElapsedCallback
+/// Продолжительность тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint32_t _bip_duration_ms = 0;
 
-/// Value of bip volume for HAL_TIM_OC_DelayElapsedCallback
+/// Уровень громкости тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint16_t _bip_volume = 0;
 
 /**
- * @brief  Stop sound (PWM TIM2 and TIM1 for durations of bips)
+ * @brief  Выключение бузера (ШИМ TIM2 и TIM1 для подсчета продолжительности
+ *         тона бузера).
  * @param  None
  * @retval None
  */
@@ -374,28 +282,28 @@ void stop_buzzer_sound() {
 }
 
 /**
- * @brief  Output Compare callback, control duration of bips for gong
- * @param  htim: Structure of TIM
+ * @brief  Output Compare колбек, подсчет продолжительности тона гонга.
+ * @param  htim: Указатель на структуру таймера.
  * @retval None
  */
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM1) {
     tim1_elapsed_ms++;
 
-    if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
+    if (tim1_elapsed_ms == _bip_duration_ms) {
 
-      TIM2_Stop_bip();
-      TIM2_Start_bip(900, _bip_volume);
+      TIM2_Stop_bip(); // Останавливаем 1-ый тон
+      TIM2_Start_bip(900, _bip_volume); // Запускаем 2-ой тон
 
       if (_bip_counter == 1) {
         stop_buzzer_sound();
       }
     }
 
-    if (tim1_elapsed_ms == 2 * _bip_duration_ms) { // stop bip 2
+    if (tim1_elapsed_ms == 2 * _bip_duration_ms) {
 
-      TIM2_Stop_bip();
-      TIM2_Start_bip(800, _bip_volume);
+      TIM2_Stop_bip(); // Останавливаем 2-ой тон
+      TIM2_Start_bip(800, _bip_volume); // Запускаем 3-ий тон
 
       if (_bip_counter == 2) {
         stop_buzzer_sound();
@@ -403,7 +311,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
     if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
-      TIM2_Stop_bip();
+      TIM2_Stop_bip(); // Останавливаем 3-ий тон
 
       if (_bip_counter == 3) {
         stop_buzzer_sound();
@@ -774,8 +682,8 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef *tim_baseHandle) {
 /* USER CODE BEGIN 1 */
 
 /**
- * @brief  TIM3 set delay in milliseconds
- * @param  delay: Number between 1..65535
+ * @brief  Установка задержки в мс (таймер 3).
+ * @param  delay: Значение задержки 1..65535.
  * @retval None
  */
 void TIM3_Delay_ms(uint16_t delay) {
@@ -790,8 +698,8 @@ void TIM3_Delay_ms(uint16_t delay) {
 }
 
 /**
- * @brief  TIM3 set delay in microseconds
- * @param  delay: Number between 1..65535
+ * @brief  Установка задержки в мкс (таймер 3).
+ * @param  delay: Значение задержки 1..65535.
  * @retval None
  */
 void TIM3_Delay_us(uint16_t delay) {
@@ -806,11 +714,12 @@ void TIM3_Delay_us(uint16_t delay) {
 }
 
 /**
- * @brief  Start bip for gong.
- * @note   Set frequency, bip_counter, bip_duration_ms and volume
- * @param  frequency:       Frequency for buzzer sound
- * @param  bip_counter:     Number of bips
- * @param  bip_duration_ms: Duration of the bip
+ * @brief  Запуск гонга (первый тон).
+ * @note   Установка частоты, bip_counter - кол-ва тонов, bip_duration_ms -
+ *         продолжительность тона и volume - уровень громкости.
+ * @param  frequency:       Частота тона.
+ * @param  bip_counter:     Кол-во тонов.
+ * @param  bip_duration_ms: Продолжительность тона в мс.
  * @retval None
  */
 void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
@@ -821,27 +730,13 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
   _bip_volume = volume;
 
   // start bip 1
-  TIM2_Start_PWM();
+  // TIM2_Start_PWM();
   TIM2_Start_bip(_bip_freq, volume);
 }
 
 /**
- * @brief  Display symbols on matrix (DEMO_MODE)
- * @param  time_ms:     The time (ms) during which the symbols will be displayed
- * @param  str_symbols: Pointer to the string to be displayed
- * @retval None
- */
-void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
-  is_tim4_period_elapsed = false;
-  is_start_indicator = true;
-
-  while (is_start_indicator) {
-    draw_string_on_matrix(str_symbols);
-  }
-}
-
-/**
- * @brief  Start TIM1 CH1 Output Compare mode to control bip duration in ms
+ * @brief  Запуск таймера 1 с каналом CH1 Output Compare mode для подсчета
+ *         продолжительности тона бузера в мс.
  * @param  None
  * @retval None
  */
@@ -852,10 +747,12 @@ void TIM1_Start() {
 }
 
 /**
- * @brief  Start TIM3 with CH1 for reading data bit in UKL protocol
- * @param  prescaler: Value of prescaler (PRESCALER_FOR_US for ukl_timings[],
- *                    PRESCALER_FOR_MS for DELAY_MS_DATA_RECEIVE=200)
- * @param  period:    Value of period of TIM3
+ * @brief  Запуск TIM3 с каналом CH1 для чтения бита данных для протокола
+ *         УЛ/УКЛ.
+ * @param  prescaler: Значение прескелера (PRESCALER_FOR_US для ukl_timings[],
+ *                    PRESCALER_FOR_MS для DELAY_MS_DATA_RECEIVE=200 по
+ *                    завершении приема).
+ * @param  period:    Значение периода для TIM3.
  * @retval None
  */
 void TIM3_Start(uint16_t prescaler, uint16_t period) {
@@ -865,17 +762,21 @@ void TIM3_Start(uint16_t prescaler, uint16_t period) {
 }
 
 /**
- * @brief  Stop TIM3
+ * @brief  Остановка таймера 3.
  * @param  None
  * @retval None
  */
 void TIM3_Stop() { HAL_TIM_Base_Stop_IT(&htim3); }
 
 /**
- * @brief  Start TIM4 to control interface connection and matrix_state.
- * @note   Control connection of CAN/UART/DATA_Pin and MATRIX_STATE_MENU to
- *         MATRIX_STATE_START (20 seconds between button's click).
- *         Timer for 1 second
+ * @brief  Запуск TIM4 на 1 мс.
+ * @note   Используется:
+ *         1. для отображения символов (яркость, удержание строки в течение 1
+ *            мс);
+ *         2. для отображения строк в течение TIME_DISPLAY_STRING_DURING_MS;
+ *         3. для контроля подключения интерфейса (CAN, USART);
+ *         4. для проверки бездействия кнопок в течение TIME_MS_FOR_SETTINGS в
+ *            режиме меню.
  * @param  None
  * @retval None
  */
@@ -883,19 +784,6 @@ void TIM4_Start(uint16_t prescaler, uint16_t period) {
   __HAL_TIM_SET_PRESCALER(&htim4, prescaler);
   __HAL_TIM_SET_AUTORELOAD(&htim4, period);
   HAL_TIM_Base_Start_IT(&htim4);
-}
-
-/**
- * @brief  Stop TIM4.
- * @note   Reset counters and flags
- * @param  None
- * @retval None
- */
-void TIM4_Stop() {
-  HAL_TIM_Base_Stop_IT(&htim4);
-  time_since_last_press_sec = 0;
-  alive_cnt[0] = 0;
-  alive_cnt[1] = 0;
 }
 
 /* USER CODE END 1 */

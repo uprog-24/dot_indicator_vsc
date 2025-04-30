@@ -1,31 +1,31 @@
 /**
  * @file    font.h
- * @brief   This file contains all the function prototypes for
- *          the font.c file
+ * @brief   Этот файл содержит прототипы функций для файла font.c
  */
 #ifndef __FONT_H__
 #define __FONT_H__
 
 #include <stdint.h>
 
-#define FONT_WIDTH 5U  ///< Width of font
-#define BINARY_SYMBOL_SIZE \
-  8  ///< 8 bit massive for binary representation of symbol
+#define BINARY_SYMBOL_SIZE 8 ///< 8 бит в строке символа
 
 /**
- * @brief  Convert decimal number to binary
- * @param  number:     Decimal number (code of symbol)
- * @param  binary_mas: Pointer to the binary representation of the symbol
+ * @brief  Преобразование десятичного числа в двоичный массив (для получения
+ *         двоичных строк символа в drawing.c).
+ * @param  number:     Число для двоичной строки символа.
+ * @param  binary_mas: Указатель на массив с двоичным представлением строки
+ *                     символа (из font.c symbols[]).
+ * @param  bin_size:   Размер двоичной строки символа.
  * @retval None
  */
-void convert_number_from_dec_to_bin(uint8_t number, uint8_t* binary_mas,
+void convert_number_from_dec_to_bin(uint8_t number, uint8_t *binary_mas,
                                     uint8_t bin_size);
 
 /**
- * @brief  Get code of the symbol from buffer symbols[]
- * @param  symbol:               Symbol from buffer symbols[] (font.c)
- * @retval Pointer to buff_code: Code of symbol
+ * @brief  Получение кода символа из массива symbols[].
+ * @param  symbol:                 Символ из symbols[] (font.c).
+ * @retval Указатель на buff_code: Код символа.
  */
-uint8_t* get_symbol_code(char symbol);
+uint8_t *get_symbol_code(char symbol);
 
 #endif /*__FONT_H__ */

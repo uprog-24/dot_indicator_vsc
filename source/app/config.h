@@ -1,8 +1,7 @@
 /**
  * @file    config.h
- * @brief   This file allows to set configuration: select protocol
- *          (UIM_6100/UEL/UKL) or TEST_MODE/DEMO_MODE. There are global
- * variables that defined in main.c
+ * @brief   Этот файл позволяет задать конфигурацию: параметры для протоколов и
+ *          режимов. Содержит глобальные переменные, определённые в main.c
  */
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -11,38 +10,11 @@
 
 #include <stdbool.h>
 
-#define PERIOD_SEC_FOR_SETTINGS                                                \
-  20000 ///< Period of TIM4 (seconds) for counting time between clicks of btns
-        ///< in
-        ///< SETTINGS mode of matrix
+#define TIME_MS_FOR_SETTINGS                                                   \
+  20000 ///< Время в мс для проверки бездействия кнопок в режиме меню (20 с)
 
-
-/*===== Выбор стрелки ======*/
-#define __ARROW_ORDINAR
-// #define __ARROW_DOUBLE
-/*===== Завершение: Выбор стрелки ======*/
-
-/* Protocol UEL (UART) */
-#if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
-    !DEMO_MODE && !TEST_MODE
-
-#include "protocol_selection.h"
-#include "uel.h"
-#include "usart.h"
-
-#define PROTOCOL_NAME "UEL"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 50
-#define MAX_POSITIVE_NUMBER_LOCATION 39
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3 ///< Time in ms to check interface connection
-
-#define BUFFER_SIZE_BYTES 1
-
-/* Protocol UIM_6100 (CAN) */
-#elif PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&                   \
-    !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE
+/* Протокол UIM_6100 (CAN) */
+#if PROTOCOL_UIM_6100 && !DEMO_MODE && !TEST_MODE
 
 #include "can.h"
 #include "protocol_selection.h"
@@ -51,103 +23,42 @@
 #define PROTOCOL_NAME "SHK"
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 47
-#define MAX_POSITIVE_NUMBER_LOCATION 40
+#define MAX_POSITIVE_NUMBER_FLOOR 40
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3000 ///< Time in ms to check interface connection
+#define TIME_MS_FOR_INTERFACE_CONNECTION                                       \
+  3000 ///< Время в мс для проверки подключения интерфейса (3 с)
 
 #define BUFFER_SIZE_BYTES 6
 
 /* DEMO_MODE */
-#elif DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&     \
-    !PROTOCOL_ALPACA && !TEST_MODE
+#elif DEMO_MODE && !PROTOCOL_UIM_6100 && !TEST_MODE
 
 #include "demo_mode.h"
 
 #define BUFFER_SIZE_BYTES 1
 
 /* TEST_MODE */
-#elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&        \
-    !PROTOCOL_UKL && !PROTOCOL_ALPACA
+#elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100
 
 #include "test_mode.h"
 
 #define BUFFER_SIZE_BYTES 8
 
-/* Protocol UKL (DATA_Pin) */
-#elif PROTOCOL_UKL && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&                   \
-    !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE
-
-#include "can.h"
-#include "protocol_selection.h"
-#include "ukl.h"
-
-#define PROTOCOL_NAME "UKL"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 63
-#define MAX_POSITIVE_NUMBER_LOCATION 55
-#define MAIN_CABIN_ID ADDR_ID_MIN
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1000 ///< Time in ms to check interface connection
-
-#define BUFFER_SIZE_BYTES 1
-
-/* Protocol ALPACA (CAN) */
-#elif PROTOCOL_ALPACA && !PROTOCOL_UKL && !PROTOCOL_UIM_6100 &&                \
-    !PROTOCOL_UEL && !DEMO_MODE && !TEST_MODE
-
-#include "alpaca.h"
-#include "can.h"
-#include "protocol_selection.h"
-
-#define PROTOCOL_NAME "ALP"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 64                // 73
-#define MAX_POSITIVE_NUMBER_LOCATION 75 // 64
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3000 ///< Time in ms to check interface connection
-
-#define MAX_P_FLOOR_SHIFT_INDEX 9      // 10
-#define MIN_MINUS_FLOOR_SHIFT_INDEX 10 // 11
-
-#define BUFFER_SIZE_BYTES 1
-#define GROUP_ID_MIN 0  // shift: 0, П1 - П10
-#define GROUP_ID_MAX 18 // 20 // ADDR_ID_LIMIT
-
-#elif PROTOCOL_NKU && !PROTOCOL_UEL && !PROTOCOL_UKL && !PROTOCOL_ALPACA &&    \
-    !DEMO_MODE && !TEST_MODE && !PROTOCOL_UIM_6100
-
-#include "can.h"
-#include "nku.h"
-#include "protocol_selection.h"
-
-#define PROTOCOL_NAME "NKU"
-#define ADDR_ID_MIN 0
-#define MAX_POSITIVE_NUMBER_LOCATION 40
-#define ADDR_ID_LIMIT MAX_POSITIVE_NUMBER_LOCATION
-#define MAIN_CABIN_ID ADDR_ID_MIN
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3000 ///< Time in ms to check interface connection
-#define BUFFER_SIZE_BYTES 8
-#define GROUP_ID_MIN 0
-#define GROUP_ID_MAX 4
-
 #else
 #error "Wrong configurations!"
 #endif
 
-/* Variables defined globally in main.c */
-/// Counters to control CAN/UART/DATA_Pin connection
+/* Общие переменные, определенные глобально в main.c */
+/// Счетчики для проверки подключения интерфейса CAN/UART/DATA_Pin
 extern volatile uint32_t alive_cnt[2];
 
-/// Flag to control if CAN/UART/DATA_Pin is connected
+/// Флаг для состояния подключения интерфейса CAN/UART/DATA_Pin
 extern volatile bool is_interface_connected;
 
-// Settings of matrix: addr_id of matrix and level of volume for buzzer
+// Настройки индикатора: адрес индикатора и уровень громкости пассивного бузера
 extern settings_t matrix_settings;
 
-/// String that will be displayed on matrix
+/// Строка для отображения на матрице
 extern char matrix_string[3];
 
 #endif // CONFIG_H

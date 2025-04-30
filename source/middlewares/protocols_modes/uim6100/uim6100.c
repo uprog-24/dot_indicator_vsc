@@ -11,24 +11,25 @@
 #include <stdbool.h>
 
 #define ARROW_MASK                                                             \
-  0x03 ///< Mask for direction of movement (0 and 1st bits of byte W3)
-#define ARRIVAL_MASK 0b100 ///< Mask for bit arrival (2nd bit of byte W3)
-#define ARRIVAL_VALUE 4    ///< Bit value of arrival (bits: 100)
-#define CODE_MESSAGE_W_1_MASK 0b00111111
+  0x03 ///< Маска для направления движения (0 и 1-й биты байта W3)
+#define ARRIVAL_MASK 0b100 ///< Маска для бита прибытия (2-й бит байта W3)
+#define ARRIVAL_VALUE 4 ///< Значение для бита прибытия в байте W3 (биты: 0100)
+#define CODE_MESSAGE_W_1_MASK                                                  \
+  0b00111111 ///< Маска для кода сообщения (дляя звуков)
 
-#define CODE_FLOOR_W_2_MASK 0x3F
+#define CODE_FLOOR_W_2_MASK 0x3F ///< Маска для номера этажа
 
-#define GONG_BUZZER_FREQ                                                       \
-  1000 ///< Frequency of bip for start UPWARD, DOWNWARD and ARRIVAL
+#define GONG_BUZZER_FREQ 1000 ///< Частота первого тона гонга
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
-  3000 ///< Frequency of sound for VOICE_CABIN_OVERLOAD
+  3000 ///< Частота для тона бузера при перегрузе кабины VOICE_CABIN_OVERLOAD
 #define BUZZER_FREQ_FIRE_DANGER                                                \
-  BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of sound for VOICE_FIRE_DANGER
+  BUZZER_FREQ_CABIN_OVERLOAD ///< Частота для тона бузера при пожарной опасности
+                             ///< VOICE_FIRE_DANGER
 
-#define SPECIAL_SYMBOLS_BUFF_SIZE 19 ///< Number of special symbols
+#define SPECIAL_SYMBOLS_BUFF_SIZE 19 ///< Кол-во спец. символов
 
 /**
- * Stores indexes of bytes of UIM6100 protocol
+ * Индексы байтов в сообщении UIM6100.
  */
 typedef enum UIM_PACKET_BYTES {
   BYTE_CODE_OPERATION_0 = 0,
@@ -39,14 +40,8 @@ typedef enum UIM_PACKET_BYTES {
   BYTE_W_3
 } uim6100_packet_bytes_t;
 
-/// Index of byte_0 for extern in can.c
-uint8_t byte_code_operation_0 = BYTE_CODE_OPERATION_0;
-
-/// Index of byte_1 for extern in can.c
-uint8_t byte_code_operation_1 = BYTE_CODE_OPERATION_1;
-
 /**
- * Stores direction of movement (UIM6100)
+ * Направления движения (UIM6100).
  */
 typedef enum {
   UIM_6100_MOVE_UP = 2,
@@ -55,7 +50,7 @@ typedef enum {
 } direction_uim_6100_t;
 
 /**
- * Stores values of byte W1 (code message), without floors
+ * Значения байта W1 (code message), без этажей.
  */
 typedef enum CODE_MSG {
   VOICE_LIFT_IS_NOT_WORK = 55,
@@ -70,7 +65,7 @@ typedef enum CODE_MSG {
 } code_msg_t;
 
 /**
- * Stores values of byte W2 (code floor)
+ * Значения байта W2 (коды этажей).
  */
 typedef enum CODE_FLOOR {
   FLOOR_MINUS_1 = 41,
@@ -94,7 +89,7 @@ typedef enum CODE_FLOOR {
   LOADING = 59
 } code_floor_t;
 
-/// Buffer with code location and it's symbols
+/// Буфер со спец. символами
 static const code_location_symbols_t
     special_symbols_code_location[SPECIAL_SYMBOLS_BUFF_SIZE] = {
         {.code_location = RESERVE, .symbols = "b"},
@@ -118,43 +113,46 @@ static const code_location_symbols_t
         {.code_location = FLOOR_MINUS_9, .symbols = "-9"},
 };
 
-/// Flag to control is button pressed
+/// Флаг для контроля состояния кнопки
 static bool is_button_pressed = false;
 
-/// Counter for number received data (order button is pressed)
+/// Счетчик для подсчета кол-ва данных о нажатии кнопки приказа (order button is
+/// pressed).
 static uint8_t order_button_cnt = 0;
 
-/// Counter for number received data (order button is disable sound)
+/// Счетчик для подсчета пропуска нажатия кнопки (order button is disable sound)
 static uint8_t button_disable_cnt = 0;
 
-/// Flag to control is cabin overloaded
+/// Флаг для контроля перегруза кабины
 static bool is_cabin_overload = false;
 
-/// Flag to control fire danger voice
+/// Флаг для контроля воспроизведения оповещения при пожарной опасности
 static bool is_fire_danger = false;
 
-/** Stores previous and current state of bit to control buzzer (the front of the
-    "Arrival" signal (bit W[3].2) from 0 to 1)
+/** Содержит текущее и предыдущее состояние бита прибытия для управления гонгом
+ * (фронт сигнала "Прибытие" (бит W[3].2) из 0 в 1).
  */
 static uint8_t gong[2] = {
     0,
 };
 
 /**
- * @brief  Setting gong depend on direction bits in byte W3
- * @note   1. Read Arrival bit using ARRIVAL_MASK and direction using
- *            ARROW_MASK;
- * 		   2. Along the front of the "Arrival" signal (bit W[3].2) from
- *            0 to 1 set play_gong depend on direction. Check previous (gong[0])
- *            and current gong state (gong[1]).
- * @param  direction_byte_w_3: Byte W3
+ * @brief  Воспроизведение гонга в зависимости от битов направления в байте W3.
+ * @note   1. Записываем бит прибытия, используя маску ARRIVAL_MASK, и
+ *            направление, используя маску ARROW_MASK;
+ * 		     2. По фронту сигнала "Прибытие" (бит W[3].2) из 0 в 1
+ *            воспроизводим гонг play_gong в зависимости от направления.
+ *            Проверяем предыдущее (gong[0]) и текущее состояние гонга
+ *            (gong[1]).
+ * @param  direction_byte_w_3: Байт W3.
+ * @param  volume: Уровень громкости (buzzer.h).
  * @retval None
  */
 static void setting_gong(uint8_t direction_byte_w_3, uint8_t volume) {
   direction_uim_6100_t direction = direction_byte_w_3 & ARROW_MASK;
   uint8_t arrival = direction_byte_w_3 & ARRIVAL_MASK;
 
-  // if signal 0 is changing to signal 1, then arrival on floor
+  // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
   gong[0] = (arrival == ARRIVAL_VALUE) != 0 ? 1 : 0;
 
   if (gong[0] && !gong[1]) {
@@ -179,11 +177,12 @@ static void setting_gong(uint8_t direction_byte_w_3, uint8_t volume) {
 }
 
 /**
- * @brief  Process code message from byte W1, turn on/off buzzer
- * @param  code_msg_byte_w_1: Byte W1
+ * @brief  Обработка code message (байт W1), включение/выключение бузера.
+ * @param  code_msg_byte_w_1: Байт W1.
  * @retval None
  */
-static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
+static void process_code_msg(uint8_t code_msg_byte_w_1) {
+  /* Перегруз кабины */
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
 
     if (matrix_settings.volume != VOLUME_0) {
@@ -195,20 +194,21 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     matrix_string[LSB] = 'g';
 
   }
-  // next received bytes by CAN
+  // Следующие полученные данные по CAN
   else if (is_cabin_overload) {
     TIM2_Stop_bip();
     is_cabin_overload = false;
   }
 
+  /* Пожарная опасность */
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_FIRE_DANGER) {
 
     if (matrix_settings.volume != VOLUME_0) {
       is_fire_danger = true;
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
     }
   }
-  // next received bytes by CAN
+  // Следующие полученные данные по CAN
   else if (is_fire_danger) {
     TIM2_Stop_bip();
     is_fire_danger = false;
@@ -216,11 +216,12 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
 }
 
 /**
- * @brief  Process code message from byte W1, turn on/off buzzer
- * @param  code_msg_byte_w_1: Byte W1
+ * @brief  Обработка звуковых сигналов: нажатие кнопки приказа, гонг, перегруз,
+ *         пожарная опасность.
+ * @param  code_msg_byte_w_1: Байт W1.
  * @retval None
  */
-static void setting_sound_uim(msg_t *msg, volume_t level_volume) {
+static void setting_sound_uim(msg_t *msg) {
 
   uint8_t code_msg_byte_w_1 = msg->w1;
 
@@ -263,7 +264,7 @@ static void setting_sound_uim(msg_t *msg, volume_t level_volume) {
     matrix_string[MSB] = 'K';
     matrix_string[LSB] = 'g';
   }
-  // next received bytes by CAN
+  // Следующие полученные данные по CAN
   else if (is_cabin_overload) {
     TIM2_Stop_bip();
     is_cabin_overload = false;
@@ -278,21 +279,21 @@ static void setting_sound_uim(msg_t *msg, volume_t level_volume) {
     }
 
   }
-  // next received bytes by CAN
+  // Следующие полученные данные по CAN
   else if (is_fire_danger) {
     TIM2_Stop_bip();
     is_fire_danger = false;
   }
 }
 
-/// Structure for data that will be displayed on matrix
+/// Структура с данными для отображения (direction, floor).
 static drawing_data_t drawing_data = {0, 0};
 
 /**
- * @brief  Transform UIM6100 values of direction to common directionType that
- *         defined in drawing.h
- * @param  direction: Value from enum direction_uim_6100_t:
- *                    UIM_6100_MOVE_UP/UIM_6100_MOVE_DOWN/UIM_6100_NO_MOVE
+ * @brief  Преобразование значений направления движения UIM6100 в общий тип
+ *         направления, который определен в файле drawing.h.
+ * @param  direction: Значение из enum direction_uim_6100_t:
+ *                    UIM_6100_MOVE_UP/UIM_6100_MOVE_DOWN/UIM_6100_NO_MOVE.
  * @retval None
  */
 static void transform_direction_to_common(direction_uim_6100_t direction) {
@@ -314,16 +315,16 @@ static void transform_direction_to_common(direction_uim_6100_t direction) {
 }
 
 /**
- * @brief  Process data using UIM6100 protocol
- * @note   1. Set drawing_data structure, process code message, setting gong
- *            and symbols;
- *         2. Display matrix_string while next data is not received and
- *            interface is connected.
- * @param  rx_data_can: Pointer to the buffer with received data by CAN
+ * @brief  Обработка данных по протоколу UIM6100 (ШК6000).
+ * @note   1. Установка структуры drawing_data, обработка code message,
+ *            воспроизведение гонга и отображение символов;
+ *         2. Отображение matrix_string пока следующие данные не получены и
+ *            интерфейс CAN подключен.
+ * @param  msg: Указатель на структуру полученных данных.
  * @retval None
  */
 void process_data_uim(msg_t *msg) {
-  /// Flag to control is data received by CAN
+  /// Флаг для контроля полученных данных по CAN.
   extern volatile bool is_data_received;
 
   uint8_t code_msg = msg->w1;
@@ -331,19 +332,21 @@ void process_data_uim(msg_t *msg) {
 
   transform_direction_to_common(msg->w3 & ARROW_MASK);
 
-  setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
+  setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_FLOOR,
                   special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
 #if 1
     /* Проверено на испытаниях */
-    setting_gong(msg->w3, matrix_settings.volume);
-    process_code_msg(code_msg, matrix_settings.volume);
+    if (matrix_settings.volume != VOLUME_0) {
+      setting_gong(msg->w3, matrix_settings.volume);
+    }
+    process_code_msg(code_msg);
 #elif
-    /* Функция для обработки всех звукрвых оповещений была составлена после
+    /* Функция для обработки ВСЕХ звукрвых оповещений была составлена после
      * испытаний, не проверена */
-    setting_sound_uim(msg, matrix_settings.volume);
+    setting_sound_uim(msg);
 #endif
   } else {
     // Этажный индикатор
@@ -355,7 +358,10 @@ void process_data_uim(msg_t *msg) {
     }
   }
 
-  // while new 6 data bytes are not received, draw str
+  /*
+   * Пока новые 6 байт данных не получены и CAN подключен, отображаем текущую
+   * matrix_string
+   */
   while (is_data_received == false && is_interface_connected == true) {
     draw_string_on_matrix(matrix_string);
   }

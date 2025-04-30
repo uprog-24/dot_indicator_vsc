@@ -4,20 +4,22 @@
 #include "flash.h"
 
 #define LOW_HALF_WORD_MASK                                                     \
-  0xFF ///< Mask for 16 bits of data: addr_id (8 bits) and volume (8 bits)
+  0xFF ///< Маска 16 bits для 2-х байт данных: addr_id (8 bits) and volume (8
+       ///< bits)
 
-/// Structure for section SETTINGS
+/// Структура для секции SETTINGS, объявленнной в скрипте компоновщика
+/// CubeMX/.ld
 static settings_t settings_flash
     __attribute__((__section__(".settings"), used));
 
 /**
- * @brief  Erase 1 page (p. 127) in Flash-memory, starting with
- *         __SETTINGS_SECTION_START (section SETTINGS is declared in .ld file)
+ * @brief  Стираем 1 страницу (стр. 127) во flash-памяти, начиная с
+ *         __SETTINGS_SECTION_START (раздел SETTINGS объявлен в файле .ld).
  * @param  None
- * @retval status: HAL Status
+ * @retval status: HAL Status.
  */
 static HAL_StatusTypeDef erase_settings(void) {
-  /// Start address of section SETTINGS that defined in .ld file
+  /// Стартовый адрес секции SETTINGS (из .ld файла).
   extern uint32_t __SETTINGS_SECTION_START;
 
   HAL_StatusTypeDef status = HAL_ERROR;
@@ -42,14 +44,14 @@ static HAL_StatusTypeDef erase_settings(void) {
 }
 
 /**
- * @brief  Write WORD (32 bits) in Flash-memory: addr_id of matrix and level of
- *         volume for buzzer (Example: 0xFFFF022D)
- * @param  addr_id: ID of matrix
- * @param  volume:  Level of volume for buzzer
- * @retval status:  HAL Status
+ * @brief  Запись слова (WORD, 32 бита) во flash-память: адрес индикатора и
+ *         уровень громкости бузера (Например: 0xFFFF022D).
+ * @param  addr_id: Адрес индикатора.
+ * @param  volume:  Уровень громкости бузера.
+ * @retval status:  HAL Status.
  */
 static HAL_StatusTypeDef write_settings(uint8_t addr_id, volume_t volume) {
-  // 2 bytes: id and volume
+  // 2 байта: addr_id и volume, первые 2 байта заполнены 0xFFFF
   uint32_t packed_data = (addr_id << 8) | (uint8_t)volume | (0xFFFF << 16);
 
   HAL_StatusTypeDef status = erase_settings();
@@ -76,9 +78,10 @@ static HAL_StatusTypeDef write_settings(uint8_t addr_id, volume_t volume) {
 }
 
 /**
- * @brief  Read addr_id and volume from Flash into structure
- * @param  settings: Pointer to the settings structure
- * @retval status:   HAL Status
+ * @brief  Чтение адреса индикатора и уровня громкости бузера из Flash-памяти в
+ *         структуру.
+ * @param  settings: Указатель на структуру с настройками.
+ * @retval status:   HAL Status.
  */
 HAL_StatusTypeDef read_settings(settings_t *settings) {
   uint32_t packed_data = *(uint32_t *)&settings_flash;
@@ -90,9 +93,8 @@ HAL_StatusTypeDef read_settings(settings_t *settings) {
 }
 
 /**
- * @brief  Overwrite settings if it's necessary (args settings != current
- *         settings in Flash)
- * @param  settings: Pointer to the settings structure
+ * @brief  Перезапись настроек, если есть изменения.
+ * @param  settings: Указатель на структуру с настройками.
  * @retval None
  */
 void overwrite_settings(settings_t *settings) {
@@ -106,10 +108,10 @@ void overwrite_settings(settings_t *settings) {
 }
 
 /**
- * @brief  Update settings structure with new values
- * @param  settings:   Pointer to the settings structure
- * @param  new_volume: New selected level of volume
- * @param  new_id:     New selected ID of matrix
+ * @brief  Обновление настроек в структуре.
+ * @param  settings:   Указатель на структуру с настройками.
+ * @param  new_volume: Новое значение громкости.
+ * @param  new_id:     Новое значение адреса.
  * @retval None
  */
 void update_structure(settings_t *settings, volume_t new_volume,

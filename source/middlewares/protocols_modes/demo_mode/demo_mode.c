@@ -4,14 +4,14 @@
 #include "demo_mode.h"
 
 #include "drawing.h"
-#include "tim.h"
 
 #include <stdlib.h>
 #include <string.h>
 
+#define START_FLOOR 1   ///< Стартовый этаж
+#define FINISH_FLOOR 14 ///< Финишный этаж
+
 #define STOP_FLOORS_BUFF_SIZE 4 ///< Размер буфера с этажами-остановками.
-#define DISPLAY_STR_DURING_MS                                                  \
-  2000 ///< Время в мс, в течение которого символы отображаются на матрице
 
 /// буфер с этажами-остановками
 static uint8_t buff_stop_floors[STOP_FLOORS_BUFF_SIZE] = {7, 8, 10, 11};
@@ -21,12 +21,11 @@ static uint8_t buff_stop_floors[STOP_FLOORS_BUFF_SIZE] = {7, 8, 10, 11};
  * @note   1. Заполнение структуры drawing_data (направление, этаж);
  *         2. Установка строки matrix_string, которая будет отображаться на
  *            матрице;
- *         3. Отображение строки matrix_string в течение DISPLAY_STR_DURING_MS.
+ *         3. Отображение строки matrix_string в течение
+ *            TIME_DISPLAY_STRING_DURING_MS (tim.c).
  * @param  floor:            Текущий этаж.
  * @param  direction:        Текущеее направление движения (directionType:
  *                           DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION).
- * @param  buff_stop_floors: Указатель на буфер с этажами-остановками.
- * @param  buff_stop_size:   Размер буфера с этажами-остановками.
  * @retval None
  */
 static void display_symbols(uint8_t floor, directionType direction) {
@@ -35,7 +34,7 @@ static void display_symbols(uint8_t floor, directionType direction) {
 
   drawing_data_setter(&drawing_data, floor, direction);
   setting_symbols(matrix_string, &drawing_data, floor, NULL, 0);
-  TIM4_Diaplay_symbols_on_matrix(DISPLAY_STR_DURING_MS, matrix_string);
+  display_symbols_during_ms(matrix_string);
 }
 
 /**
@@ -97,7 +96,7 @@ static void demo_start_finish_floors_movement(uint8_t start_floor,
  * @retval None
  */
 void demo_mode_start(void) {
-  demo_start_finish_floors_movement(1, 14, buff_stop_floors,
+  demo_start_finish_floors_movement(START_FLOOR, FINISH_FLOOR, buff_stop_floors,
                                     STOP_FLOORS_BUFF_SIZE);
-  demo_start_finish_floors_movement(14, 1, NULL, 0);
+  demo_start_finish_floors_movement(FINISH_FLOOR, START_FLOOR, NULL, 0);
 }

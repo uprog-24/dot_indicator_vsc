@@ -120,21 +120,21 @@ void Error_Handler(void);
 #define DATA_GPIO_Port GPIOA
 
 /**
- * Stores dot/active buzzer states
+ * Состояние включение/выключение для активного бузера и светодиода.
  */
 typedef enum { TURN_OFF, TURN_ON } states_t;
 
 /**
- * Stores matrix states
+ * Состояния индикатора.
  */
 typedef enum {
-  MATRIX_STATE_START,
-  MATRIX_STATE_WORKING,
-  MATRIX_STATE_MENU
+  MATRIX_STATE_START, // Запуск интерфейса для протокола
+  MATRIX_STATE_WORKING, // Обработка протокола
+  MATRIX_STATE_MENU     // Режим меню
 } matrix_state_t;
 
 /**
- * Stores menu states
+ * Состояния меню.
  */
 typedef enum {
   MENU_STATE_OPEN,

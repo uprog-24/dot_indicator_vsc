@@ -35,7 +35,7 @@ extern "C" {
 extern CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN Private defines */
-#define TEST_MODE_STD_ID 0x0378 ///< ID for CAN in TEST_MODE
+#define TEST_MODE_STD_ID 0x0378 ///< ID сообщения для CAN в TEST_MODE
 /* USER CODE END Private defines */
 
 void MX_CAN_Init(void);
@@ -43,32 +43,32 @@ void MX_CAN_Init(void);
 /* USER CODE BEGIN Prototypes */
 
 /**
- * @brief  Start CAN
- * @note   Set filter for frame ID, activate notifications for
- *         interrupt callback
- * @param  hcan: Pointer to the CAN_HandleTypeDef structure
+ * @brief  Запуск интерфейса CAN.
+ * @note   Установка фильтра для ID, включение нотификаций для колбека.
+ * @param  hcan: Указатель на структуру CAN_HandleTypeDef.
  * @retval None
  */
 void start_can(CAN_HandleTypeDef *hcan, uint32_t stdId);
 
 /**
- * @brief  Stop CAN
- * @param  hcan: Pointer to the CAN_HandleTypeDef structure
+ * @brief  Завершение работы CAN.
+ * @param  hcan: Указатель на структуру CAN_HandleTypeDef.
  * @retval None
  */
 void stop_can(CAN_HandleTypeDef *hcan);
 
 /**
- * @brief  Transmit data by CAN.
- * @note   If transmitted data is received then set symbols to matrix
- * @param  stdId: Standard ID of frame
+ * @brief  Отправка данных по CAN (для TEST_MODE, loopback).
+ * @note   Если отправленные данные получены, то отобразить строку.
+ * @param  stdId: ID сообщения.
  * @retval None
  */
 void CAN_TxData(uint32_t stdId);
 
 /**
- * @brief  Process data received by CAN.
- * @note   If transmitted data by UIM6100 protocol is received then process data
+ * @brief  Обработка данных, полученных по CAN.
+ * @note   Если получены данные от станции управления (СУЛ), то начать обработку
+ *         по протоколу.
  * @param  None
  * @retval None
  */

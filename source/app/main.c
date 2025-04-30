@@ -61,29 +61,30 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
+#if !DEMO_MODE && !TEST_MODE
 
-/// Settings of matrix: addr_id of matrix and level of volume for buzzer
+/// Настройки индикатора: адрес индикатора и уровень громкости пассивного бузера
 settings_t matrix_settings = {.addr_id = MAIN_CABIN_ID, .volume = VOLUME_1};
 
 #endif
 
-/// Counters to control interface connection (UART/CAN/DATA_Pin)
+/// Счетчики для проверки подключения интерфейса CAN/UART/DATA_Pin
 volatile uint32_t alive_cnt[2] = {
     0,
 };
 
-/// Flag to control is CAN/UART/DATA_Pin connected
+/// Флаг для состояния подключения интерфейса CAN/UART/DATA_Pin
 volatile bool is_interface_connected = true;
 
-/// Current matrix state: MATRIX_STATE_START, MATRIX_STATE_WORKING,
+/// Текущее состояние индикатора: MATRIX_STATE_START, MATRIX_STATE_WORKING,
 /// MATRIX_STATE_MENU
 volatile matrix_state_t matrix_state = MATRIX_STATE_START;
 
-/// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING, MENU_STATE_CLOSE
+/// Текущее состояние меню: MENU_STATE_OPEN, MENU_STATE_WORKING,
+/// MENU_STATE_CLOSE
 menu_state_t menu_state = MENU_STATE_OPEN;
 
-/// String that will be displayed on matrix
+/// Строка для отображения на матрице
 char matrix_string[3];
 
 /* USER CODE END 0 */
@@ -129,21 +130,23 @@ int main(void) {
 
   while (1) {
     demo_mode_start();
+
+    /* Раскомментировать для включения всех светодиодов, закомментировать
+     * demo_mode_start(); в drawing.c раскомментировать блок в draw_symbols() */
+    // draw_string_on_matrix("**");
   }
 
 #else
-#include "conf.h"
+#include "conf.h" // Для номера версии ПО (из файла config.h.in)
+#include "drawing.h"
 
-  display_protocol_name(PROTOCOL_NAME);
-  display_protocol_name(PROJECT_VER);
+  display_symbols_during_ms(PROTOCOL_NAME);
+  display_symbols_during_ms(PROJECT_VER);
 
   read_settings(&matrix_settings);
   protocol_init();
 
   while (1) {
-#if PROTOCOL_ALPACA
-    is_interface_connected = true;
-#endif
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();
