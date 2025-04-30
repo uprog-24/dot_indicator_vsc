@@ -47,16 +47,6 @@
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": []
-    },
-    {
-      "type": "shell",
-      "label": "CubeProg: List all available communication interfaces",
-      "command": "STM32_Programmer_CLI",
-      "args": ["--list"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
     }
   ]
 }

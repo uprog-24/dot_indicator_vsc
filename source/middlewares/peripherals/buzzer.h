@@ -18,31 +18,11 @@
  */
 typedef enum {
   VOLUME_0 = 0,
-  // VOLUME_1 = 3,  // 80
-  // VOLUME_2 = 50, // 75
-  // VOLUME_3 = 55  // 55
-
-  VOLUME_1 = 1, // 80
-  VOLUME_2 = 3, // 75
-  VOLUME_3 = 55 // 55
+  VOLUME_1 = 1,
+  VOLUME_2 = 3,
+  VOLUME_3 = 55
 } volume_t;
 
-/* 10 - 77
- * 15 - 76
- * 20 - 77
- * 25 - 79
- * 30 - 76
- * 35 - 77
- * 40 - 70 !
- * 45 - 76
- * 50 - 74
- * 55 - 81
- * 60 - 78
- * 65 - 81
- * 70 - 78
- * 75 - 72
- * 80 - 60 !
- */
 /**
  * @brief Setting the state of an active buzzer.
  * @note  When state = TURN_ON - buzzer is turning on,
@@ -57,7 +37,7 @@ void set_active_buzzer_state(states_t state);
  * @param  buff_size: Size of freq_buff
  * @retval None
  */
-void set_passive_buzzer_melody(uint16_t *freq_buff, uint8_t buff_size);
+void set_passive_buzzer_melody(const uint16_t *freq_buff, uint8_t buff_size);
 
 /**
  * @brief  Play gong using timers for start buzzer sound and count duration

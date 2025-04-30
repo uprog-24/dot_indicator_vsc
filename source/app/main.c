@@ -17,16 +17,18 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "gpio.h"
 #include "main.h"
+
+#include "gpio.h"
 #include "tim.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
+
 #include "button.h"
 #include "config.h"
 
-#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -114,39 +116,24 @@ int main(void) {
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-// MX_TIM2_Init();
-// #if !DEMO_MODE
-  MX_TIM2_Init_1uS();
-  Test_BuzzerStart();
-// #endif
+  Timer_Buzzer_Init_1uS();
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM1_Init();
-  /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-
-  /* USER CODE BEGIN 3 */
+  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
 
 #if TEST_MODE
   test_mode_start();
 #elif DEMO_MODE
-#include "test_Buzzer.h"
 
-  MX_TIM2_Init_1uS();
-  // Test_BuzzerStart();
-  // play_gong(3, 1000, VOLUME_3);
-  TIM2_Start_bip(1000, VOLUME_3);
   while (1) {
-    // demo_mode_start();
+    demo_mode_start();
   }
 
 #else
 #include "conf.h"
 
-  TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
   display_protocol_name(PROTOCOL_NAME);
   display_protocol_name(PROJECT_VER);
 

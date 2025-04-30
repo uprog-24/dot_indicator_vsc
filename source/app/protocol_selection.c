@@ -61,8 +61,6 @@ void protocol_init() {
  */
 void protocol_start() {
 #if !TEST_MODE && !DEMO_MODE
-  // TIM4_Stop();
-  // TIM4_Start(); // Timer for checking interface connection
 #endif
 
 #if PROTOCOL_UIM_6100
@@ -73,7 +71,7 @@ void protocol_start() {
   if (is_id_from_flash_valid) {
     start_can(&hcan, matrix_settings.addr_id);
   } else {
-    start_can(&hcan, UIM6100_MAIN_CABIN_CAN_ID);
+    start_can(&hcan, MAIN_CABIN_ID);
   }
 
 #elif PROTOCOL_UEL
@@ -125,6 +123,4 @@ void protocol_stop() {
 
   stop_ukl_before_menu_mode();
 #endif
-
-  // TIM4_Stop();
 }

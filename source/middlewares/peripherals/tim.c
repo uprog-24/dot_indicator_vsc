@@ -23,7 +23,10 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
+
+#if PROTOCOL_UKL
 #include "ukl.h"
+#endif
 
 #define TIM4_FREQ TIM2_FREQ  ///< Frequency of APB1 for TIM4
 #define TIM4_PERIOD 1000 - 1 ///< Period of TIM4 for 1 sec
@@ -63,16 +66,9 @@ static void TIM2_Set_volume(uint8_t volume) {
  * @brief  Start PWM TIM2 for buzzer
  * @retval None
  */
-// static void TIM2_Start_PWM() {
-// #if DEMO_MODE
-//   // HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
-//   Test_BuzzerStart();
-// #else
-//   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
-// #endif
-// }
-
 static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
+
+void Test_BuzzerStart(void) { HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2); }
 
 /**
  * @brief  Set frequency for sound of buzzer (turning on buzzer using TIM2)
@@ -324,7 +320,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
 
     if (matrix_state == MATRIX_STATE_WORKING) {
       connection_sec_is_elapsed += 1;
@@ -386,7 +382,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM1) {
     tim1_elapsed_ms++;
 
-    // if (tim1_elapsed_ms == 1056 / 2) { // stop bip 1
     if (tim1_elapsed_ms == _bip_duration_ms) { // stop bip 1
 
       TIM2_Stop_bip();
@@ -397,12 +392,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-    // if (tim1_elapsed_ms == 100 + _bip_duration_ms) { // start bip 2
-    //   TIM2_Start_bip(1200, _bip_volume);             // 1200      // 1319
-    // }
-
-    //  if (tim1_elapsed_ms == 100 + 2 * _bip_duration_ms) { // stop bip 2
-    // if (tim1_elapsed_ms == (1048 + 1056) / 2) { // stop bip 2
     if (tim1_elapsed_ms == 2 * _bip_duration_ms) { // stop bip 2
 
       TIM2_Stop_bip();
@@ -413,13 +402,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-    // if (tim1_elapsed_ms == 200 + 2 * _bip_duration_ms) { // start bip 3
-    //   TIM2_Start_bip(1300, _bip_volume);                 // 1200       //
-    //   1568
-    // }
-
-    //  if (tim1_elapsed_ms == 200 + 3 * _bip_duration_ms) { // stop bip 3
-    // if (tim1_elapsed_ms == (1048 + 1056 + 882) / 2) { // stop bip 3
     if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
       TIM2_Stop_bip();
 
@@ -542,6 +524,54 @@ void MX_TIM2_Init(void) {
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
 }
+
+void Timer_Buzzer_Init_1uS(void) {
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 64 - 1; // freq tim = 1 000 000
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 65535;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
+}
+
 /* TIM3 init function */
 void MX_TIM3_Init(void) {
   /* USER CODE BEGIN TIM3_Init 0 */
@@ -791,7 +821,6 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
   _bip_volume = volume;
 
   // start bip 1
-  //	is_gong_play = true;
   TIM2_Start_PWM();
   TIM2_Start_bip(_bip_freq, volume);
 }
@@ -850,11 +879,6 @@ void TIM3_Stop() { HAL_TIM_Base_Stop_IT(&htim3); }
  * @param  None
  * @retval None
  */
-// void TIM4_Start() {
-//   __HAL_TIM_SET_PRESCALER(&htim4, PRESCALER_FOR_MS); // 1 ms
-//   __HAL_TIM_SET_AUTORELOAD(&htim4, TIM4_PERIOD);     // 1 s
-//   HAL_TIM_Base_Start_IT(&htim4);
-// }
 void TIM4_Start(uint16_t prescaler, uint16_t period) {
   __HAL_TIM_SET_PRESCALER(&htim4, prescaler);
   __HAL_TIM_SET_AUTORELOAD(&htim4, period);

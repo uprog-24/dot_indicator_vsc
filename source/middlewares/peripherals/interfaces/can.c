@@ -23,9 +23,11 @@
 /* USER CODE BEGIN 0 */
 #include "config.h"
 #include "drawing.h"
-#include "uim6100.h"
 
+#if PROTOCOL_UIM_6100
+#include "uim6100.h"
 msg_t msg = {0, 0, 0, 0};
+#endif
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -36,14 +38,37 @@ msg_t msg = {0, 0, 0, 0};
 static CAN_RxHeaderTypeDef rx_header;
 
 /// Buffer for receiving data
-static uint8_t rx_data_can[6] = {
+static uint8_t rx_data_can[BUFFER_SIZE_BYTES] = {
     0x00,
 };
 
 /// Flag to control is data received by CAN
 volatile bool is_data_received = false;
 
-// msg_t msg = {0, 0, 0, 0};
+/// Structure of Header for transmitting data
+static CAN_TxHeaderTypeDef tx_header;
+
+/**
+ * @brief Отправка сообщений-ответов по CAN для PROTOCOL_UIM_6100.
+ *
+ * @param stdId:  Адрес, на который отправляется ответ.
+ * @param dlc:    Размер сообщения в байтах.
+ * @param buffer: Указатель на буфер с данными для ответа.
+ */
+static void can_send_answer(uint32_t stdId, uint8_t dlc, uint8_t *buffer) {
+  tx_header.StdId = stdId;
+  tx_header.ExtId = 0;
+  tx_header.RTR = CAN_RTR_DATA;
+  tx_header.IDE = CAN_ID_STD;
+  tx_header.DLC = dlc;
+  tx_header.TransmitGlobalTime = 0;
+
+  uint32_t tx_mailbox = 0;
+
+  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
+    HAL_CAN_AddTxMessage(&hcan, &tx_header, buffer, &tx_mailbox);
+  }
+}
 
 /**
  * @brief  Handle Interrupt by receiving data after transmitting by CAN,
@@ -54,18 +79,12 @@ volatile bool is_data_received = false;
  * @retval None
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-  /// Index of byte_0 for extern in can.c
-  extern uint8_t byte_code_operation_0;
-
-  /// Index of byte_1 for extern in can.c
-  extern uint8_t byte_code_operation_1;
 
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data_can) ==
       HAL_OK) {
 
 #if PROTOCOL_UIM_6100
 
-#if 1
     if ((matrix_settings.addr_id == rx_header.StdId) &&
         (rx_header.StdId >= 46) && (rx_header.StdId != 49)) {
       if (rx_header.DLC == 2) {
@@ -90,14 +109,15 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
         }
       }
     }
-#endif
 
+    /* Полученные данные записываем в структуру msg */
     if (rx_header.DLC == 6 && rx_data_can[0] == 0x81 &&
         rx_data_can[1] == 0x00) {
 
       alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
       is_interface_connected = true;
       is_data_received = true;
+
       msg.w0 = rx_data_can[2];
       msg.w1 = rx_data_can[3];
       msg.w2 = rx_data_can[4];
@@ -259,9 +279,6 @@ static uint8_t tx_data_can[8] = {
     0,
 };
 
-/// Structure of Header for transmitting data
-static CAN_TxHeaderTypeDef tx_header;
-
 /**
  * @brief  Setting frame for transmitting TxData by CAN
  * @param  stdId: The standard ID of the frame
@@ -277,22 +294,6 @@ static void set_frame(uint32_t stdId) {
 
   for (uint8_t i = 0; i < 8; i++) {
     tx_data_can[i] = (i + 10);
-  }
-}
-
-void can_send_answer(uint32_t stdId, uint8_t dlc, uint8_t *buffer) {
-  tx_header.StdId = stdId;
-  tx_header.ExtId = 0;
-  tx_header.RTR = CAN_RTR_DATA;
-  tx_header.IDE = CAN_ID_STD;
-  tx_header.DLC = dlc;
-  tx_header.TransmitGlobalTime = 0;
-
-  /// Mailbox for transmitted data
-  uint32_t tx_mailbox = 0;
-
-  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
-    HAL_CAN_AddTxMessage(&hcan, &tx_header, buffer, &tx_mailbox);
   }
 }
 
@@ -356,8 +357,6 @@ void stop_can(CAN_HandleTypeDef *hcan) { HAL_CAN_Stop(hcan); }
 void CAN_TxData(uint32_t stdId) {
 
 #if TEST_MODE
-  /// String OK
-  char *str_ok = "0K";
 
   /// Mailbox for transmitted data
   uint32_t tx_mailbox = 0;
@@ -365,11 +364,6 @@ void CAN_TxData(uint32_t stdId) {
   set_frame(stdId);
   if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0) {
     HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data_can, &tx_mailbox);
-  }
-
-  if (is_data_received) {
-    is_data_received = false;
-    draw_string_on_matrix(str_ok);
   }
 
 #elif PROTOCOL_ALPACA
@@ -394,7 +388,6 @@ void CAN_TxData(uint32_t stdId) {
 #endif
 }
 
-uint8_t v = 0;
 /**
  * @brief  Process data received by CAN.
  * @note   If transmitted data by UIM6100 protocol is received then process
@@ -403,42 +396,6 @@ uint8_t v = 0;
  * @retval None
  */
 void process_data_from_can() {
-
-#if PROTOCOL_ALPACA
-// движения нет
-// CAN_TxData(10000);
-// движение вверх
-// CAN_TxData(10001);
-// CAN_TxData(10006); // 3 floor
-// CAN_TxData(10003);
-
-// Перегрузка кабины
-// CAN_TxData(10738);
-
-// Погрузка
-// CAN_TxData(10735);
-
-// Гонг Прибытие
-// if (v == 0) {
-//   v++;
-// CAN_TxData(10739);
-// }
-
-// Пожарная опасность
-// CAN_TxData(10741);
-
-// Открытие дверей
-// if (v == 0) {
-//   v++;
-//   CAN_TxData(10742);
-// }
-
-// Неисправность лифта
-// CAN_TxData(10745);
-
-// Эвакуация
-// CAN_TxData(10746);
-#endif
 
   if (is_data_received) {
     is_data_received = false;

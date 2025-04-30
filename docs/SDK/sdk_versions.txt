@@ -1,0 +1,10 @@
+STM32CubeIDE
+
+Version: 1.16.0
+Build: 21983_20240628_1741 (UTC)
+
+CubeMX
+Version: 6.12.0
+
+HAL
+ProjectManager.FirmwarePackage=STM32Cube FW_F1 V1.8.6

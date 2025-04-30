@@ -9,23 +9,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STOP_FLOORS_BUFF_SIZE 4 ///< Size of buff_stop_floors
+#define STOP_FLOORS_BUFF_SIZE 4 ///< Размер буфера с этажами-остановками.
 #define DISPLAY_STR_DURING_MS                                                  \
-  2000 ///< Time during which symbols are displayed on matrix
+  2000 ///< Время в мс, в течение которого символы отображаются на матрице
 
-/// Buffer with stop floors
+/// буфер с этажами-остановками
 static uint8_t buff_stop_floors[STOP_FLOORS_BUFF_SIZE] = {7, 8, 10, 11};
 
 /**
- * @brief  Display string on matrix (DEMO_MODE).
- * @note   1. Set drawing_data structure (direction, floor);
- *         2. Set matrix_string that will be displayed on matrix;
- *         3. Display matrix_string during DISPLAY_STR_DURING_MS.
- * @param  floor:            Current floor
- * @param  direction:        Direction with directionType:
- *                           DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION
- * @param  buff_stop_floors: Pointer to the buffer with stop floors
- * @param  buff_stop_size:   Size of the buff_stop_floors
+ * @brief  Отображение строки на матрице (DEMO_MODE).
+ * @note   1. Заполнение структуры drawing_data (направление, этаж);
+ *         2. Установка строки matrix_string, которая будет отображаться на
+ *            матрице;
+ *         3. Отображение строки matrix_string в течение DISPLAY_STR_DURING_MS.
+ * @param  floor:            Текущий этаж.
+ * @param  direction:        Текущеее направление движения (directionType:
+ *                           DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION).
+ * @param  buff_stop_floors: Указатель на буфер с этажами-остановками.
+ * @param  buff_stop_size:   Размер буфера с этажами-остановками.
  * @retval None
  */
 static void display_symbols(uint8_t floor, directionType direction) {
@@ -38,11 +39,11 @@ static void display_symbols(uint8_t floor, directionType direction) {
 }
 
 /**
- * @brief  Movement from start to finish floor with stop floors
+ * @brief  Движение от стартового до финишного этажа с остановками.
  * @param  start_floor
  * @param  finish_floor
- * @param  buff_stop_floors: Pointer to the buffer with stop floors
- * @param  buff_stop_size:   Size of the buff_stop_floors
+ * @param  buff_stop_floors: Указатель на буфер с этажами-остановками.
+ * @param  buff_stop_size:   Размер буфера с этажами-остановками.
  * @retval None
  */
 static void demo_start_finish_floors_movement(uint8_t start_floor,
@@ -51,15 +52,17 @@ static void demo_start_finish_floors_movement(uint8_t start_floor,
                                               uint8_t buff_stop_size) {
   uint8_t current_floor = start_floor;
 
-  // start floor
+  // Стартовый этаж
   display_symbols(start_floor, NO_DIRECTION);
+
+  // Движение вверх/вниз
   if (finish_floor > start_floor) {
     display_symbols(start_floor, DIRECTION_UP);
   } else {
     display_symbols(start_floor, DIRECTION_DOWN);
   }
 
-  // other floors
+  // Этажи с остановками
   while (abs(current_floor - finish_floor) > 0) {
     if (buff_stop_size != 0 && buff_stop_floors != NULL) {
       for (uint8_t ind = 0; ind < buff_stop_size; ind++) {
@@ -80,7 +83,7 @@ static void demo_start_finish_floors_movement(uint8_t start_floor,
     }
   }
 
-  // finish floor
+  // Финишный этаж
   if (finish_floor > start_floor) {
     display_symbols(finish_floor, DIRECTION_UP);
   } else {
@@ -90,7 +93,7 @@ static void demo_start_finish_floors_movement(uint8_t start_floor,
 }
 
 /**
- * @brief  Start lift movement in demo mode
+ * @brief  Запуск демонстрационного режима (движение с остановками)
  * @retval None
  */
 void demo_mode_start(void) {

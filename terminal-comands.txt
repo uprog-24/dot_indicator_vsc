@@ -1,8 +1,0 @@
-Команды запускаются из корневой папки проекта (например, User@DESKTOP-6NR1I7L /cygdrive/c/STM32_Projects/VSC/dot_indicator_copy). Файлы сборки сохраняются в папку build (создается в корневой папке при запуске команды 1).
-1. Конфигурация и генерация файлов:
-$ cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=C:/STM32_Projects/VSC/dot_indicator_vsc/gcc-arm-none-eabi.cmake -B build
-2. Сборка исполняемого файла: cmake --build ./build
-3. Загрузка .elf через STLink (openocd): cmake --build ./build --target flash
-4. Очистка папки сборки build: cmake --build ./build --target clean-build
-   Или удаление папки: rm -rf build.    
-5. Rebuild вместо п. 4:  cmake --build ./build --clean-first -v -j 8

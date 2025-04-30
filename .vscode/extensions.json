@@ -1,0 +1,32 @@
+{
+  "recommendations": [
+    "actboy168.tasks",
+    "bmd.stm32-for-vscode",
+    "cschlosser.doxdocgen",
+    "dan-c-underwood.arm",
+    "esbenp.prettier-vscode",
+    "github.copilot",
+    "github.copilot-chat",
+    "gruntfuggly.todo-tree",
+    "kylinideteam.cmake-intellisence",
+    "marus25.cortex-debug",
+    "mcu-debug.debug-tracker-vscode",
+    "mcu-debug.memory-view",
+    "mcu-debug.peripheral-viewer",
+    "mcu-debug.rtos-views",
+    "ms-vscode.cmake-tools",
+    "ms-vscode.cpptools",
+    "ms-vscode.cpptools-extension-pack",
+    "ms-vscode.cpptools-themes",
+    "ms-vscode.hexeditor",
+    "ms-vscode.makefile-tools",
+    "rioj7.command-variable",
+    "stmicroelectronics.stm32-vscode-extension",
+    "tomoki1207.pdf",
+    "trond-snekvik.gnu-mapfiles",
+    "twxs.cmake",
+    "vscode-icons-team.vscode-icons",
+    "xaver.clang-format",
+    "zixuanwang.linkerscript"
+  ]
+}

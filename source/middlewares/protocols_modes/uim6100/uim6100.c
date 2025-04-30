@@ -183,22 +183,53 @@ static void setting_gong(uint8_t direction_byte_w_3, uint8_t volume) {
  * @param  code_msg_byte_w_1: Byte W1
  * @retval None
  */
+static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
+  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+      is_cabin_overload = true;
+      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
+
+  }
+  // next received bytes by CAN
+  else if (is_cabin_overload) {
+    TIM2_Stop_bip();
+    is_cabin_overload = false;
+  }
+
+  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_FIRE_DANGER) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+      is_fire_danger = true;
+      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
+  }
+  // next received bytes by CAN
+  else if (is_fire_danger) {
+    TIM2_Stop_bip();
+    is_fire_danger = false;
+  }
+}
+
+/**
+ * @brief  Process code message from byte W1, turn on/off buzzer
+ * @param  code_msg_byte_w_1: Byte W1
+ * @retval None
+ */
 static void setting_sound_uim(msg_t *msg, volume_t level_volume) {
 
   uint8_t code_msg_byte_w_1 = msg->w1;
 
-  /* Нажатие кнопки приказа;
-   * Озвучивать нажатие, если нет сигнала Кабина перегружена и сигнала Пожарная
-   * опасность, гонг прибытия не проверяем тк перед его срабатыванием выключаем
-   * звук нажатой кнопки */
-  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == BUTTON_SOUND_SHORT
-      // && !is_cabin_overload && !is_fire_danger
-  ) {
-    is_button_pressed = true;
+  /* Нажатие кнопки приказа */
+  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == BUTTON_SOUND_SHORT) {
 
     if (button_disable_cnt == 0) {
       if (matrix_settings.volume != VOLUME_0) {
-        // TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+        is_button_pressed = true;
         play_gong(1, 1000, matrix_settings.volume);
       }
     }
@@ -216,23 +247,15 @@ static void setting_sound_uim(msg_t *msg, volume_t level_volume) {
   }
 
   /* Гонг прибытия */
-  if (matrix_settings.volume != VOLUME_0
-      // && !is_fire_danger
-  ) {
+  if (matrix_settings.volume != VOLUME_0) {
     setting_gong(msg->w3, matrix_settings.volume);
   }
 
   /* Перегруз кабины */
   if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
-    is_cabin_overload = true;
-
-    /** Если нажата кнопка, то выключаем бузер; гонг не проверяем, тк не
-     * возможна ситуация, что перед перегрузом звучит гонг прибытия  */
-    // if (is_button_pressed) {
-    //   stop_buzzer_sound();
-    // }
 
     if (matrix_settings.volume != VOLUME_0) {
+      is_cabin_overload = true;
       TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
     }
 
@@ -251,8 +274,6 @@ static void setting_sound_uim(msg_t *msg, volume_t level_volume) {
     is_fire_danger = true;
 
     if (matrix_settings.volume != VOLUME_0) {
-      /* Выключаем все возможные звуки */
-      // stop_buzzer_sound();
       TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
     }
 
@@ -315,10 +336,15 @@ void process_data_uim(msg_t *msg) {
 
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+#if 1
+    /* Проверено на испытаниях */
+    setting_gong(msg->w3, matrix_settings.volume);
+    process_code_msg(code_msg, matrix_settings.volume);
+#elif
+    /* Функция для обработки всех звукрвых оповещений была составлена после
+     * испытаний, не проверена */
     setting_sound_uim(msg, matrix_settings.volume);
-    // if (matrix_settings.volume != VOLUME_0) {
-    //   setting_gong(msg->w3, matrix_settings.volume);
-    // }
+#endif
   } else {
     // Этажный индикатор
     if (matrix_settings.addr_id == drawing_data.floor ||

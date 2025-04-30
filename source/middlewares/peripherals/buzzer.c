@@ -32,7 +32,7 @@ void set_active_buzzer_state(states_t state) {
  * @param  buff_size: Size of freq_buff
  * @retval None
  */
-void set_passive_buzzer_melody(uint16_t *freq_buff, uint8_t buff_size) {
+void set_passive_buzzer_melody(const uint16_t *freq_buff, uint8_t buff_size) {
   for (uint8_t ind_freq = 0; ind_freq < buff_size; ind_freq++) {
     TIM2_Start_bip(freq_buff[ind_freq], VOLUME_1);
     TIM3_Delay_ms(250);
