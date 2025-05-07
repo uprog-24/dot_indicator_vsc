@@ -10,7 +10,8 @@
 
 #define TIM4_FREQ TIM2_FREQ ///< Частота линии APB1 для TIM4
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA ||    \
+    PROTOCOL_NKU_SD7
 #define TIME_DISPLAY_STRING_DURING_MS                                          \
   3000 ///< Время в мс, в течение которого отображается строка при подаче
        ///< питания
@@ -170,7 +171,14 @@ volatile uint32_t connection_ms_is_elapsed = 0;
 volatile bool is_time_ms_for_display_str_elapsed = false;
 
 /// Счетчик времени отображения строки при запуске индикатора в мс
-static uint16_t tim4_ms_counter = 0;
+uint16_t tim4_ms_counter = 0;
+
+uint32_t tim3_ms_counter = 0;
+
+extern uint32_t received_bit_time[];
+
+volatile bool is_time_start = false;
+volatile uint8_t bit_message_number = 0;
 
 /**
  * @brief  Обработка прерываний по завершении периода таймеров.
@@ -199,9 +207,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM3) {
     is_tim3_period_elapsed = true; // для TEST_MODE
 
-#if PROTOCOL_UKL
+#if PROTOCOL_NKU_SD7
+
+    extern const uint16_t nku_sd7_timings[];
+
+    extern volatile uint8_t bit_index;
+
+#if 0
+    tim3_ms_counter++;
+
+    if (tim3_ms_counter == 2556 / 2 && bit_message_number == 0) {
+      read_data_bit();
+      tim3_ms_counter = 0;
+      received_bit_time[bit_message_number] = tim3_ms_counter;
+      bit_message_number++;
+    } else if (tim3_ms_counter / 2556 == bit_message_number &&
+               bit_message_number != 0) {
+      read_data_bit();
+      received_bit_time[bit_message_number] = tim3_ms_counter;
+      bit_message_number++;
+
+      if (bit_message_number == 32) {
+        bit_message_number == 0;
+        tim3_ms_counter = 0;
+      }
+    }
+#endif
 
     read_data_bit();
+
+    // TIM3_Stop();
+    // if (bit_index == 1) { // после чтения старт-бита
+    //   TIM3_Start(PRESCALER_FOR_US, nku_sd7_timings[0]);
+    // }
 
 #endif
   }
@@ -211,18 +249,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
      * колонками) для отображения символов */
     is_tim4_period_elapsed = true;
 
-/* Счетчик для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
- * для протоколов: название протокола и номер версии ПО при запуске
- * индикатора; для DEMO_MODE: отображение строки */
-#if !TEST_MODE
-    if (!is_time_ms_for_display_str_elapsed) {
-      tim4_ms_counter += 1;
-      if (tim4_ms_counter >= TIME_DISPLAY_STRING_DURING_MS) {
-        tim4_ms_counter = 0;
-        is_time_ms_for_display_str_elapsed = true;
-      }
-    }
-#endif
+    // if (is_time_start) {
+    //   tim4_ms_counter += 1;
+    // }
+
+    // if (is_tim3_period_elapsed) {
+    // tim4_ms_counter += 1;
+    // }
+
+    /* Счетчик для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
+     * для протоколов: название протокола и номер версии ПО при запуске
+     * индикатора; для DEMO_MODE: отображение строки */
+    // #if !TEST_MODE
+    //     if (!is_time_ms_for_display_str_elapsed) {
+    //       tim4_ms_counter += 1;
+    //       if (tim4_ms_counter >= TIME_DISPLAY_STRING_DURING_MS) {
+    //         tim4_ms_counter = 0;
+    //         is_time_ms_for_display_str_elapsed = true;
+    //       }
+    //     }
+    // #endif
 
 #if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
 
@@ -511,7 +557,8 @@ void MX_TIM3_Init(void) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-
+  HAL_NVIC_SetPriority(TIM3_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
   /* USER CODE END TIM3_Init 2 */
 }
 /* TIM4 init function */

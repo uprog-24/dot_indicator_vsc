@@ -16,6 +16,7 @@
     "test_buzzer.h": "c",
     "*.in": "cpp",
     "config.h": "c",
-    "demo_mode.h": "c"
+    "demo_mode.h": "c",
+    "type_traits": "c"
   }
 }

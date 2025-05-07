@@ -140,11 +140,12 @@ int main(void) {
 #include "conf.h" // Для номера версии ПО (из файла config.h.in)
 #include "drawing.h"
 
-  display_symbols_during_ms(PROTOCOL_NAME);
-  display_symbols_during_ms(PROJECT_VER);
+  // display_symbols_during_ms(PROTOCOL_NAME);
+  // display_symbols_during_ms(PROJECT_VER);
 
   read_settings(&matrix_settings);
   protocol_init();
+  is_interface_connected = true;
 
   while (1) {
     switch (matrix_state) {

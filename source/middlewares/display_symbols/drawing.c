@@ -82,7 +82,10 @@ void set_floor_symbols(char *matrix_string, uint16_t floor,
   } else if (floor <= max_positive_number_location) {
     matrix_string[MSB] = convert_int_to_char(floor / 10);
     matrix_string[LSB] = convert_int_to_char(floor % 10);
-  } else {
+  }
+
+#if 1
+  else {
     // Спец. символы
     for (uint8_t ind = 0; ind < spec_symbols_buff_size; ind++) {
       if (code_location_symbols[ind].code_location == floor) {
@@ -93,6 +96,7 @@ void set_floor_symbols(char *matrix_string, uint16_t floor,
       }
     }
   }
+#endif
 }
 
 /**
@@ -316,117 +320,11 @@ static void draw_special_symbols(char *matrix_string) {
   }
 }
 
-/**
- * @brief Тестовая версия для ЩЛЗ (НО используется первая версия выше).
- * Этажи 1-9 справа, точки (светодиоды):
- *  0..4: стрелка;
- *  5,6: пробел;
- *  7..10: первый символ;
- *  11: пробел;
- *  12..15: второй символ. Для "1" (ширина 3 точки) сдвиг по правой части.
- */
-#if 0
-static void draw_special_symbols(char *matrix_string) {
-  // stop floor 1..9: c1c
-  if (matrix_string[DIRECTION] == 'c' && matrix_string[LSB] == 'c') {
-    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
-    draw_symbol_on_matrix(matrix_string[LSB], 0, 0);
-    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
-
-  } else if (matrix_string[DIRECTION] ==
-             'c') { // stop floor c10..c99 and c-1..c-9
-
-    // draw DIRECTION symbol
-    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
-
-    // draw MSB and LSB symbols
-    if (matrix_string[MSB] == '1' || matrix_string[MSB] == 'I') {
-      draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
-    } else if (matrix_string[MSB] != '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
-      // draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
-      // "cKg" перегруз
-      if (matrix_string[MSB] == 'K' && matrix_string[LSB] == 'g') {
-        draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
-      } else {
-        draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
-      }
-    }
-
-    if (matrix_string[MSB] == '-' && matrix_string[LSB] != '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 8, 0);
-    }
-
-    // "c--" interface is not connected
-    if (matrix_string[MSB] == '-' && matrix_string[LSB] == '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 4, 0);
-    }
-  } else if (matrix_string[DIRECTION] == '>' ||
-             matrix_string[DIRECTION] == '<' ||
-             matrix_string[DIRECTION] == '+' ||
-             matrix_string[DIRECTION] == '-' ||
-             matrix_string[DIRECTION] == 'p') { // in moving up/down: >10 or >1c
-
-    if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
-    } else {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
-    }
-    //========== MSB
-    // >1c
-    if (matrix_string[MSB] == '1' && matrix_string[LSB] == 'c') {
-      draw_symbol_on_matrix(matrix_string[MSB], 13, 0);
-    }
-
-    // >2c ... >9c
-    if (matrix_string[MSB] != '1' && matrix_string[LSB] == 'c') {
-      draw_symbol_on_matrix(matrix_string[MSB], 12, 0);
-    }
-
-    // >10 ... >19
-    if (matrix_string[MSB] == '1' && matrix_string[LSB] != 'c') {
-      draw_symbol_on_matrix(matrix_string[MSB], 8, 0);
-    }
-
-    // >-1 ... >-9
-    if (matrix_string[MSB] == '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 8, 0);
-    }
-
-    // >20 ... >99
-    if (matrix_string[MSB] != '1' && matrix_string[MSB] != '-' &&
-        matrix_string[LSB] != 'c') {
-      draw_symbol_on_matrix(matrix_string[MSB], 7, 0);
-    }
-    //========== MSB
-
-    //========== LSB
-    // font_width = 3 for '1' and '-'
-    if (matrix_string[LSB] == '1') {
-      draw_symbol_on_matrix(matrix_string[LSB], 13, 0);
-    } else {
-      draw_symbol_on_matrix(matrix_string[LSB], 12, 0);
-    }
-
-#if 0
-    if (matrix_string[MSB] == '1' || matrix_string[MSB] == '-') {
-      if (matrix_string[LSB] == '1') {
-        draw_symbol_on_matrix(matrix_string[LSB], 13, 0);
-      } else {
-        draw_symbol_on_matrix(matrix_string[LSB], 12, 0);
-      }
-
-    } else if (matrix_string[MSB] != '-') {
-      draw_symbol_on_matrix(matrix_string[LSB], 12, 0);
-    }
-#endif
-    //========== LSB
-  }
-}
-#endif
+// void set_matrix_string(char *str) {
+//   matrix_string[DIRECTION] = str[DIRECTION];
+//   matrix_string[MSB] = str[MSB];
+//   matrix_string[LSB] = str[LSB];
+// }
 
 /**
  * @brief  Отображение matrix_string в зависимости от типа строки.

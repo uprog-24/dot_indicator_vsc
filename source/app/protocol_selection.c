@@ -20,8 +20,21 @@ void protocol_init() {
     matrix_settings.volume = VOLUME_1;
   }
 
+#if 0
 #if PROTOCOL_UIM_6100
   MX_CAN_Init();
+#endif
+#endif
+
+#if PROTOCOL_NKU_SD7
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = DATA_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  // GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(DATA_GPIO_Port, &GPIO_InitStruct);
 #endif
 }
 
@@ -53,8 +66,8 @@ void protocol_start() {
 
 void protocol_process_data() {
   if (is_interface_connected) {
-#if PROTOCOL_UIM_6100
-    process_data_from_can();
+#if PROTOCOL_NKU_SD7
+    process_data_pin();
 #endif
   } else {
     draw_string_on_matrix("c--");

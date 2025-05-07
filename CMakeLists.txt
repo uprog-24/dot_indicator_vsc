@@ -18,7 +18,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Поддерживаемые режимы/протоколы
 set(MODES
-    USE_PROTOCOL_UIM_6100
+    # USE_PROTOCOL_UIM_6100
+    USE_PROTOCOL_NKU_SD7
     USE_DEMO_MODE
     USE_TEST_MODE
 )
@@ -137,9 +138,13 @@ function(setup_protocol PROTOCOL_NAME PROTOCOL_FOLDER PROTOCOL_SOURCE_FILES)
 endfunction()
 
 # Подключаем файлы, необходимые для протокола/режима
-if(USE_PROTOCOL_UIM_6100)
-    setup_protocol("PROTOCOL_UIM_6100" "uim6100"
-        "middlewares/protocols_modes/uim6100/uim6100.c"
+# if(USE_PROTOCOL_UIM_6100)
+#     setup_protocol("PROTOCOL_UIM_6100" "uim6100"
+#         "middlewares/protocols_modes/uim6100/uim6100.c"
+#     )
+if(USE_PROTOCOL_NKU_SD7)
+    setup_protocol("PROTOCOL_NKU_SD7" "nku_sd7"
+        "middlewares/protocols_modes/nku_sd7/nku_sd7.c"
     )
     # setup_protocol("PROTOCOL_UIM_6100" "uim6100" "uim6100.c")
 elseif(USE_DEMO_MODE)

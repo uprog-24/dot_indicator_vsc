@@ -111,6 +111,58 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   if (GPIO_Pin == BUTTON_1_Pin || GPIO_Pin == BUTTON_2_Pin) {
     time_since_last_press_ms = 0;
   }
+
+#if PROTOCOL_NKU_SD7
+  /// Flag to control is start bit is received (state DATA_Pin from 1 to 0)
+  extern bool is_start_bit_received;
+
+  /// Buffer with timings for reading data bits
+  extern const uint16_t nku_sd7_timings[];
+
+  extern volatile uint8_t bit_index;
+
+  extern volatile uint8_t current_byte;
+
+  extern volatile bool is_tim3_period_elapsed;
+
+  extern volatile bool is_time_start;
+
+#if 1
+  if (GPIO_Pin == DATA_Pin) {
+    if (matrix_state == MATRIX_STATE_WORKING) {
+      if (!is_start_bit_received) {
+        if (HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin) == GPIO_PIN_RESET) {
+          // __HAL_GPIO_EXTI_CLEAR_IT(DATA_Pin);
+          TIM3_Start(PRESCALER_FOR_US, (nku_sd7_timings[0]) / 2);
+          // TIM3_Start(PRESCALER_FOR_US, 1);
+          HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+        }
+      }
+    }
+  }
+#endif
+
+#if 0
+  if (GPIO_Pin == DATA_Pin && matrix_state == MATRIX_STATE_WORKING) {
+    if (!is_start_bit_received) {
+      if (HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin) ==
+          GPIO_PIN_RESET) { // Старт-бит (0)
+
+        is_start_bit_received = true;
+        bit_index = 1; // с первого data-бита
+
+        current_byte = 0;
+        HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+
+        TIM3_Start(PRESCALER_FOR_US,
+                   nku_sd7_timings[0] * 3 /
+                       2); // 1.5X для середины первого data-бита
+      }
+    }
+  }
+#endif
+
+#endif
 }
 
 /// Текущий режим меню

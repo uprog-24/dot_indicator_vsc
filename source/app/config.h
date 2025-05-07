@@ -30,7 +30,22 @@
 
 #define BUFFER_SIZE_BYTES 6
 
-/* DEMO_MODE */
+/* Протокол UIM_6100 (CAN) */
+#elif PROTOCOL_NKU_SD7 && !DEMO_MODE && !TEST_MODE
+
+#include "nku_sd7.h"
+#include "protocol_selection.h"
+
+#define PROTOCOL_NAME "NK7"
+#define ADDR_ID_MIN 1
+#define ADDR_ID_LIMIT 47
+#define MAX_POSITIVE_NUMBER_FLOOR 9
+#define MAIN_CABIN_ID 46
+#define TIME_MS_FOR_INTERFACE_CONNECTION                                       \
+  3000 ///< Время в мс для проверки подключения интерфейса (3 с)
+
+#define BUFFER_SIZE_BYTES 6
+
 #elif DEMO_MODE && !PROTOCOL_UIM_6100 && !TEST_MODE
 
 #include "demo_mode.h"
