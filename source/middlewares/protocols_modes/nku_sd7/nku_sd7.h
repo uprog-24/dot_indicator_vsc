@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#define SD7_BIT_LENGTH_US 2556
+
 /**
  * @brief  Обработка данных по протоколу UIM6100 (ШК6000).
  * @note   1. Установка структуры drawing_data, обработка code message,

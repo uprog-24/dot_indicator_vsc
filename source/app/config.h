@@ -36,7 +36,7 @@
 #include "nku_sd7.h"
 #include "protocol_selection.h"
 
-#define PROTOCOL_NAME "NK7"
+#define PROTOCOL_NAME "SD7"
 #define ADDR_ID_MIN 1
 #define ADDR_ID_LIMIT 47
 #define MAX_POSITIVE_NUMBER_FLOOR 9

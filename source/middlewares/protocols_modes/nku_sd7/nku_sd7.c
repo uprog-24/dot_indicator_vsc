@@ -10,18 +10,13 @@
 
 #include <stdbool.h>
 
-// #define SYMBOL_FLOOR_MASK 0x3F
-// #define SYMBOL_FLOOR_MASK 0x7E
-#if 0
-#define SYMBOL_FLOOR_MASK 0x3F
-#define ARROW_MASK 0x30 // 0x60 ///< Маска для направления движения
-#endif
-
-#if 1
-#define SYMBOL_FLOOR_MASK 0x7E
+#define DATA_BITS_MASK 0x7E
 #define ARROW_MASK 0x60 ///< Маска для направления движения
 
-#endif
+#define LOADING_MASK 0x1
+#define FIRE_DANGER_MASK 0x4
+#define CABIN_OVERLOAD_MASK 0x8
+#define GONG_MASK 0x10
 
 #define ARRIVAL_MASK 0b100 ///< Маска для бита прибытия (2-й бит байта W3)
 
@@ -53,10 +48,6 @@ typedef struct {
  * Направления движения.
  */
 typedef enum {
-#if 0
-  NKU_SD7_MOVE_UP = 32,   // 64,
-  NKU_SD7_MOVE_DOWN = 16, // 32,
-#endif
   NKU_SD7_MOVE_UP = 64,
   NKU_SD7_MOVE_DOWN = 32,
   NKU_SD7_NO_MOVE = 0
@@ -175,18 +166,94 @@ static void transform_direction_to_common(direction_nku_sd7_t direction) {
   }
 }
 
+static uint8_t gong[2] = {
+    0,
+};
+
+static void setting_gong(uint8_t direction_code, uint8_t control_byte_first,
+                         uint8_t volume) {
+  uint8_t arrival = control_byte_first & GONG_MASK;
+
+  // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
+  gong[0] = (arrival == GONG_MASK) != 0 ? 1 : 0;
+
+  if (gong[0] && !gong[1]) {
+
+    switch (direction_code) {
+    case NKU_SD7_MOVE_UP:
+      play_gong(1, GONG_BUZZER_FREQ, volume);
+      break;
+    case NKU_SD7_MOVE_DOWN:
+      play_gong(2, GONG_BUZZER_FREQ, volume);
+      break;
+    case NKU_SD7_NO_MOVE:
+      play_gong(3, GONG_BUZZER_FREQ, volume);
+      break;
+    default:
+      __NOP();
+      play_gong(3, GONG_BUZZER_FREQ, volume);
+      break;
+    }
+  }
+  gong[1] = gong[0];
+}
+
+/// Флаг для контроля перегруза кабины
+static bool is_cabin_overload = false;
+
+/// Флаг для контроля воспроизведения оповещения при пожарной опасности
+static bool is_fire_danger = false;
+
 /// Flag to control is data completed
 volatile bool is_read_data_completed = false;
 
-// uint8_t reverse_byte(uint8_t n) {
-//   uint8_t result = 0;
-//   for (int i = 0; i < 8; i++) {
-//     result <<= 1;      // Сдвигаем result влево
-//     result |= (n & 1); // Берём младший бит из n
-//     n >>= 1;           // Сдвигаем n вправо
-//   }
-//   return result;
-// }
+static setting_special_regime(uint8_t direction_code,
+                              uint8_t control_byte_first,
+                              uint8_t control_byte_second) {
+
+  // Гонг
+  if (matrix_settings.volume != VOLUME_0) {
+    setting_gong(direction_code, control_byte_first, matrix_settings.volume);
+  }
+
+  // Погрузка
+  if ((control_byte_first & LOADING_MASK) == LOADING_MASK) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'p';
+    matrix_string[LSB] = 'g';
+  }
+
+  // Перегруз
+  if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+      is_cabin_overload = true;
+      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
+
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
+  } else if (is_cabin_overload) {
+    TIM2_Stop_bip();
+    is_cabin_overload = false;
+  }
+
+  // Пожар
+  if ((control_byte_first & FIRE_DANGER_MASK) == FIRE_DANGER_MASK) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+      is_fire_danger = true;
+      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+    }
+
+    matrix_string[MSB] = 'F';
+    matrix_string[LSB] = 'c';
+  } else if (is_fire_danger) {
+    TIM2_Stop_bip();
+    is_fire_danger = false;
+  }
+}
 
 /**
  * @brief  Обработка данных по протоколу NKU_SD7.
@@ -195,12 +262,56 @@ volatile bool is_read_data_completed = false;
  */
 void process_data_nku_sd7() {
 
-  drawing_data.floor = byte_buf_copy[1] & SYMBOL_FLOOR_MASK;
+  uint8_t first_symbol_code = (byte_buf_copy[0] & DATA_BITS_MASK) >> 1;
+  uint8_t second_symbol_code = (byte_buf_copy[1] & DATA_BITS_MASK) >> 1;
+  uint8_t direction_code = (byte_buf_copy[3] & ARROW_MASK);
 
-  // transform_direction_to_common(byte_buf_copy[3] & ARROW_MASK);
+  uint8_t control_byte_first = byte_buf_copy[2] & DATA_BITS_MASK;
+  uint8_t control_byte_second = byte_buf_copy[3] & DATA_BITS_MASK;
 
-  setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_FLOOR,
-                  special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+  switch (first_symbol_code) {
+    // этажи 1..9
+  case SYMBOL_EMPTY:
+    matrix_string[MSB] = convert_int_to_char(second_symbol_code);
+    matrix_string[LSB] = 'c';
+
+    // этаж cП
+    if (second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG) {
+      matrix_string[MSB] = 'p';
+      matrix_string[LSB] = 'c';
+    }
+    break;
+
+    // этажи -1..-9
+  case SYMBOL_MINUS:
+    matrix_string[MSB] = '-';
+    matrix_string[LSB] = convert_int_to_char(second_symbol_code);
+    break;
+
+    // этажи П1..П9
+  case SYMBOL_UNDERGROUND_FLOOR_BIG:
+    matrix_string[MSB] = 'p';
+    matrix_string[LSB] = convert_int_to_char(second_symbol_code);
+    break;
+
+  default:
+    matrix_string[MSB] = convert_int_to_char(first_symbol_code);
+    matrix_string[LSB] = convert_int_to_char(second_symbol_code);
+    break;
+  }
+
+  // Стрелка
+  transform_direction_to_common(direction_code);
+  set_direction_symbol(matrix_string, drawing_data.direction);
+
+  // setting_gong(direction_code, control_byte_first, matrix_settings.volume);
+
+  // Спец. режимы
+  setting_special_regime(direction_code, control_byte_first,
+                         control_byte_second);
+
+  // setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_FLOOR,
+  //                 special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
   while (is_read_data_completed == false && is_interface_connected == true) {
     draw_string_on_matrix(matrix_string);
@@ -221,10 +332,6 @@ volatile bool is_start_bit_received = false;
 /// Buffer with timings for reading data bits
 const uint16_t nku_sd7_timings[1] = {2556};
 
-uint32_t received_bit_time[32] = {
-    0,
-};
-
 /// Value of the current received bit
 volatile uint8_t bit = 1;
 
@@ -234,20 +341,12 @@ static const uint8_t packet_size = 8;
 /// Maximum index of received data
 static const uint8_t max_index_packet = packet_size - 1;
 
-// volatile uint8_t current_byte = 0;
-volatile uint32_t current_byte = 0;
-volatile uint32_t current_byte_copy = 0;
+volatile uint8_t current_byte = 0;
 
 volatile uint8_t bit_index = 0;
 volatile uint8_t byte_count = 0;
 
-extern uint16_t tim4_ms_counter;
-extern volatile bool is_time_start;
-
-extern uint32_t tim3_ms_counter;
-extern volatile uint8_t bit_message_number;
-
-void reset_state() {
+static void reset_state() {
   bit_index = 0;
   byte_count = 0;
   current_byte = 0;
@@ -256,7 +355,16 @@ void reset_state() {
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
-#if 1
+void stop_sd7_before_menu_mode() {
+  bit_index = 0;
+  byte_count = 0;
+  current_byte = 0;
+  is_start_bit_received = false;
+  TIM3_Stop();
+  // HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+}
+
+#if 0 
 void read_data_bit() {
 
   bit = HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin);
@@ -264,16 +372,16 @@ void read_data_bit() {
   if (bit_index < 32) {
     if (bit_index == 0) {
       is_start_bit_received = true;
-      current_byte |= bit << (31 - bit_index);
+      current_message |= bit << (31 - bit_index);
       bit_index++;
       TIM3_Start(PRESCALER_FOR_US, nku_sd7_timings[0]);
     } else {
-      current_byte |= (bit) << (31 - bit_index);
+      current_message |= (bit) << (31 - bit_index);
       bit_index++;
     }
   } else {
     is_read_data_completed = true;
-    current_byte_copy = ~current_byte;
+    current_byte_copy = ~current_message;
     for (int i = 0; i < 4; i++) {
       byte_buf_copy[i] = (current_byte_copy >> (8 * i)) & 0xFF;
     }
@@ -307,98 +415,45 @@ void read_data_bit() {
 }
 #endif
 
-#if 0
-void read_data_bit() {
+void read_data_bit(void) {
 
-  bit = HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin);
-
-  if (bit_index == 0) {
-    // current_byte = 0;
-    if (bit == 0) {
-      is_start_bit_received = true;
-      current_byte |= bit << (7 - bit_index);
-      bit_index++;
-      TIM3_Start(PRESCALER_FOR_US, nku_sd7_timings[0]);
-    } else {
-      reset_state(); // Переход к прерывнию по спаду фронта
-    }
-    return;
-  }
-
-  if (bit_index < 7) {
-    current_byte |= (bit) << (7 - bit_index);
-    bit_index++;
-  } else if (bit_index == 7) {
-// стоп-бит
-#if 1
-    if (bit != 1) {
-      // Ошибка, невалидный пакет
-      reset_state();
-    } else {
-      current_byte |= (bit) << (7 - bit_index);
-      byte_buf[byte_count] = ~current_byte;
-      byte_count++;
-    }
-#endif
-
-    if (byte_count == 4) {
-
-      is_read_data_completed = true;
-      memcpy(byte_buf_copy, byte_buf, sizeof(byte_buf));
-
-      reset_state(); // Переход к прерывнию по спаду фронта
-    }
-
-    bit_index = 0; // Для следующего байта
-    current_byte = 0;
-
-    // is_start_bit_received = false;
-    // TIM3_Stop();
-    // HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-  }
-}
-#endif
-
-#if 0
-void read_data_bit() {
   uint8_t bit = HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin);
 
-  if (bit_index >= 1 && bit_index <= 6) {     // 6 data-битов
-    current_byte |= (bit << (6 - bit_index)); // LSB first
-    bit_index++;
-    TIM3_Start(PRESCALER_FOR_US, nku_sd7_timings[0]); // Следующий бит
-    return;
-  }
+  current_byte |= (bit << (7 - bit_index));
+  bit_index++;
 
-  if (bit_index == 7) { // Стоп-бит
-    if (bit == 1) {
-      // Стоп-бит корректен
+  if (bit_index == 8) {
 
-      byte_buf[byte_count] = ~(current_byte & 0x3F); // Только 6 бит
-      byte_count++;
+    // Приняли 8 бит (start + 6 data + stop)
+    byte_buf[byte_count] = ~current_byte;
+    byte_count++;
 
-      if (byte_count >= 4) {
-        is_read_data_completed = true;
-        memcpy(byte_buf_copy, byte_buf, sizeof(byte_buf));
-        byte_count = 0;
-        tim4_ms_counter = 0;
-      }
-
-      //  ожидания старт bit
-      bit_index = 0;
-      current_byte = 0;
-      is_start_bit_received = false;
-      HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-      TIM3_Stop();
-    } else {
-      // Ошибка стоп-бита
-      bit_index = 0;
-      current_byte = 0;
-      byte_count = 0;
-      is_start_bit_received = false;
-      HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-      TIM3_Stop();
+    // Проверка старт и стоп битов
+    uint8_t start_bit = (~current_byte >> 7) & 0x01;
+    uint8_t stop_bit = ~current_byte & 0x01;
+    if (start_bit != 1 || stop_bit != 0) {
+      // Ошибка байта
+      reset_state();
+      return;
     }
+
+    if (byte_count == 4) {
+      is_read_data_completed = true;
+      memcpy(byte_buf_copy, byte_buf, sizeof(byte_buf));
+      memset((void *)byte_buf, 0, 4 * sizeof(uint8_t));
+      reset_state();
+
+      // Проверка подключения интерфейса
+      alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
+      is_interface_connected = true;
+
+      return;
+    }
+
+    // следующий байт
+    current_byte = 0;
+    bit_index = 0;
   }
+
+  __HAL_TIM_SET_AUTORELOAD(&htim3, nku_sd7_timings[0]);
 }
-#endif

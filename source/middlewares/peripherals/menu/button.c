@@ -127,40 +127,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
   extern volatile bool is_time_start;
 
-#if 1
   if (GPIO_Pin == DATA_Pin) {
     if (matrix_state == MATRIX_STATE_WORKING) {
       if (!is_start_bit_received) {
         if (HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin) == GPIO_PIN_RESET) {
-          // __HAL_GPIO_EXTI_CLEAR_IT(DATA_Pin);
-          TIM3_Start(PRESCALER_FOR_US, (nku_sd7_timings[0]) / 2);
-          // TIM3_Start(PRESCALER_FOR_US, 1);
+          is_start_bit_received = true;
           HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+          TIM3_Start(PRESCALER_FOR_US, (nku_sd7_timings[0]) / 2);
         }
       }
     }
   }
-#endif
-
-#if 0
-  if (GPIO_Pin == DATA_Pin && matrix_state == MATRIX_STATE_WORKING) {
-    if (!is_start_bit_received) {
-      if (HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin) ==
-          GPIO_PIN_RESET) { // Старт-бит (0)
-
-        is_start_bit_received = true;
-        bit_index = 1; // с первого data-бита
-
-        current_byte = 0;
-        HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
-
-        TIM3_Start(PRESCALER_FOR_US,
-                   nku_sd7_timings[0] * 3 /
-                       2); // 1.5X для середины первого data-бита
-      }
-    }
-  }
-#endif
 
 #endif
 }

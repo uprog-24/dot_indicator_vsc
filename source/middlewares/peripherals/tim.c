@@ -249,28 +249,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
      * колонками) для отображения символов */
     is_tim4_period_elapsed = true;
 
-    // if (is_time_start) {
-    //   tim4_ms_counter += 1;
-    // }
+/* Счетчик для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
+ * для протоколов: название протокола и номер версии ПО при запуске
+ * индикатора; для DEMO_MODE: отображение строки */
+#if !TEST_MODE
+    if (!is_time_ms_for_display_str_elapsed) {
+      tim4_ms_counter += 1;
+      if (tim4_ms_counter >= TIME_DISPLAY_STRING_DURING_MS) {
+        tim4_ms_counter = 0;
+        is_time_ms_for_display_str_elapsed = true;
+      }
+    }
+#endif
 
-    // if (is_tim3_period_elapsed) {
-    // tim4_ms_counter += 1;
-    // }
-
-    /* Счетчик для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
-     * для протоколов: название протокола и номер версии ПО при запуске
-     * индикатора; для DEMO_MODE: отображение строки */
-    // #if !TEST_MODE
-    //     if (!is_time_ms_for_display_str_elapsed) {
-    //       tim4_ms_counter += 1;
-    //       if (tim4_ms_counter >= TIME_DISPLAY_STRING_DURING_MS) {
-    //         tim4_ms_counter = 0;
-    //         is_time_ms_for_display_str_elapsed = true;
-    //       }
-    //     }
-    // #endif
-
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL
+#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_NKU_SD7
 
     /* Счетчик для проверки подключения интерфейса */
     if (matrix_state == MATRIX_STATE_WORKING) {
@@ -543,7 +535,7 @@ void MX_TIM3_Init(void) {
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 100 - 1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
     Error_Handler();
   }
@@ -557,8 +549,8 @@ void MX_TIM3_Init(void) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-  HAL_NVIC_SetPriority(TIM3_IRQn, 1, 0);
-  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  // HAL_NVIC_SetPriority(TIM3_IRQn, 1, 0);
+  // HAL_NVIC_EnableIRQ(TIM3_IRQn);
   /* USER CODE END TIM3_Init 2 */
 }
 /* TIM4 init function */

@@ -32,9 +32,9 @@ void protocol_init() {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   GPIO_InitStruct.Pin = DATA_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  // GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(DATA_GPIO_Port, &GPIO_InitStruct);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 #endif
 }
 
@@ -84,5 +84,8 @@ void protocol_stop() {
 
 #if PROTOCOL_UIM_6100
   stop_can(&hcan);
+
+#elif PROTOCOL_NKU_SD7
+  stop_sd7_before_menu_mode();
 #endif
 }
