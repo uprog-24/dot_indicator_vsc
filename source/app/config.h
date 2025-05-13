@@ -37,10 +37,11 @@
 #include "protocol_selection.h"
 
 #define PROTOCOL_NAME "SD7"
-#define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 47
-#define MAX_POSITIVE_NUMBER_FLOOR 9
-#define MAIN_CABIN_ID 46
+#define ADDR_ID_MIN 0
+#define ADDR_ID_LIMIT 40
+#define MAIN_CABIN_ID ADDR_ID_MIN
+#define GROUP_ID_MIN 0
+#define GROUP_ID_MAX 0
 #define TIME_MS_FOR_INTERFACE_CONNECTION                                       \
   3000 ///< Время в мс для проверки подключения интерфейса (3 с)
 

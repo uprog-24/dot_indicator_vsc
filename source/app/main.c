@@ -64,7 +64,8 @@ void SystemClock_Config(void);
 #if !DEMO_MODE && !TEST_MODE
 
 /// Настройки индикатора: адрес индикатора и уровень громкости пассивного бузера
-settings_t matrix_settings = {.addr_id = MAIN_CABIN_ID, .volume = VOLUME_1};
+settings_t matrix_settings = {
+    .addr_id = MAIN_CABIN_ID, .volume = VOLUME_1, .group_id = GROUP_ID_MIN};
 
 #endif
 
@@ -145,7 +146,6 @@ int main(void) {
 
   read_settings(&matrix_settings);
   protocol_init();
-  // is_interface_connected = true;
 
   while (1) {
     switch (matrix_state) {

@@ -13,12 +13,17 @@
 #define DATA_BITS_MASK 0x7E
 #define ARROW_MASK 0x60 ///< Маска для направления движения
 
-#define LOADING_MASK 0x1
-#define FIRE_DANGER_MASK 0x4
-#define CABIN_OVERLOAD_MASK 0x8
+// Маски для control_byte_first
+#define LOADING_MASK 0x02
+#define FIRE_DANGER_MASK 0x04
+#define CABIN_OVERLOAD_MASK 0x08
 #define GONG_MASK 0x10
 
-#define ARRIVAL_MASK 0b100 ///< Маска для бита прибытия (2-й бит байта W3)
+// Маски для control_byte_second
+#define ACCIDENT_MASK 0x02
+#define CALL_MASK 0x04
+#define ORDER_MASK 0x08
+#define FIRE_DANGER_SOUND_MASK 0x10
 
 #define GONG_BUZZER_FREQ 1000 ///< Частота первого тона гонга
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
@@ -30,6 +35,9 @@
 #define SPECIAL_SYMBOLS_BUFF_SIZE 19 ///< Кол-во спец. символов
 
 #define MESSAGE_BYTES 4 ///< Длина сообщения в байтах
+
+#define FILTER_BUFF_SIZE                                                       \
+  5 ///< Size of buffer with received data (width of filter)
 
 uint8_t byte_buf[4] = {0, 0, 0, 0}; ///< Буфер для полученных данных
 uint8_t byte_buf_copy[4] = {0, 0, 0, 0}; ///< Буфер для полученных данных
@@ -166,6 +174,64 @@ static void transform_direction_to_common(direction_nku_sd7_t direction) {
   }
 }
 
+static void set_loading_symbol(uint8_t control_byte_first) {
+  if ((control_byte_first & LOADING_MASK) == LOADING_MASK) {
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'p';
+    matrix_string[LSB] = 'g';
+  }
+}
+
+/// Флаг для контроля перегруза кабины
+static bool is_cabin_overload = false;
+
+static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
+  if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+      is_cabin_overload = true;
+      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
+
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
+  } else if (is_cabin_overload) {
+    stop_buzzer_sound();
+    is_cabin_overload = false;
+  }
+}
+
+static void set_accident_symbol(uint8_t control_byte_second) {
+  if ((control_byte_second & ACCIDENT_MASK) == ACCIDENT_MASK) {
+    matrix_string[MSB] = 'A';
+    matrix_string[LSB] = 'c';
+  }
+}
+
+static void set_fire_danger_symbol(uint8_t control_byte_first) {
+  if ((control_byte_first & FIRE_DANGER_MASK) == FIRE_DANGER_MASK) {
+    matrix_string[MSB] = 'F';
+    matrix_string[LSB] = 'c';
+  }
+}
+
+static uint8_t fire_sound_edge[2] = {
+    0,
+};
+
+static void set_fire_danger_sound(uint8_t control_byte_second) {
+  uint8_t fire_danger_sound_bit = control_byte_second & FIRE_DANGER_SOUND_MASK;
+
+  fire_sound_edge[0] =
+      (fire_danger_sound_bit == FIRE_DANGER_SOUND_MASK) != 0 ? 1 : 0;
+
+  if (fire_sound_edge[0] && !fire_sound_edge[1]) {
+    play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+  }
+  fire_sound_edge[1] = fire_sound_edge[0];
+}
+
 static uint8_t gong[2] = {
     0,
 };
@@ -198,18 +264,15 @@ static void setting_gong(uint8_t direction_code, uint8_t control_byte_first,
   gong[1] = gong[0];
 }
 
-/// Флаг для контроля перегруза кабины
-static bool is_cabin_overload = false;
-
 /// Флаг для контроля воспроизведения оповещения при пожарной опасности
 static bool is_fire_danger = false;
 
-/// Flag to control is data completed
+/// Флаг контроля 4-х байтов
 volatile bool is_read_data_completed = false;
 
-static setting_special_regime(uint8_t direction_code,
-                              uint8_t control_byte_first,
-                              uint8_t control_byte_second) {
+static void cabin_indicator_special_regime(uint8_t direction_code,
+                                           uint8_t control_byte_first,
+                                           uint8_t control_byte_second) {
 
   // Гонг
   if (matrix_settings.volume != VOLUME_0) {
@@ -217,41 +280,141 @@ static setting_special_regime(uint8_t direction_code,
   }
 
   // Погрузка
-  if ((control_byte_first & LOADING_MASK) == LOADING_MASK) {
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'p';
-    matrix_string[LSB] = 'g';
-  }
+  set_loading_symbol(control_byte_first);
 
   // Перегруз
-  if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
+  set_cabin_overload_symbol_sound(control_byte_first);
 
+  // Авария
+  set_accident_symbol(control_byte_second);
+
+  // Пожар, символ F
+  set_fire_danger_symbol(control_byte_first);
+
+  // Пожар, звук по фронту
+  if (matrix_settings.volume != VOLUME_0) {
+    set_fire_danger_sound(control_byte_second);
+  }
+}
+
+static void floor_indicator_special_regime(uint8_t direction_code,
+                                           uint8_t control_byte_first,
+                                           uint8_t control_byte_second) {
+
+  // Гонг, прибытие на этаж с номером matrix_settings.addr_id
+  if (matrix_settings.addr_id == drawing_data.floor) {
     if (matrix_settings.volume != VOLUME_0) {
-      is_cabin_overload = true;
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      setting_gong(direction_code, control_byte_first, matrix_settings.volume);
     }
-
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'g';
-  } else if (is_cabin_overload) {
-    TIM2_Stop_bip();
-    is_cabin_overload = false;
   }
 
-  // Пожар
-  if ((control_byte_first & FIRE_DANGER_MASK) == FIRE_DANGER_MASK) {
+  // Авария
+  set_accident_symbol(control_byte_second);
 
-    if (matrix_settings.volume != VOLUME_0) {
-      is_fire_danger = true;
-      TIM2_Start_bip(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+  // Пожар, символ F
+  set_fire_danger_symbol(control_byte_first);
+}
+
+/// Flag to control is data filtered before displaying it on matrix
+static bool is_data_filtered = false;
+
+/// Number of received data
+static uint8_t number_received_data = 0;
+
+/// Current index of the element in filter_buff
+static uint8_t current_index_buff = 0;
+
+/**
+ * Stores the parameters for filtering received data that will be displayed on
+ * matrix: floor, direction, control_bits and counter that save number of
+ * repetitions of the data
+ */
+typedef struct {
+  uint8_t buffer[4];
+  uint8_t counter;
+} floor_counter_t;
+
+/// Buffer that store received data and its repetitions
+static floor_counter_t filter_buff[FILTER_BUFF_SIZE];
+
+/// Copy of received_data_ukl (13 bits received by UKL)
+static volatile uint16_t received_data_ukl_copy = 1;
+
+/**
+ * @brief  Setting structure with type floor_counter_t
+ * @param  filter_struct: Pointer to the structure with type floor_counter_t
+ * @param  floor:         Received floor
+ * @param  direction:     Received direction
+ * @param  control_bits:  Received control_bits
+ * @param  counter:       Save number of repetitions of the data
+ * @retval None
+ */
+static void set_filter_structure(floor_counter_t *filter_struct,
+                                 uint8_t *buffer, uint8_t counter) {
+  memcpy(filter_struct->buffer, buffer, sizeof(filter_struct->buffer));
+  filter_struct->counter = counter;
+}
+
+/**
+ * @brief  Sorting filter_buff in descending order using the bubble method.
+ * @note   filter_buff[0].counter has maximum value and will be displayed on
+ *         matrix
+ * @param  filter_buff: Pointer to the buffer with received data by UKL
+ * @param  buff_size:   Size of filter_buff
+ * @retval None
+ */
+static void sort_bubble(floor_counter_t *filter_buff, uint8_t buff_size) {
+  for (uint8_t i = 0; i < buff_size - 1; i++) {
+    for (uint8_t k = 0; k < buff_size - i - 1; k++) {
+      if (filter_buff[k].counter < filter_buff[k + 1].counter) {
+        floor_counter_t temp = filter_buff[k];
+        filter_buff[k] = filter_buff[k + 1];
+        filter_buff[k + 1] = temp;
+      }
     }
+  }
+}
 
-    matrix_string[MSB] = 'F';
-    matrix_string[LSB] = 'c';
-  } else if (is_fire_danger) {
-    TIM2_Stop_bip();
-    is_fire_danger = false;
+uint8_t zero_buffer[4] = {0};
+
+static void filter_data() {
+  if (current_index_buff == 0) {
+    for (uint8_t i = 0; i < FILTER_BUFF_SIZE; i++) {
+      set_filter_structure(&filter_buff[i], zero_buffer, 0);
+    }
+    current_index_buff = 0;
+  }
+
+  // uint8_t floor = received_data_ukl_copy & CODE_FLOOR_MASK;
+  // direction_ukl_t direction = received_data_ukl_copy & DIRECTION_MASK;
+  // control_bits_states_t control_bits =
+  //     received_data_ukl_copy & CONTROL_BITS_MASK;
+
+  bool is_data_found = false;
+  number_received_data++;
+
+  for (uint8_t i = 0; i < current_index_buff; i++) {
+    if (filter_buff[i].buffer[0] == byte_buf_copy[0] &&
+        filter_buff[i].buffer[1] == byte_buf_copy[1] &&
+        filter_buff[i].buffer[2] == byte_buf_copy[2] &&
+        filter_buff[i].buffer[3] == byte_buf_copy[3]) {
+      filter_buff[i].counter++;
+      is_data_found = true;
+      break;
+    }
+  }
+
+  if (!is_data_found && current_index_buff < FILTER_BUFF_SIZE - 1) {
+    set_filter_structure(&filter_buff[current_index_buff], byte_buf_copy, 1);
+    current_index_buff++;
+  }
+
+  if (number_received_data == FILTER_BUFF_SIZE) {
+    sort_bubble(filter_buff, FILTER_BUFF_SIZE);
+
+    is_data_filtered = true;
+    number_received_data = 0;
+    current_index_buff = 0;
   }
 }
 
@@ -262,56 +425,97 @@ static setting_special_regime(uint8_t direction_code,
  */
 void process_data_nku_sd7() {
 
+  filter_data();
+
+  if (is_data_filtered) {
+    is_data_filtered = false;
+
+    uint8_t first_symbol_code =
+        (filter_buff[0].buffer[0] & DATA_BITS_MASK) >> 1;
+    uint8_t second_symbol_code =
+        (filter_buff[0].buffer[1] & DATA_BITS_MASK) >> 1;
+    uint8_t control_byte_first = filter_buff[0].buffer[2];
+    uint8_t control_byte_second = filter_buff[0].buffer[3];
+
+    uint8_t direction_code = control_byte_second & ARROW_MASK;
+
+#if 0
   uint8_t first_symbol_code = (byte_buf_copy[0] & DATA_BITS_MASK) >> 1;
   uint8_t second_symbol_code = (byte_buf_copy[1] & DATA_BITS_MASK) >> 1;
-  uint8_t direction_code = (byte_buf_copy[3] & ARROW_MASK);
+  uint8_t control_byte_first = byte_buf_copy[2];
+  uint8_t control_byte_second = byte_buf_copy[3];
 
-  uint8_t control_byte_first = byte_buf_copy[2] & DATA_BITS_MASK;
-  uint8_t control_byte_second = byte_buf_copy[3] & DATA_BITS_MASK;
+  uint8_t direction_code = control_byte_second & ARROW_MASK;
+#endif
 
-  switch (first_symbol_code) {
-    // этажи 1..9
-  case SYMBOL_EMPTY:
-    matrix_string[MSB] = convert_int_to_char(second_symbol_code);
-    matrix_string[LSB] = 'c';
+    // Отрисовка этажей
+    switch (first_symbol_code) {
 
-    // этаж cП
-    if (second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG) {
-      matrix_string[MSB] = 'p';
+    // Этаж 0
+    case 0:
+      matrix_string[MSB] = convert_int_to_char(second_symbol_code);
       matrix_string[LSB] = 'c';
+      break;
+
+    // Этажи 1..9
+    case SYMBOL_EMPTY:
+      matrix_string[MSB] = convert_int_to_char(second_symbol_code);
+      matrix_string[LSB] = 'c';
+
+      // Этаж cП
+      if (second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG) {
+        matrix_string[MSB] = 'p';
+        matrix_string[LSB] = 'c';
+      }
+      break;
+
+      // Этажи -1..-9
+    case SYMBOL_MINUS:
+      matrix_string[MSB] = '-';
+      matrix_string[LSB] = convert_int_to_char(second_symbol_code);
+      break;
+
+      // Этажи П1..П9
+    case SYMBOL_UNDERGROUND_FLOOR_BIG:
+      matrix_string[MSB] = 'p';
+      matrix_string[LSB] = convert_int_to_char(second_symbol_code);
+      break;
+
+      // Этажи с 10
+    default:
+      matrix_string[MSB] = convert_int_to_char(first_symbol_code);
+      matrix_string[LSB] = convert_int_to_char(second_symbol_code);
+      break;
     }
-    break;
 
-    // этажи -1..-9
-  case SYMBOL_MINUS:
-    matrix_string[MSB] = '-';
-    matrix_string[LSB] = convert_int_to_char(second_symbol_code);
-    break;
+    // Стрелка
+    transform_direction_to_common(direction_code);
+    set_direction_symbol(matrix_string, drawing_data.direction);
 
-    // этажи П1..П9
-  case SYMBOL_UNDERGROUND_FLOOR_BIG:
-    matrix_string[MSB] = 'p';
-    matrix_string[LSB] = convert_int_to_char(second_symbol_code);
-    break;
+    // Кабинный индикатор
+    if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+      // Спец. режимы для кабинного индикатора
+      cabin_indicator_special_regime(direction_code, control_byte_first,
+                                     control_byte_second);
+    } else {
+      // Этажный индикатор
+      /* Установка drawing_data.floor для гонга */
+      // Этажи 0, с 1 по 9
+      if (first_symbol_code == 0 || first_symbol_code == SYMBOL_EMPTY) {
+        drawing_data.floor = second_symbol_code;
+      }
 
-  default:
-    matrix_string[MSB] = convert_int_to_char(first_symbol_code);
-    matrix_string[LSB] = convert_int_to_char(second_symbol_code);
-    break;
+      // Этажи с 10 по 99
+      if (first_symbol_code >= 1 && first_symbol_code <= 9 &&
+          second_symbol_code >= 0 && second_symbol_code <= 9) {
+        drawing_data.floor = first_symbol_code * 10 + second_symbol_code;
+      }
+
+      // Спец. режимы для этажного индикатора
+      floor_indicator_special_regime(direction_code, control_byte_first,
+                                     control_byte_second);
+    }
   }
-
-  // Стрелка
-  transform_direction_to_common(direction_code);
-  set_direction_symbol(matrix_string, drawing_data.direction);
-
-  // setting_gong(direction_code, control_byte_first, matrix_settings.volume);
-
-  // Спец. режимы
-  setting_special_regime(direction_code, control_byte_first,
-                         control_byte_second);
-
-  // setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_FLOOR,
-  //                 special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
   while (is_read_data_completed == false && is_interface_connected == true) {
     draw_string_on_matrix(matrix_string);
@@ -351,69 +555,20 @@ static void reset_state() {
   byte_count = 0;
   current_byte = 0;
   is_start_bit_received = false;
+  memset((void *)byte_buf, 0, 4 * sizeof(uint8_t));
   TIM3_Stop();
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
+// reset_state()
 void stop_sd7_before_menu_mode() {
   bit_index = 0;
   byte_count = 0;
   current_byte = 0;
   is_start_bit_received = false;
+  memset((void *)byte_buf, 0, 4 * sizeof(uint8_t));
   TIM3_Stop();
-  // HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
 }
-
-#if 0 
-void read_data_bit() {
-
-  bit = HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin);
-
-  if (bit_index < 32) {
-    if (bit_index == 0) {
-      is_start_bit_received = true;
-      current_message |= bit << (31 - bit_index);
-      bit_index++;
-      TIM3_Start(PRESCALER_FOR_US, nku_sd7_timings[0]);
-    } else {
-      current_message |= (bit) << (31 - bit_index);
-      bit_index++;
-    }
-  } else {
-    is_read_data_completed = true;
-    current_byte_copy = ~current_message;
-    for (int i = 0; i < 4; i++) {
-      byte_buf_copy[i] = (current_byte_copy >> (8 * i)) & 0xFF;
-    }
-    reset_state();
-  }
-
-  //   if (bit_index < 7) {
-  //     current_byte |= (bit) << (7 - bit_index);
-  //     bit_index++;
-  //   } else if (bit_index == 7) {
-  // // стоп-бит
-  // #if 1
-  //     if (bit != 1) {
-  //       // Ошибка, невалидный пакет
-  //       reset_state();
-  //     } else {
-  //       current_byte |= (bit) << (7 - bit_index);
-  //       byte_buf[byte_count] = ~current_byte;
-  //       byte_count++;
-  //     }
-  // #endif
-
-  //     if (byte_count == 4) {
-
-  //       is_read_data_completed = true;
-  //       memcpy(byte_buf_copy, byte_buf, sizeof(byte_buf));
-
-  //       reset_state(); // Переход к прерывнию по спаду фронта
-  //     }
-  //   }
-}
-#endif
 
 void read_data_bit(void) {
 

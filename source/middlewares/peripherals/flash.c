@@ -50,9 +50,11 @@ static HAL_StatusTypeDef erase_settings(void) {
  * @param  volume:  Уровень громкости бузера.
  * @retval status:  HAL Status.
  */
-static HAL_StatusTypeDef write_settings(uint8_t addr_id, volume_t volume) {
+static HAL_StatusTypeDef write_settings(uint8_t addr_id, volume_t volume,
+                                        uint8_t group_id) {
   // 2 байта: addr_id и volume, первые 2 байта заполнены 0xFFFF
-  uint32_t packed_data = (addr_id << 8) | (uint8_t)volume | (0xFFFF << 16);
+  uint32_t packed_data =
+      (addr_id << 8) | (uint8_t)volume | (0xFF00 << 16) | (group_id << 16);
 
   HAL_StatusTypeDef status = erase_settings();
   if (status != HAL_OK) {
@@ -88,6 +90,7 @@ HAL_StatusTypeDef read_settings(settings_t *settings) {
 
   settings->addr_id = (packed_data >> 8) & LOW_HALF_WORD_MASK;
   settings->volume = (volume_t)(packed_data & LOW_HALF_WORD_MASK);
+  settings->group_id = (packed_data >> 16) & LOW_HALF_WORD_MASK;
 
   return HAL_OK;
 }
@@ -98,12 +101,13 @@ HAL_StatusTypeDef read_settings(settings_t *settings) {
  * @retval None
  */
 void overwrite_settings(settings_t *settings) {
-  settings_t current_flash_settings = {1, 1};
+  settings_t current_flash_settings = {1, 1, 1};
   read_settings(&current_flash_settings);
 
   if (current_flash_settings.addr_id != settings->addr_id ||
-      current_flash_settings.volume != settings->volume) {
-    write_settings(settings->addr_id, settings->volume);
+      current_flash_settings.volume != settings->volume ||
+      current_flash_settings.group_id != settings->group_id) {
+    write_settings(settings->addr_id, settings->volume, settings->group_id);
   }
 }
 
@@ -114,8 +118,9 @@ void overwrite_settings(settings_t *settings) {
  * @param  new_id:     Новое значение адреса.
  * @retval None
  */
-void update_structure(settings_t *settings, volume_t new_volume,
-                      uint8_t new_id) {
+void update_structure(settings_t *settings, volume_t new_volume, uint8_t new_id,
+                      uint8_t new_group_id) {
   settings->volume = new_volume;
   settings->addr_id = new_id;
+  settings->group_id = new_group_id;
 }

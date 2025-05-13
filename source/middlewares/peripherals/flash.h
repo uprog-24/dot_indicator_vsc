@@ -13,6 +13,7 @@
 typedef struct {
   uint8_t addr_id; // Адрес индикатора
   volume_t volume; // Уровень громкости бузера
+  uint8_t group_id;
 } settings_t;
 
 /**
@@ -37,7 +38,7 @@ void overwrite_settings(settings_t *settings);
  * @param  new_id:     Новое значение адреса.
  * @retval None
  */
-void update_structure(settings_t *settings, volume_t new_volume,
-                      uint8_t new_id);
+void update_structure(settings_t *settings, volume_t new_volume, uint8_t new_id,
+                      uint8_t new_group_id);
 
 #endif /*__ BUTTON_H__ */

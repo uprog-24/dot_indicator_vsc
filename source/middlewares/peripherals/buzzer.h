@@ -30,16 +30,8 @@ typedef enum {
 void set_active_buzzer_state(states_t state);
 
 /**
- * @brief  Установка мелодии для пассивного бузера (TEST_MODE).
- * @param  freq_buff: Буфер с частотами для тонов.
- * @param  buff_size: Размер freq_buff.
- * @retval None
- */
-void set_passive_buzzer_melody(const uint16_t *freq_buff, uint8_t buff_size);
-
-/**
- * @brief  Старт воспроизведения гонга (1, 2, 3 тона), запуск TIM1 для подсчета
- *         продолжительности тона.
+ * @brief  Старт воспроизведения гонга (1, 2, 3 тона), TIM4 используется для
+ *         подсчета продолжительности тона.
  * @param  bip_counter:   Кол-во тонов.
  * @param  bip_frequency: Частота стартового тона.
  * @param  volume:        Уровень громкости тона.

@@ -23,20 +23,15 @@
 #endif
 
 /**
- * @brief  Запуск таймера 2 на 2-ом канале в режиме ШИМ (для пассивного бузера).
- * @retval None
- */
-static void TIM2_Start_PWM() { HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2); }
-
-/**
- * @brief  Включение тона пассивного бузера (подключен к таймеру 2).
+ * @brief  Включение тона пассивного бузера (подключен к каналу таймера 2).
  * @param  frequency: Значение частоты 1..65535.
  * @param  volume:    Уровень громкости (volume_t из buzzer.h).
  * @retval None
  */
-void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
+void start_buzzer_sound(uint16_t frequency, uint8_t volume) {
 
-  TIM2_Start_PWM();
+  // Режим ШИМ
+  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
   /* Инициализация таймера 2 на 1 мкс, поэтому используем 1000000UL */
   TIM2->ARR = (1000000UL / frequency) - 1; //
 
@@ -121,37 +116,8 @@ void TIM2_Start_bip(uint16_t frequency, uint8_t volume) {
   TIM2->CCR2 = ((TIM2->ARR / 100) * volume * k);
 }
 
-/**
- * @brief  Остановка пассивного бузера (ШИМ TIM2).
- * @param  None
- * @retval None
- */
-static void TIM2_Stop_PWM() { HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2); }
-
-/**
- * @brief  Выключение тона бузера.
- * @retval None
- */
-void TIM2_Stop_bip() {
-  uint16_t prescaler = 0;
-  // __HAL_TIM_SET_PRESCALER(&htim2, prescaler);
-  TIM2_Stop_PWM();
-}
-
-/// Счетчик для подсчета продолжительности тонов гонга.
-volatile uint32_t tim1_elapsed_ms = 0;
-
-/**
- * @brief  Остановка TIM1.
- * @note   Сброс счетчика для подсчета продолжительности тонов гонга.
- * @param  None
- * @retval None
- */
-static void TIM1_Stop() {
-  tim1_elapsed_ms = 0;
-  HAL_TIM_Base_Stop_IT(&htim1);
-  HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
-}
+/// TIM1 counter to control elapsed time in ms for bips of gong
+volatile uint32_t sound_duration_ms = 0;
 
 /// Флаг для контроля завершения периода TIM3
 volatile bool is_tim3_period_elapsed = false;
@@ -170,15 +136,24 @@ volatile uint32_t connection_ms_is_elapsed = 0;
 /// Флаг для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
 volatile bool is_time_ms_for_display_str_elapsed = false;
 
+/* Флаг для выхода из меню по истечении времени бездействия:
+ * PERIOD_SEC_FOR_SETTINGS секунд */
+volatile bool is_time_sec_for_settings_elapsed = false;
+
 /// Счетчик времени отображения строки при запуске индикатора в мс
-uint16_t tim4_ms_counter = 0;
+static uint16_t tim4_ms_counter = 0;
 
-uint32_t tim3_ms_counter = 0;
+/// Знвчение частоты тона гонга для HAL_TIM_OC_DelayElapsedCallback
+static uint16_t _bip_freq = 0;
 
-extern uint32_t received_bit_time[];
+/// Кол-во тонов гонга для HAL_TIM_OC_DelayElapsedCallback
+static uint8_t _bip_counter = 0;
 
-volatile bool is_time_start = false;
-volatile uint8_t bit_message_number = 0;
+/// Продолжительность тона гонга для HAL_TIM_OC_DelayElapsedCallback
+static uint32_t _bip_duration_ms = 0;
+
+/// Уровень громкости тона гонга для HAL_TIM_OC_DelayElapsedCallback
+static uint16_t _bip_volume = 0;
 
 /**
  * @brief  Обработка прерываний по завершении периода таймеров.
@@ -186,60 +161,17 @@ volatile uint8_t bit_message_number = 0;
  * @retval None
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  /// Флаг для детектирования первого нажатия кнопки 1 (вход в меню - считывание
-  /// настроек из flash-памяти).
-  extern bool is_first_btn_clicked;
-
-  /// Счетчик кол-ва нажатий BUTTON_1
-  extern uint8_t btn_1_set_mode_counter;
-
-  /// Счетчик кол-ва нажатий BUTTON_2
-  extern uint8_t btn_2_set_value_counter;
 
   /// Текущее состояние индикатора: MATRIX_STATE_START, MATRIX_STATE_WORKING,
   /// MATRIX_STATE_MENU
   extern matrix_state_t matrix_state;
-
-  /// Текущее состояние меню: MENU_STATE_OPEN, MENU_STATE_WORKING,
-  /// MENU_STATE_CLOSE
-  extern menu_state_t menu_state;
 
   if (htim->Instance == TIM3) {
     is_tim3_period_elapsed = true; // для TEST_MODE
 
 #if PROTOCOL_NKU_SD7
 
-    extern const uint16_t nku_sd7_timings[];
-
-    extern volatile uint8_t bit_index;
-
-#if 0
-    tim3_ms_counter++;
-
-    if (tim3_ms_counter == 2556 / 2 && bit_message_number == 0) {
-      read_data_bit();
-      tim3_ms_counter = 0;
-      received_bit_time[bit_message_number] = tim3_ms_counter;
-      bit_message_number++;
-    } else if (tim3_ms_counter / 2556 == bit_message_number &&
-               bit_message_number != 0) {
-      read_data_bit();
-      received_bit_time[bit_message_number] = tim3_ms_counter;
-      bit_message_number++;
-
-      if (bit_message_number == 32) {
-        bit_message_number == 0;
-        tim3_ms_counter = 0;
-      }
-    }
-#endif
-
     read_data_bit();
-
-    // TIM3_Stop();
-    // if (bit_index == 1) { // после чтения старт-бита
-    //   TIM3_Start(PRESCALER_FOR_US, nku_sd7_timings[0]);
-    // }
 
 #endif
   }
@@ -281,82 +213,86 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       time_since_last_press_ms += 1;
 
       if (time_since_last_press_ms >= TIME_MS_FOR_SETTINGS) {
-        time_since_last_press_ms = 0;
-
-        btn_1_set_mode_counter = 0;
-        btn_2_set_value_counter = 0;
-        is_first_btn_clicked = true;
-        matrix_state = MATRIX_STATE_START;
-        menu_state = MENU_STATE_OPEN;
+        is_time_sec_for_settings_elapsed = true;
       }
     }
 
 #endif
+
+    /* Управление продолжительностью тонов гонга */
+    if (_bip_counter != 0) {
+
+      sound_duration_ms++;
+
+      if (sound_duration_ms == _bip_duration_ms) {
+
+        /* Включаем 2-ой бип */
+        start_buzzer_sound(900, _bip_volume);
+
+        /* Выключаем гонг, если кол-во бипов равно 1 */
+        if (_bip_counter == 1) {
+          stop_buzzer_sound();
+        }
+      }
+
+      if (sound_duration_ms == 2 * _bip_duration_ms) {
+
+        /* Включаем 3-ий бип */
+        start_buzzer_sound(800, _bip_volume);
+
+        /* Выключаем гонг, если кол-во бипов равно 2 */
+        if (_bip_counter == 2) {
+          stop_buzzer_sound();
+        }
+      }
+
+      if (sound_duration_ms == 3 * _bip_duration_ms) { // stop bip 3
+
+        /* Выключаем гонг, если кол-во бипов равно 3 */
+        if (_bip_counter == 3) {
+          stop_buzzer_sound();
+        }
+      }
+    }
   }
 }
 
-/// Знвчение частоты тона гонга для HAL_TIM_OC_DelayElapsedCallback
-static uint16_t _bip_freq = 0;
-
-/// Кол-во тонов гонга для HAL_TIM_OC_DelayElapsedCallback
-static uint8_t _bip_counter = 0;
-
-/// Продолжительность тона гонга для HAL_TIM_OC_DelayElapsedCallback
-static uint32_t _bip_duration_ms = 0;
-
-/// Уровень громкости тона гонга для HAL_TIM_OC_DelayElapsedCallback
-static uint16_t _bip_volume = 0;
-
 /**
- * @brief  Выключение бузера (ШИМ TIM2 и TIM1 для подсчета продолжительности
- *         тона бузера).
+ * @brief  Выключение бузера (ШИМ TIM2).
  * @param  None
  * @retval None
  */
 void stop_buzzer_sound() {
-  TIM1_Stop();
-  TIM2_Stop_bip();
+  /* Выключаем ШИМ */
+  HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_2);
+
+  /* Сбрасываем счетчики для гонга:
+   * счетчик продолжительности тона и
+   * счетчик кол-ва тонов */
+  sound_duration_ms = 0;
   _bip_counter = 0;
 }
 
 /**
- * @brief  Output Compare колбек, подсчет продолжительности тона гонга.
- * @param  htim: Указатель на структуру таймера.
+ * @brief  Запуск гонга (первый тон).
+ * @note   Установка частоты, bip_counter - кол-ва тонов, bip_duration_ms -
+ *         продолжительность тона и volume - уровень громкости.
+ * @param  frequency:       Частота тона.
+ * @param  bip_counter:     Кол-во тонов.
+ * @param  bip_duration_ms: Продолжительность тона в мс.
  * @retval None
  */
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim->Instance == TIM1) {
-    tim1_elapsed_ms++;
+void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
+                        uint16_t bip_duration_ms, uint8_t volume) {
+  _bip_freq = frequency;
+  _bip_counter = bip_counter;
+  _bip_duration_ms = bip_duration_ms;
+  _bip_volume = volume;
 
-    if (tim1_elapsed_ms == _bip_duration_ms) {
-
-      TIM2_Stop_bip(); // Останавливаем 1-ый тон
-      TIM2_Start_bip(900, _bip_volume); // Запускаем 2-ой тон
-
-      if (_bip_counter == 1) {
-        stop_buzzer_sound();
-      }
-    }
-
-    if (tim1_elapsed_ms == 2 * _bip_duration_ms) {
-
-      TIM2_Stop_bip(); // Останавливаем 2-ой тон
-      TIM2_Start_bip(800, _bip_volume); // Запускаем 3-ий тон
-
-      if (_bip_counter == 2) {
-        stop_buzzer_sound();
-      }
-    }
-
-    if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
-      TIM2_Stop_bip(); // Останавливаем 3-ий тон
-
-      if (_bip_counter == 3) {
-        stop_buzzer_sound();
-      }
-    }
-  }
+  /* Включаем 1-ый бип */
+  start_buzzer_sound(_bip_freq, volume);
 }
+
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim1;
@@ -750,39 +686,6 @@ void TIM3_Delay_us(uint16_t delay) {
   while (!is_tim3_period_elapsed) {
   }
   HAL_TIM_Base_Stop_IT(&htim3);
-}
-
-/**
- * @brief  Запуск гонга (первый тон).
- * @note   Установка частоты, bip_counter - кол-ва тонов, bip_duration_ms -
- *         продолжительность тона и volume - уровень громкости.
- * @param  frequency:       Частота тона.
- * @param  bip_counter:     Кол-во тонов.
- * @param  bip_duration_ms: Продолжительность тона в мс.
- * @retval None
- */
-void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
-                        uint16_t bip_duration_ms, uint8_t volume) {
-  _bip_freq = frequency;
-  _bip_counter = bip_counter;
-  _bip_duration_ms = bip_duration_ms;
-  _bip_volume = volume;
-
-  // start bip 1
-  // TIM2_Start_PWM();
-  TIM2_Start_bip(_bip_freq, volume);
-}
-
-/**
- * @brief  Запуск таймера 1 с каналом CH1 Output Compare mode для подсчета
- *         продолжительности тона бузера в мс.
- * @param  None
- * @retval None
- */
-void TIM1_Start() {
-  __HAL_TIM_SET_PRESCALER(&htim1, PRESCALER_FOR_MS); // 1 ms
-  __HAL_TIM_SET_AUTORELOAD(&htim1, 1);               // 1 ms
-  HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
 }
 
 /**

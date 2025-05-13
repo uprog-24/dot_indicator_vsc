@@ -68,28 +68,6 @@ void TIM3_Delay_ms(uint16_t delay);
 void TIM3_Delay_us(uint16_t delay);
 
 /**
- * @brief  Включение тона пассивного бузера (подключен к таймеру 2).
- * @param  frequency: Значение частоты 1..65535.
- * @param  volume:    Уровень громкости (volume_t из buzzer.h).
- * @retval None
- */
-void TIM2_Start_bip(uint16_t frequency, uint8_t volume);
-
-/**
- * @brief  Выключение тона бузера.
- * @retval None
- */
-void TIM2_Stop_bip();
-
-/**
- * @brief  Запуск таймера 1 с каналом CH1 Output Compare mode для подсчета
- *         продолжительности тона бузера в мс.
- * @param  None
- * @retval None
- */
-void TIM1_Start();
-
-/**
  * @brief  Запуск TIM4 на 1 мс.
  * @note   Используется:
  *         1. для отображения символов (яркость, удержание строки в течение 1
@@ -134,8 +112,15 @@ void TIM3_Start(uint16_t prescaler, uint16_t period);
 void TIM3_Stop();
 
 /**
- * @brief  Выключение бузера (ШИМ TIM2 и TIM1 для подсчета продолжительности
- *         тона бузера).
+ * @brief  Включение тона пассивного бузера (подключен к каналу таймера 2).
+ * @param  frequency: Значение частоты 1..65535.
+ * @param  volume:    Уровень громкости (volume_t из buzzer.h).
+ * @retval None
+ */
+void start_buzzer_sound(uint16_t frequency, uint8_t volume);
+
+/**
+ * @brief  Выключение бузера (ШИМ TIM2).
  * @param  None
  * @retval None
  */

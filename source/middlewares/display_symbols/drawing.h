@@ -51,6 +51,15 @@ void drawing_data_setter(drawing_data_t *drawing_data, uint16_t floor,
                          directionType direction);
 
 /**
+ * @brief  Установка символа направления в matrix_string по индексу = DIRECTION.
+ * @param  matrix_string: Указатель на строку.
+ * @param  direction:     Направление движения directionType:
+ *                        DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION.
+ * @retval None
+ */
+void set_direction_symbol(char *matrix_string, directionType direction);
+
+/**
  * @brief  Установка строки для отображения.
  * @param  matrix_string:                 Указатель на строку.
  * @param  drawing_data:                  Указатель на структуру с этажом и
