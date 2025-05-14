@@ -78,7 +78,7 @@ void protocol_process_data() {
     process_data_pin();
 #endif
   } else {
-    draw_string_on_matrix("c--");
+    // draw_string_on_matrix("c--");
   }
 }
 

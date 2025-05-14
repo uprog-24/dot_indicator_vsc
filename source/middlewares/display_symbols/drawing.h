@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "font.h"
+
 /**
  * Общие значения направления движения (для всех протоколов и режимов,
  * определённых в config.h). У каждого протокола есть функция
@@ -22,6 +24,14 @@ typedef struct drawing_data {
   uint16_t floor;
   directionType direction;
 } drawing_data_t;
+
+typedef struct {
+  symbol_e symbol_code_1;
+  symbol_e symbol_code_2;
+  symbol_e symbol_code_3;
+} displayed_symbols_t;
+
+extern displayed_symbols_t symbols;
 
 /**
  * Структура содержит код местоположения и соответствующую ему строку для

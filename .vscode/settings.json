@@ -18,6 +18,7 @@
     "config.h": "c",
     "demo_mode.h": "c",
     "type_traits": "c",
-    "buzzer.h": "c"
+    "buzzer.h": "c",
+    "font.h": "c"
   }
 }

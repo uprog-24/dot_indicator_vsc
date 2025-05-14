@@ -137,6 +137,50 @@ extern volatile bool is_tim4_period_elapsed;
  * @retval None
  */
 
+void draw_symbol_on_matrix(symbol_e symbol_code, uint8_t start_pos) {
+
+  static uint8_t current_row = 0;
+
+  // Включаем текущую строку
+  set_row_state(current_row, TURN_ON);
+
+  // Получаем значения для колонок текущей строки (строка кода символа)
+  uint8_t binary_symbol_code_row = bitmap[symbol_code][current_row];
+
+  // Включаем колонку, если бит в строке символа = 1
+  for (uint8_t i = 0; i < 7; i++) {
+    // uint8_t current_col = BINARY_SYMBOL_CODE_SIZE - i;
+    // Если бит в строке символа = 1, то включаем колонку
+    if ((binary_symbol_code_row >> (6 - i)) & 1) {
+      set_col_state(start_pos + i, TURN_ON);
+    }
+  }
+
+  /**
+   * Держим состояние строки с колонками, пока таймер не завершит
+   * отсчет (1000 мкс)
+   */
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
+
+    // Переходим к следующей строке
+    current_row++;
+
+    // Выключаем предыдущую строку
+    if (current_row) {
+      set_row_state(current_row - 1, TURN_OFF);
+    }
+    // Выключаем все колонки
+    set_all_cols_state(TURN_OFF);
+
+    // Завершаем проход по строкам
+    if (current_row >= ROWS) {
+      current_row = 0;
+    }
+  }
+}
+
+#if 0
 static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
                                   uint8_t shift) {
 
@@ -190,6 +234,7 @@ static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
     }
   }
 }
+#endif
 
 /**
  * @brief  Проверка начального символа DIRECTION, является ли он спец.: 'c',
@@ -209,6 +254,7 @@ static bool is_start_symbol_special(char *matrix_string) {
  * @param  matrix_string: Указатель на строку.
  * @retval None
  */
+#if 0
 static void draw_symbols(char *matrix_string) {
 
   /* Для включения всех светодиодов в DEMO_MODE с ШИМ */
@@ -252,6 +298,59 @@ static void draw_symbols(char *matrix_string) {
     draw_symbol_on_matrix(matrix_string[3], 11, 0);
   }
 }
+#endif
+
+// typedef struct {
+//   symbol_e symbol_code_1;
+//   symbol_e symbol_code_2;
+//   symbol_e symbol_code_3;
+// } displayed_symbols_t;
+displayed_symbols_t symbols = {
+    .symbol_code_1 = SYMBOL_EMPTY,
+    .symbol_code_2 = SYMBOL_EMPTY,
+    .symbol_code_3 = SYMBOL_EMPTY,
+};
+
+void draw_symbols(displayed_symbols_t *symbols) {
+
+  /* Для включения всех светодиодов в DEMO_MODE с ШИМ */
+#if 0
+  if (strlen(matrix_string) == 2) {
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 7, 0);
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 9, 0);
+  }
+#endif
+
+  draw_symbol_on_matrix(symbols->symbol_code_1, 0);
+  draw_symbol_on_matrix(symbols->symbol_code_2, 6);
+  draw_symbol_on_matrix(symbols->symbol_code_3, 11);
+
+  // if (strlen(matrix_string) == 3) { // 3 symbols, font_width = 4
+
+  // draw DIRECTION symbol
+  // if (matrix_string[DIRECTION] == 'V' || matrix_string[DIRECTION] == 'K' ||
+  //     matrix_string[MSB] == 'K') { // font_width = 5
+  //   draw_symbol_on_matrix(matrix_string[DIRECTION], 0);
+  // } else {
+  //   draw_symbol_on_matrix(matrix_string[DIRECTION], 1);
+  // }
+
+  // // draw MSB symbol
+  // if (matrix_string[DIRECTION] == 'U' && matrix_string[MSB] == 'K') {
+  //   draw_symbol_on_matrix(matrix_string[MSB], 5);
+  // } else {
+  //   draw_symbol_on_matrix(matrix_string[MSB], 6);
+  // }
+
+  // // draw LSB symbol
+  // if (matrix_string[MSB] == '.') { // version
+  //   draw_symbol_on_matrix(matrix_string[LSB], 8);
+  // } else {
+  //   draw_symbol_on_matrix(matrix_string[LSB], 11);
+  // }
+  // }
+}
 
 /**
  * @brief  Отображение спец. строки (с начальным спец. символом -
@@ -262,40 +361,40 @@ static void draw_symbols(char *matrix_string) {
 static void draw_special_symbols(char *matrix_string) {
   // stop floor 1..9: "c1c"
   if (matrix_string[DIRECTION] == 'c' && matrix_string[LSB] == 'c') {
-    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
-    draw_symbol_on_matrix(matrix_string[LSB], 0, 0);
-    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 0);
+    draw_symbol_on_matrix(matrix_string[LSB], 0);
+    draw_symbol_on_matrix(matrix_string[MSB], 6);
 
   } else if (matrix_string[DIRECTION] ==
              'c') { // stop floor "c10".."c99" and "c-1".."c-9"
 
     // draw DIRECTION symbol
-    draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+    draw_symbol_on_matrix(matrix_string[DIRECTION], 0);
 
     // draw MSB and LSB symbols
     if (matrix_string[MSB] == '1' || matrix_string[MSB] == 'I') {
-      draw_symbol_on_matrix(matrix_string[MSB], 5, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 5);
+      draw_symbol_on_matrix(matrix_string[LSB], 9);
     } else if (matrix_string[MSB] != '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 4);
 
       // "cKg" перегруз
       if (matrix_string[MSB] == 'K' && matrix_string[LSB] == 'g') {
-        draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
+        draw_symbol_on_matrix(matrix_string[LSB], 10);
       } else {
-        draw_symbol_on_matrix(matrix_string[LSB], 9, 0);
+        draw_symbol_on_matrix(matrix_string[LSB], 9);
       }
     }
 
     if (matrix_string[MSB] == '-' && matrix_string[LSB] != '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 4, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 8, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 4);
+      draw_symbol_on_matrix(matrix_string[LSB], 8);
     }
 
     // "c--" interface is not connected
     if (matrix_string[MSB] == '-' && matrix_string[LSB] == '-') {
-      draw_symbol_on_matrix(matrix_string[MSB], 9, 0);
-      draw_symbol_on_matrix(matrix_string[LSB], 4, 0);
+      draw_symbol_on_matrix(matrix_string[MSB], 9);
+      draw_symbol_on_matrix(matrix_string[LSB], 4);
     }
   } else if (matrix_string[DIRECTION] == '>' ||
              matrix_string[DIRECTION] == '<' ||
@@ -304,18 +403,18 @@ static void draw_special_symbols(char *matrix_string) {
              matrix_string[DIRECTION] == 'p') { // in moving up/down: >10 or >1c
 
     if (matrix_string[DIRECTION] == '-' || matrix_string[DIRECTION] == 'p') {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 1, 0);
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 1);
     } else {
-      draw_symbol_on_matrix(matrix_string[DIRECTION], 0, 0);
+      draw_symbol_on_matrix(matrix_string[DIRECTION], 0);
     }
 
-    draw_symbol_on_matrix(matrix_string[MSB], 6, 0);
+    draw_symbol_on_matrix(matrix_string[MSB], 6);
 
     // font_width = 3 for '1' and '-'
     if (matrix_string[MSB] == '1' || matrix_string[MSB] == '-') {
-      draw_symbol_on_matrix(matrix_string[LSB], 10, 0);
+      draw_symbol_on_matrix(matrix_string[LSB], 10);
     } else if (matrix_string[MSB] != '-') {
-      draw_symbol_on_matrix(matrix_string[LSB], 11, 0);
+      draw_symbol_on_matrix(matrix_string[LSB], 11);
     }
   }
 }
@@ -331,14 +430,14 @@ static void draw_special_symbols(char *matrix_string) {
  * @param  matrix_string: Указатель на строку для отображения.
  * @retval None
  */
-void draw_string_on_matrix(char *matrix_string) {
+// void draw_string_on_matrix(char *matrix_string) {
 
-  if (is_start_symbol_special(matrix_string)) {
-    draw_special_symbols(matrix_string);
-  } else {
-    draw_symbols(matrix_string);
-  }
-}
+//   if (is_start_symbol_special(matrix_string)) {
+//     draw_special_symbols(matrix_string);
+//   } else {
+//     draw_symbols(matrix_string);
+//   }
+// }
 
 extern volatile bool is_time_ms_for_display_str_elapsed;
 /**
@@ -348,10 +447,10 @@ extern volatile bool is_time_ms_for_display_str_elapsed;
  * @param  matrix_string: Указатель на строку, которая будет отображаться.
  * @retval None
  */
-void display_symbols_during_ms(char *matrix_string) {
-  is_time_ms_for_display_str_elapsed = false;
+// void display_symbols_during_ms(char *matrix_string) {
+//   is_time_ms_for_display_str_elapsed = false;
 
-  while (!is_time_ms_for_display_str_elapsed) {
-    draw_string_on_matrix(matrix_string);
-  }
-}
+//   while (!is_time_ms_for_display_str_elapsed) {
+//     draw_string_on_matrix(matrix_string);
+//   }
+// }

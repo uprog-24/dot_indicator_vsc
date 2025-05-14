@@ -6,6 +6,7 @@
 #include "buzzer.h"
 #include "config.h"
 #include "drawing.h"
+#include "font.h"
 #include "tim.h"
 
 #include <stdbool.h>
@@ -42,16 +43,6 @@
 uint8_t byte_buf[4] = {0, 0, 0, 0}; ///< Буфер для полученных данных
 uint8_t byte_buf_copy[4] = {0, 0, 0, 0}; ///< Буфер для полученных данных
 
-/*
- * Структура для сохранения полученных байтов по последовательному интерфейсу.
- */
-typedef struct {
-  uint8_t byte_0;
-  uint8_t byte_1;
-  uint8_t byte_2;
-  uint8_t byte_3;
-} msg_t;
-
 /**
  * Направления движения.
  */
@@ -62,96 +53,96 @@ typedef enum {
 } direction_nku_sd7_t;
 
 typedef enum SYMBOLS {
-  SYMBOL_0 = 0,
-  SYMBOL_1 = 1,
-  SYMBOL_2 = 2,
-  SYMBOL_3 = 3,
-  SYMBOL_4 = 4,
-  SYMBOL_5 = 5,
-  SYMBOL_6 = 6,
-  SYMBOL_7 = 7,
-  SYMBOL_8 = 8,
-  SYMBOL_9 = 9,
-  SYMBOL_A = 10,                       // Символ A
-  SYMBOL_b = 11,                       // Символ b
-  SYMBOL_C = 12,                       // Символ C
-  SYMBOL_d = 13,                       // Символ d
-  SYMBOL_E = 14,                       // Символ E
-  SYMBOL_F = 15,                       // Символ F
-  SYMBOL_EMPTY = 16,                   // Символ Пробел
-  SYMBOL_UNDERGROUND_FLOOR_BIG = 17,   // Символ П
-  SYMBOL_P = 18,                       // Символ P
-  SYMBOL_UNDERGROUND_FLOOR_SMALL = 19, // Символ п
-  SYMBOL_H = 20,                       // Символ H
-  SYMBOL_U_BIG = 21,                   // Символ U
-  SYMBOL_MINUS = 22,                   // Символ -
-  SYMBOL_UNDERSCORE = 23,              // Символ _
-  SYMBOL_U_SMALL = 24,                 // Символ u
-  SYMBOL_L = 25,                       // Символ L
-  SYMBOL_Y_RU = 26,                    // Символ У
-  SYMBOL_B_RU = 27,                    // Символ Б
-  SYMBOL_G_RU = 28,                    // Символ Г
-  SYMBOL_R = 29,                       // Символ R
-  SYMBOL_V = 30,                       // Символ V
-  SYMBOL_N = 31,                       // Символ N
-  SYMBOL_S = 32,                       // Символ S
-  SYMBOL_K = 33,                       // Символ K
-  SYMBOL_Y = 34,                       // Символ Y
-  SYMBOL_G = 35,                       // Символ G
-  SYMBOL_B = 36,                       // Символ B
-  SYMBOL_T = 37                        // Символ T
+  NKU_SYMBOL_0 = 0,
+  NKU_SYMBOL_1 = 1,
+  NKU_SYMBOL_2 = 2,
+  NKU_SYMBOL_3 = 3,
+  NKU_SYMBOL_4 = 4,
+  NKU_SYMBOL_5 = 5,
+  NKU_SYMBOL_6 = 6,
+  NKU_SYMBOL_7 = 7,
+  NKU_SYMBOL_8 = 8,
+  NKU_SYMBOL_9 = 9,
+  NKU_SYMBOL_A = 10,                       // Символ A
+  NKU_SYMBOL_b = 11,                       // Символ b
+  NKU_SYMBOL_C = 12,                       // Символ C
+  NKU_SYMBOL_d = 13,                       // Символ d
+  NKU_SYMBOL_E = 14,                       // Символ E
+  NKU_SYMBOL_F = 15,                       // Символ F
+  NKU_SYMBOL_EMPTY = 16,                   // Символ Пробел
+  NKU_SYMBOL_UNDERGROUND_FLOOR_BIG = 17,   // Символ П
+  NKU_SYMBOL_P = 18,                       // Символ P
+  NKU_SYMBOL_UNDERGROUND_FLOOR_SMALL = 19, // Символ п
+  NKU_SYMBOL_H = 20,                       // Символ H
+  NKU_SYMBOL_U_BIG = 21,                   // Символ U
+  NKU_SYMBOL_MINUS = 22,                   // Символ -
+  NKU_SYMBOL_UNDERSCORE = 23,              // Символ _
+  NKU_SYMBOL_U_SMALL = 24,                 // Символ u
+  NKU_SYMBOL_L = 25,                       // Символ L
+  NKU_SYMBOL_Y_RU = 26,                    // Символ У
+  NKU_SYMBOL_B_RU = 27,                    // Символ Б
+  NKU_SYMBOL_G_RU = 28,                    // Символ Г
+  NKU_SYMBOL_R = 29,                       // Символ R
+  NKU_SYMBOL_V = 30,                       // Символ V
+  NKU_SYMBOL_N = 31,                       // Символ N
+  NKU_SYMBOL_S = 32,                       // Символ S
+  NKU_SYMBOL_K = 33,                       // Символ K
+  NKU_SYMBOL_Y = 34,                       // Символ Y
+  NKU_SYMBOL_G = 35,                       // Символ G
+  NKU_SYMBOL_B = 36,                       // Символ B
+  NKU_SYMBOL_T = 37                        // Символ T
 } symbols_t;
 
-typedef struct {
-  uint16_t code_location;
-  char symbol_char;
-} code_location_char_t;
+// typedef struct {
+//   uint16_t code_location;
+//   char symbol_char;
+// } code_location_char_t;
 
-static const code_location_char_t char_code_location[10] = {
-    {.code_location = SYMBOL_0, .symbol_char = '0'},
-    {.code_location = SYMBOL_1, .symbol_char = '1'},
-    {.code_location = SYMBOL_2, .symbol_char = '2'},
-    {.code_location = SYMBOL_3, .symbol_char = '3'},
-    {.code_location = SYMBOL_4, .symbol_char = '4'},
-    {.code_location = SYMBOL_5, .symbol_char = '5'},
-    {.code_location = SYMBOL_6, .symbol_char = '6'},
-    {.code_location = SYMBOL_7, .symbol_char = '7'},
-    {.code_location = SYMBOL_8, .symbol_char = '8'},
-    {.code_location = SYMBOL_9, .symbol_char = '9'}};
+// static const code_location_char_t char_code_location[10] = {
+//     {.code_location = SYMBOL_0, .symbol_char = '0'},
+//     {.code_location = SYMBOL_1, .symbol_char = '1'},
+//     {.code_location = SYMBOL_2, .symbol_char = '2'},
+//     {.code_location = SYMBOL_3, .symbol_char = '3'},
+//     {.code_location = SYMBOL_4, .symbol_char = '4'},
+//     {.code_location = SYMBOL_5, .symbol_char = '5'},
+//     {.code_location = SYMBOL_6, .symbol_char = '6'},
+//     {.code_location = SYMBOL_7, .symbol_char = '7'},
+//     {.code_location = SYMBOL_8, .symbol_char = '8'},
+//     {.code_location = SYMBOL_9, .symbol_char = '9'}};
 
-/// Буфер со спец. символами
-static const code_location_symbols_t
-    special_symbols_code_location[SPECIAL_SYMBOLS_BUFF_SIZE] = {
-        {.code_location = SYMBOL_A, .symbols = "A"},
-        {.code_location = SYMBOL_b, .symbols = "b"},
-        {.code_location = SYMBOL_C, .symbols = "C"},
-        {.code_location = SYMBOL_d, .symbols = "d"},
-        {.code_location = SYMBOL_E, .symbols = "E"},
-        {.code_location = SYMBOL_F, .symbols = "F"},
-        {.code_location = SYMBOL_EMPTY, .symbols = "c"},
-        {.code_location = SYMBOL_UNDERGROUND_FLOOR_BIG, .symbols = "p"},
-        {.code_location = SYMBOL_P, .symbols = "P"},
+// /// Буфер со спец. символами
+// static const code_location_symbols_t
+//     special_symbols_code_location[SPECIAL_SYMBOLS_BUFF_SIZE] = {
+//         {.code_location = SYMBOL_A, .symbols = "A"},
+//         {.code_location = SYMBOL_b, .symbols = "b"},
+//         {.code_location = SYMBOL_C, .symbols = "C"},
+//         {.code_location = SYMBOL_d, .symbols = "d"},
+//         {.code_location = SYMBOL_E, .symbols = "E"},
+//         {.code_location = SYMBOL_F, .symbols = "F"},
+//         {.code_location = SYMBOL_EMPTY, .symbols = "c"},
+//         {.code_location = SYMBOL_UNDERGROUND_FLOOR_BIG, .symbols = "p"},
+//         {.code_location = SYMBOL_P, .symbols = "P"},
 
-        // {.code_location = SYMBOL_UNDERGROUND_FLOOR_SMALL, .symbols = "P"},
+//         // {.code_location = SYMBOL_UNDERGROUND_FLOOR_SMALL, .symbols = "P"},
 
-        {.code_location = SYMBOL_H, .symbols = "H"},
-        {.code_location = SYMBOL_U_BIG, .symbols = "U"},
-        {.code_location = SYMBOL_MINUS, .symbols = "-"},
-        // {.code_location = SYMBOL_UNDERSCORE, .symbols = "_"},
-        // {.code_location = SYMBOL_U_SMALL, .symbols = "u"},
-        {.code_location = SYMBOL_L, .symbols = "L"},
-        // {.code_location = SYMBOL_Y_RU, .symbols = "Y"},
-        // {.code_location = SYMBOL_B_RU, .symbols = "B"},
-        {.code_location = SYMBOL_G_RU, .symbols = "g"},
-        // {.code_location = SYMBOL_R, .symbols = "R"},
-        {.code_location = SYMBOL_V, .symbols = "V"},
-        {.code_location = SYMBOL_N, .symbols = "N"},
-        {.code_location = SYMBOL_S, .symbols = "S"},
-        {.code_location = SYMBOL_K, .symbols = "K"},
-        // {.code_location = SYMBOL_Y, .symbols = "Y"},
-        // {.code_location = SYMBOL_G, .symbols = "G"},
-        // {.code_location = SYMBOL_B, .symbols = "B"},
-        {.code_location = SYMBOL_T, .symbols = "T"}};
+//         {.code_location = SYMBOL_H, .symbols = "H"},
+//         {.code_location = SYMBOL_U_BIG, .symbols = "U"},
+//         {.code_location = SYMBOL_MINUS, .symbols = "-"},
+//         // {.code_location = SYMBOL_UNDERSCORE, .symbols = "_"},
+//         // {.code_location = SYMBOL_U_SMALL, .symbols = "u"},
+//         {.code_location = SYMBOL_L, .symbols = "L"},
+//         // {.code_location = SYMBOL_Y_RU, .symbols = "Y"},
+//         // {.code_location = SYMBOL_B_RU, .symbols = "B"},
+//         {.code_location = SYMBOL_G_RU, .symbols = "g"},
+//         // {.code_location = SYMBOL_R, .symbols = "R"},
+//         {.code_location = SYMBOL_V, .symbols = "V"},
+//         // {.code_location = SYMBOL_N, .symbols = "N"},
+//         {.code_location = SYMBOL_S, .symbols = "S"},
+//         {.code_location = SYMBOL_K, .symbols = "K"},
+//         // {.code_location = SYMBOL_Y, .symbols = "Y"},
+//         // {.code_location = SYMBOL_G, .symbols = "G"},
+//         // {.code_location = SYMBOL_B, .symbols = "B"},
+//         {.code_location = SYMBOL_T, .symbols = "T"}};
 
 /// Структура с данными для отображения (direction, floor).
 static drawing_data_t drawing_data = {0, 0};
@@ -174,11 +165,110 @@ static void transform_direction_to_common(direction_nku_sd7_t direction) {
   }
 }
 
+static inline symbol_e direction_to_symbol(direction_nku_sd7_t direction) {
+  switch (direction) {
+  case NKU_SD7_MOVE_UP:
+    return SYMBOL_ARROW_UP;
+  case NKU_SD7_MOVE_DOWN:
+    return SYMBOL_ARROW_DOWN;
+  default:
+    return SYMBOL_EMPTY;
+  }
+}
+
+static inline symbol_e map_to_common_symbol(uint8_t symbol_code) {
+  switch (symbol_code) {
+  case NKU_SYMBOL_0:
+    return SYMBOL_ZERO;
+  case NKU_SYMBOL_1:
+    return SYMBOL_ONE;
+  case NKU_SYMBOL_2:
+    return SYMBOL_TWO;
+  case NKU_SYMBOL_3:
+    return SYMBOL_THREE;
+  case NKU_SYMBOL_4:
+    return SYMBOL_FOUR;
+  case NKU_SYMBOL_5:
+    return SYMBOL_FIVE;
+  case NKU_SYMBOL_6:
+    return SYMBOL_SIX;
+  case NKU_SYMBOL_7:
+    return SYMBOL_SEVEN;
+  case NKU_SYMBOL_8:
+    return SYMBOL_EIGHT;
+  case NKU_SYMBOL_9:
+    return SYMBOL_NINE;
+
+  case NKU_SYMBOL_A:
+    return SYMBOL_A;
+  case NKU_SYMBOL_b:
+    return SYMBOL_b;
+  case NKU_SYMBOL_C:
+    return SYMBOL_C;
+  case NKU_SYMBOL_d:
+    return SYMBOL_d;
+  case NKU_SYMBOL_E:
+    return SYMBOL_E;
+  case NKU_SYMBOL_F:
+    return SYMBOL_F;
+  case NKU_SYMBOL_EMPTY:
+    return SYMBOL_EMPTY;
+
+  case NKU_SYMBOL_UNDERGROUND_FLOOR_BIG:
+    return SYMBOL_UNDERGROUND_FLOOR_BIG; // Символ П
+  case NKU_SYMBOL_P:
+    return SYMBOL_P; // Символ P
+
+  case NKU_SYMBOL_UNDERGROUND_FLOOR_SMALL:
+    return SYMBOL_UNDERGROUND_FLOOR_SMALL; // Символ п
+  case NKU_SYMBOL_H:
+    return SYMBOL_H; // Символ H
+  case NKU_SYMBOL_U_BIG:
+    return SYMBOL_U_BIG; // Символ U
+  case NKU_SYMBOL_MINUS:
+    return SYMBOL_MINUS; // Символ -
+  case NKU_SYMBOL_UNDERSCORE:
+    return SYMBOL_UNDERSCORE; // Символ _
+  case NKU_SYMBOL_U_SMALL:
+    return SYMBOL_U_SMALL; // Символ u
+  case NKU_SYMBOL_L:
+    return SYMBOL_L; // Символ L
+  case NKU_SYMBOL_Y_RU:
+    return SYMBOL_Y_RU; // Символ У
+  case NKU_SYMBOL_B_RU:
+    return SYMBOL_B_RU; // Символ Б
+  case NKU_SYMBOL_G_RU:
+    return SYMBOL_G_RU; // Символ Г
+  case NKU_SYMBOL_R:
+    return SYMBOL_R; // Символ R
+  case NKU_SYMBOL_V:
+    return SYMBOL_V; // Символ V
+  case NKU_SYMBOL_N:
+    return SYMBOL_N; // Символ N
+  case NKU_SYMBOL_S:
+    return SYMBOL_S; // Символ S
+  case NKU_SYMBOL_K:
+    return SYMBOL_K; // Символ K
+  case NKU_SYMBOL_Y:
+    return SYMBOL_Y; // Символ Y
+  case NKU_SYMBOL_G:
+    return SYMBOL_G; // Символ G
+  case NKU_SYMBOL_B:
+    return SYMBOL_B; // Символ B
+  case NKU_SYMBOL_T:
+    return SYMBOL_T; // Символ T
+
+  default:
+    return SYMBOL_EMPTY;
+  }
+}
+
 static void set_loading_symbol(uint8_t control_byte_first) {
   if ((control_byte_first & LOADING_MASK) == LOADING_MASK) {
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'p';
-    matrix_string[LSB] = 'g';
+    symbols.symbol_code_1 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
+    symbols.symbol_code_2 =
+        map_to_common_symbol(NKU_SYMBOL_UNDERGROUND_FLOOR_BIG);
+    symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_G_RU);
   }
 }
 
@@ -193,9 +283,9 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
       start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
     }
 
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'g';
+    symbols.symbol_code_1 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
+    symbols.symbol_code_2 = map_to_common_symbol(NKU_SYMBOL_K);
+    symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_G_RU);
   } else if (is_cabin_overload) {
     stop_buzzer_sound();
     is_cabin_overload = false;
@@ -204,15 +294,18 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
 
 static void set_accident_symbol(uint8_t control_byte_second) {
   if ((control_byte_second & ACCIDENT_MASK) == ACCIDENT_MASK) {
-    matrix_string[MSB] = 'A';
-    matrix_string[LSB] = 'c';
+    symbols.symbol_code_2 = map_to_common_symbol(NKU_SYMBOL_A);
+    symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
   }
 }
 
+static bool is_fire_danger_symbol = false;
+
 static void set_fire_danger_symbol(uint8_t control_byte_first) {
   if ((control_byte_first & FIRE_DANGER_MASK) == FIRE_DANGER_MASK) {
-    matrix_string[MSB] = 'F';
-    matrix_string[LSB] = 'c';
+    is_fire_danger_symbol = true;
+    symbols.symbol_code_2 = map_to_common_symbol(NKU_SYMBOL_F);
+    symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
   }
 }
 
@@ -418,6 +511,27 @@ static void filter_data() {
   }
 }
 
+/*
+ * Структура для сохранения полученных байтов по последовательному интерфейсу.
+ */
+typedef struct {
+  uint8_t first_symbol_code;
+  uint8_t second_symbol_code;
+  uint8_t control_byte_first;
+  uint8_t control_byte_second;
+} msg_t;
+
+msg_t messgae_nku_sd7 = {
+
+};
+
+uint8_t first_symbol_code;
+uint8_t second_symbol_code;
+uint8_t control_byte_first;
+uint8_t control_byte_second;
+
+uint8_t direction_code;
+
 /**
  * @brief  Обработка данных по протоколу NKU_SD7.
  * @param
@@ -430,25 +544,16 @@ void process_data_nku_sd7() {
   if (is_data_filtered) {
     is_data_filtered = false;
 
-    uint8_t first_symbol_code =
-        (filter_buff[0].buffer[0] & DATA_BITS_MASK) >> 1;
-    uint8_t second_symbol_code =
-        (filter_buff[0].buffer[1] & DATA_BITS_MASK) >> 1;
-    uint8_t control_byte_first = filter_buff[0].buffer[2];
-    uint8_t control_byte_second = filter_buff[0].buffer[3];
+    first_symbol_code = (filter_buff[0].buffer[0] & DATA_BITS_MASK) >> 1;
+    second_symbol_code = (filter_buff[0].buffer[1] & DATA_BITS_MASK) >> 1;
+    control_byte_first = filter_buff[0].buffer[2];
+    control_byte_second = filter_buff[0].buffer[3];
 
-    uint8_t direction_code = control_byte_second & ARROW_MASK;
+    direction_code = control_byte_second & ARROW_MASK;
+
+    // if (!is_fire_danger_symbol) {
 
 #if 0
-  uint8_t first_symbol_code = (byte_buf_copy[0] & DATA_BITS_MASK) >> 1;
-  uint8_t second_symbol_code = (byte_buf_copy[1] & DATA_BITS_MASK) >> 1;
-  uint8_t control_byte_first = byte_buf_copy[2];
-  uint8_t control_byte_second = byte_buf_copy[3];
-
-  uint8_t direction_code = control_byte_second & ARROW_MASK;
-#endif
-
-    // Отрисовка этажей
     switch (first_symbol_code) {
 
     // Этаж 0
@@ -487,10 +592,34 @@ void process_data_nku_sd7() {
       matrix_string[LSB] = convert_int_to_char(second_symbol_code);
       break;
     }
+    // }
+#endif
 
-    // Стрелка
-    transform_direction_to_common(direction_code);
-    set_direction_symbol(matrix_string, drawing_data.direction);
+    // Настройка кода стрелки
+    symbols.symbol_code_1 = direction_to_symbol(direction_code);
+    // transform_direction_to_common(direction_code);
+    // set_direction_symbol(matrix_string, drawing_data.direction);
+
+    // Настройка кода этажа
+    // Этаж 0
+    if (first_symbol_code == 0 && second_symbol_code == 0) {
+      symbols.symbol_code_2 = map_to_common_symbol(second_symbol_code);
+      symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
+    } else if (first_symbol_code == NKU_SYMBOL_EMPTY) {
+
+      symbols.symbol_code_2 = map_to_common_symbol(second_symbol_code);
+      symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
+
+      // Этаж cП
+      if (second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG) {
+        symbols.symbol_code_2 = map_to_common_symbol(second_symbol_code);
+        symbols.symbol_code_3 = map_to_common_symbol(NKU_SYMBOL_EMPTY);
+      }
+
+    } else {
+      symbols.symbol_code_2 = map_to_common_symbol(first_symbol_code);
+      symbols.symbol_code_3 = map_to_common_symbol(second_symbol_code);
+    }
 
     // Кабинный индикатор
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
@@ -518,7 +647,9 @@ void process_data_nku_sd7() {
   }
 
   while (is_read_data_completed == false && is_interface_connected == true) {
-    draw_string_on_matrix(matrix_string);
+    // draw_string_on_matrix(matrix_string);
+    // draw_symbols(SYM_EMPTY, SYM_EMPTY, second_symbol_code);
+    draw_symbols(&symbols);
   }
 }
 
