@@ -141,22 +141,19 @@ int main(void) {
 #include "conf.h" // Для номера версии ПО (из файла config.h.in)
 #include "drawing.h"
 
-  // display_symbols_during_ms(PROTOCOL_NAME);
-  // display_symbols_during_ms(PROJECT_VER);
+  // display_string_during_ms(PROTOCOL_NAME);
+  // display_string_during_ms(PROJECT_VER);
 
   read_settings(&matrix_settings);
   protocol_init();
 
 #include "font.h"
-  // extern const uint8_t bitmap;
 
-  // symbols.symbol_code_1 = SYM_SIX;
-  // symbols.symbol_code_2 = SYM_ZERO;
-  // symbols.symbol_code_3 = SYM_EMPTY;
+  set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_G_RU);
   while (1) {
-    // draw_symbols(&symbols);
+    draw_symbols();
 
-#if 1
+#if 0
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();

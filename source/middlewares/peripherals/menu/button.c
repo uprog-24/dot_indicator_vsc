@@ -287,16 +287,15 @@ void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
 
 #elif PROTOCOL_ALPACA
 
-#endif
-
-      if (*selected_id == MAIN_CABIN_ID) {
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'c';
+#elif PROTOCOL_NKU_SD7
+  if (*selected_id == MAIN_CABIN_ID) {
+    set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_EMPTY);
   } else {
-    drawing_data->floor = *selected_id;
-    setting_symbols(matrix_string, drawing_data, ADDR_ID_LIMIT, NULL, 0);
+    set_symbols(SYMBOL_EMPTY,
+                (*selected_id < 10) ? (*selected_id) % 10 : (*selected_id) / 10,
+                (*selected_id < 10) ? SYMBOL_EMPTY : (*selected_id) % 10);
   }
+#endif
 }
 
 void set_symbols_extra_mode(uint8_t *selected_group_id,
@@ -360,9 +359,9 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
     is_first_btn_clicked = true;
     time_since_last_press_ms = 0;
 
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'c';
-    matrix_string[LSB] = 'c';
+    // matrix_string[DIRECTION] = 'c';
+    // matrix_string[MSB] = 'c';
+    // matrix_string[LSB] = 'c';
 
     matrix_state = MATRIX_STATE_START;
     *menu_state = MENU_STATE_OPEN;
@@ -386,9 +385,9 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
     is_first_btn_clicked = true;
     time_since_last_press_ms = 0;
 
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'c';
-    matrix_string[LSB] = 'c';
+    // matrix_string[DIRECTION] = 'c';
+    // matrix_string[MSB] = 'c';
+    // matrix_string[LSB] = 'c';
     *menu_state = MENU_STATE_CLOSE;
 
     break;
@@ -398,6 +397,7 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
 void handle_button_press(menu_context_t *menu, button_state_t button) {
 
   switch (menu->current_state) {
+    /* ===== Состояние ожидания ===== */
   case MENU_STATE_IDLE:
     if (button == BUTTON_1_PRESSED) {
     }
@@ -411,10 +411,10 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
-        // draw_string_on_matrix(SETTINGS_MODE_VOLUME);
+        draw_string(SETTINGS_MODE_VOLUME);
       }
 
-      /* Переход к следующему режиму меню */
+      /* Переход к следующему режиму меню (к адресу) */
       if (is_button_1_pressed) {
         menu->current_state = MENU_STATE_ID;
       }
@@ -439,25 +439,31 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
              is_time_sec_for_settings_elapsed != true) {
         switch (selected_level_volume) {
         case 0:
-          // draw_string_on_matrix(LEVEL_VOLUME_0);
+
+          // draw_symbols(SYMBOL_EMPTY, SYMBOL_L, SYMBOL_ZERO);
+          draw_string(LEVEL_VOLUME_0);
+
           play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
           is_level_volume_3_displayed = false;
           break;
 
         case 1:
-          // draw_string_on_matrix(LEVEL_VOLUME_1);
+          draw_string(LEVEL_VOLUME_1);
+
           play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
           is_level_volume_0_displayed = false;
           break;
 
         case 2:
-          // draw_string_on_matrix(LEVEL_VOLUME_2);
+          draw_string(LEVEL_VOLUME_2);
+
           play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
           is_level_volume_1_displayed = false;
           break;
 
         case 3:
-          // draw_string_on_matrix(LEVEL_VOLUME_3);
+          draw_string(LEVEL_VOLUME_3);
+
           play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
           is_level_volume_2_displayed = false;
           break;
@@ -483,9 +489,12 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       is_button_2_pressed_first = true;
 
+      // set_symbols(SYMBOL_EMPTY, SYMBOL_I, SYMBOL_D);
+
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
-        // draw_string_on_matrix(SETTINGS_MODE_ID);
+        // draw_symbols(SYMBOL_EMPTY, SYMBOL_I, SYMBOL_D);
+        draw_string(SETTINGS_MODE_ID);
       }
 
       /* Переход к следующему режиму меню */
@@ -515,7 +524,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
       /* Отображаем текущий выбранный/сохраненный адрес */
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
-        // draw_string_on_matrix(matrix_string);
+        draw_symbols();
       }
 
       if (!is_button_2_pressed_first) {
@@ -542,7 +551,7 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 #endif
       }
 
-      /* Переход к следующему режиму меню */
+      /* Переход к следующему режиму меню (к выходу из меню) */
       if (is_button_1_pressed) {
         menu->current_state = MENU_STATE_EXIT;
       }
@@ -585,12 +594,13 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
   /*===== Режим меню ESC (Выход) =====*/
   case MENU_STATE_EXIT:
     if (button == BUTTON_1_PRESSED) {
+
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
-        // draw_string_on_matrix(SETTINGS_MODE_ESC);
+        draw_string(SETTINGS_MODE_ESC);
       }
 
-      /* Переход к следующему режиму меню */
+      /* Переход к следующему режиму меню (к уровню громкости) */
       if (is_button_1_pressed) {
         menu->current_state = MENU_STATE_VOLUME;
       }

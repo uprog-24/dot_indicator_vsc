@@ -13,130 +13,75 @@
   6 ///< Количество битов в строке кода символа в font.c.
 
 /**
- * @brief Преобразование числа в символ (для этажей 0..9).
+ * Индексы строки, которая будет отображаться на матрице.
+ * Направление имеет позицию 0;
+ * MSB (старший бит, первый символ) имеет позицию 1;
+ * LSB (младший бит, второй символ) имеет позицию 2.
+ */
+typedef enum { DIRECTION = 0, MSB = 1, LSB = 2, INDEX_NUMBER } symbol_index_t;
+
+static displayed_symbols_t symbols = {
+    .symbol_code_1 = SYMBOL_EMPTY,
+    .symbol_code_2 = SYMBOL_EMPTY,
+    .symbol_code_3 = SYMBOL_EMPTY,
+};
+
+/**
+ * @brief Установка символа в структуру по индексу
  *
- * @param number: номер этажа 0..9.
- * @return char:  символ '0'..'9'.
+ * @param index: Индекс символа
+ * @param symbol Код символа из перечисления symbol_e
  */
-char convert_int_to_char(uint8_t number) {
-  if (number <= 9) {
-    return number + '0';
-  }
-  return 'e';
-}
+static void set_symbol_at(symbol_index_t index, symbol_e symbol) {
+  if (index >= INDEX_NUMBER)
+    return;
 
-/**
- * @brief Установка значений структуры drawing_data_t.
- * @param  drawing_data: Указатель на структуру.
- * @param  floor:         Этаж (код).
- * @param  direction:     Направление движения.
- * @retval None
- */
-void drawing_data_setter(drawing_data_t *drawing_data, uint16_t floor,
-                         directionType direction) {
-  drawing_data->floor = floor;
-  drawing_data->direction = direction;
-}
-
-/**
- * @brief  Установка символа направления в matrix_string по индексу = DIRECTION.
- * @param  matrix_string: Указатель на строку.
- * @param  direction:     Направление движения directionType:
- *                        DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION.
- * @retval None
- */
-void set_direction_symbol(char *matrix_string, directionType direction) {
-  switch (direction) {
-  case DIRECTION_UP:
-    matrix_string[DIRECTION] = '>';
+  switch (index) {
+  case DIRECTION:
+    symbols.symbol_code_1 = symbol;
     break;
-  case DIRECTION_DOWN:
-    matrix_string[DIRECTION] = '<';
+  case MSB:
+    symbols.symbol_code_2 = symbol;
     break;
-  case NO_DIRECTION:
-    matrix_string[DIRECTION] = 'c';
+  case LSB:
+    symbols.symbol_code_3 = symbol;
     break;
   }
 }
 
 /**
- * @brief  Установка символов для этажей в matrix_string по индексам MSB и LSB.
- * @param  matrix_string:                Указатель на строку для отображения.
- * @param  floor:                        Этаж (код).
- * @param  max_positive_number_location: Максимвльное значение для
- *                                       положительного номера этажа в
- *                                       протоколе.
- * @param  code_location_symbols:        Указатель на буфер с символами для
- *                                       спец. режимов/символов протокола.
- * @param  spec_symbols_buff_size:       Кол-во элементов в буфере
- *                                       special_symbols_code_location.
- * @retval None
+ * @brief  Установка символа направления движения
+ * @param  direction_code: Код направления (из перечисления symbol_e).
  */
-void set_floor_symbols(char *matrix_string, uint16_t floor,
-                       uint8_t max_positive_number_location,
-                       const code_location_symbols_t *code_location_symbols,
-                       uint8_t spec_symbols_buff_size) {
-  if (floor <= 9) {
-    matrix_string[MSB] = convert_int_to_char(floor % 10);
-    matrix_string[LSB] = 'c';
-  } else if (floor <= max_positive_number_location) {
-    matrix_string[MSB] = convert_int_to_char(floor / 10);
-    matrix_string[LSB] = convert_int_to_char(floor % 10);
-  }
-
-#if 1
-  else {
-    // Спец. символы
-    for (uint8_t ind = 0; ind < spec_symbols_buff_size; ind++) {
-      if (code_location_symbols[ind].code_location == floor) {
-        matrix_string[MSB] = code_location_symbols[ind].symbols[0];
-        matrix_string[LSB] = strlen(code_location_symbols[ind].symbols) == 1
-                                 ? 'c'
-                                 : code_location_symbols[ind].symbols[1];
-      }
-    }
-  }
-#endif
+void set_direction_symbol(symbol_e direction_code) {
+  set_symbol_at(DIRECTION, direction_code);
 }
 
 /**
- * @brief  Установка строки для отображения.
- * @param  matrix_string:                 Указатель на строку.
- * @param  drawing_data:                  Указатель на структуру с этажом и
- *                                        направлением движения.
- * @param  max_positive_number_location:  Максимвльное значение для
- *                                        положительного номера этажа в
- *                                        протоколе.
- * @param  special_symbols_code_location: Указатель на буфер с символами для
- *                                        спец. режимов/символов протокола.
- * @param  spec_symbols_buff_size:        Кол-во элементов в буфере
- *                                        special_symbols_code_location.
- * @retval None
+ * @brief  Установка символов для этажей
+ * @param  left_symbol_code:  Код символа 1
+ * @param  right_symbol_code: Код символа 2
  */
-void setting_symbols(
-    char *matrix_string, const drawing_data_t *const drawing_data,
-    uint8_t max_positive_number_location,
-    const code_location_symbols_t *special_symbols_code_location,
-    uint8_t spec_symbols_buff_size) {
-  set_direction_symbol(matrix_string, drawing_data->direction);
-  set_floor_symbols(matrix_string, drawing_data->floor,
-                    max_positive_number_location, special_symbols_code_location,
-                    spec_symbols_buff_size);
+void set_floor_symbols(symbol_e left_symbol_code, symbol_e right_symbol_code) {
+  set_symbol_at(MSB, left_symbol_code);
+  set_symbol_at(LSB, right_symbol_code);
 }
 
-/// Флаг для удержания состояния строки в темение 1 мс (максимвльная яркость,
-/// частота обновления матрицы 125 Гц).
+void set_symbols(symbol_e s1, symbol_e s2, symbol_e s3) {
+  set_direction_symbol(s1);
+  set_floor_symbols(s2, s3);
+}
+
+/* Флаг для удержания состояния строки в течение 1 мс (максимальная яркость,
+ * частота обновления матрицы 125 Гц) */
 extern volatile bool is_tim4_period_elapsed;
 /**
- * @brief  Отображение символа на матрице.
+ * @brief  Отображение символа на матрице
  * @note   Построчно проходим по коду символа, удерживая состояние строки 1 мс
- *         (максимвльная яркость, частота обновления матрицы 125 Гц).
- * @param  symbol:    Символ для отображения (из font.c).
- * @param  start_pos: Начальная позиция (индекс столбца) для символа.
- * @param  shift:     Сдвиг по Y для анимации. НЕ используется (ВСЕГДА 0).
- * @retval None
+ *         (максимвльная яркость, частота обновления матрицы 125 Гц)
+ * @param  symbol_code: Код символа для отображения (из font.h)
+ * @param  start_pos:   Начальная позиция (индекс столбца) для символа
  */
-
 void draw_symbol_on_matrix(symbol_e symbol_code, uint8_t start_pos) {
 
   static uint8_t current_row = 0;
@@ -179,62 +124,6 @@ void draw_symbol_on_matrix(symbol_e symbol_code, uint8_t start_pos) {
     }
   }
 }
-
-#if 0
-static void draw_symbol_on_matrix(char symbol, uint8_t start_pos,
-                                  uint8_t shift) {
-
-  uint8_t *cur_symbol_code = get_symbol_code(symbol);
-  if (cur_symbol_code == NULL)
-    return;
-
-  static uint8_t current_row = 0;
-
-  // Включаем текущую строку
-  set_row_state(current_row, TURN_ON);
-
-  // Получаем значения для колонок текущей строки
-  uint8_t binary_symbol_code_row[BINARY_SYMBOL_SIZE];
-  if (current_row + shift < ROWS) {
-    convert_number_from_dec_to_bin(cur_symbol_code[current_row + shift],
-                                   binary_symbol_code_row,
-                                   BINARY_SYMBOL_CODE_SIZE);
-  } else {
-    memset(binary_symbol_code_row, 0, BINARY_SYMBOL_SIZE);
-  }
-
-  // Включаем колонку, если бит в строке символа = 1
-  for (uint8_t i = 0; i < 7; i++) {
-    uint8_t current_col = BINARY_SYMBOL_CODE_SIZE - i;
-    if (binary_symbol_code_row[current_col] == 1) {
-      set_col_state(start_pos + i, TURN_ON);
-    }
-  }
-
-  /**
-   * Держим состояние строки с колонками, пока таймер не завершит
-   * отсчет (1000 мкс)
-   */
-  if (is_tim4_period_elapsed) {
-    is_tim4_period_elapsed = false;
-
-    // Переходим к следующей строке
-    current_row++;
-
-    // Выключаем предыдущую строку
-    if (current_row) {
-      set_row_state(current_row - 1, TURN_OFF);
-    }
-    // Выключаем все колонки
-    set_all_cols_state(TURN_OFF);
-
-    // Завершаем проход по строкам
-    if (current_row >= ROWS) {
-      current_row = 0;
-    }
-  }
-}
-#endif
 
 /**
  * @brief  Проверка начального символа DIRECTION, является ли он спец.: 'c',
@@ -300,18 +189,7 @@ static void draw_symbols(char *matrix_string) {
 }
 #endif
 
-// typedef struct {
-//   symbol_e symbol_code_1;
-//   symbol_e symbol_code_2;
-//   symbol_e symbol_code_3;
-// } displayed_symbols_t;
-displayed_symbols_t symbols = {
-    .symbol_code_1 = SYMBOL_EMPTY,
-    .symbol_code_2 = SYMBOL_EMPTY,
-    .symbol_code_3 = SYMBOL_EMPTY,
-};
-
-void draw_symbols(displayed_symbols_t *symbols) {
+void draw_symbols() {
 
   /* Для включения всех светодиодов в DEMO_MODE с ШИМ */
 #if 0
@@ -322,9 +200,18 @@ void draw_symbols(displayed_symbols_t *symbols) {
   }
 #endif
 
-  draw_symbol_on_matrix(symbols->symbol_code_1, 0);
-  draw_symbol_on_matrix(symbols->symbol_code_2, 6);
-  draw_symbol_on_matrix(symbols->symbol_code_3, 11);
+  uint8_t pos = 4;
+
+  if (symbols.symbol_code_1 == SYMBOL_EMPTY &&
+      symbols.symbol_code_3 != SYMBOL_EMPTY) {
+    draw_symbol_on_matrix(symbols.symbol_code_2, 4);
+    pos += 5 + 1;
+    draw_symbol_on_matrix(symbols.symbol_code_3, pos);
+  } else {
+    draw_symbol_on_matrix(symbols.symbol_code_1, 0);
+    draw_symbol_on_matrix(symbols.symbol_code_2, 6);
+    draw_symbol_on_matrix(symbols.symbol_code_3, 11);
+  }
 
   // if (strlen(matrix_string) == 3) { // 3 symbols, font_width = 4
 
@@ -419,25 +306,62 @@ static void draw_special_symbols(char *matrix_string) {
   }
 }
 
-// void set_matrix_string(char *str) {
-//   matrix_string[DIRECTION] = str[DIRECTION];
-//   matrix_string[MSB] = str[MSB];
-//   matrix_string[LSB] = str[LSB];
-// }
+symbol_e char_to_symbol(char ch) {
+  switch (ch) {
+  case '0':
+    return SYMBOL_0;
+  case '1':
+    return SYMBOL_1;
+  case '2':
+    return SYMBOL_2;
+  case '3':
+    return SYMBOL_3;
+  case '4':
+    return SYMBOL_4;
+  case '5':
+    return SYMBOL_5;
+  case '6':
+    return SYMBOL_6;
+  case '7':
+    return SYMBOL_7;
+  case '8':
+    return SYMBOL_8;
+  case '9':
+    return SYMBOL_9;
+  case 'S':
+    return SYMBOL_S;
+  case 'I':
+    return SYMBOL_I;
+  case 'D':
+    return SYMBOL_D;
+  case '-':
+    return SYMBOL_MINUS;
+  case ' ':
+    return SYMBOL_EMPTY;
+  case '.':
+    return SYMBOL_DOT;
+  case 'c':
+    return SYMBOL_EMPTY;
+  case 'V':
+    return SYMBOL_V;
+  case 'L':
+    return SYMBOL_L;
+  case 'C':
+    return SYMBOL_C;
+  case 'E':
+    return SYMBOL_E;
+  // Добавь другие символы по необходимости
+  default:
+    return SYMBOL_EMPTY;
+  }
+}
 
-/**
- * @brief  Отображение matrix_string в зависимости от типа строки.
- * @param  matrix_string: Указатель на строку для отображения.
- * @retval None
- */
-// void draw_string_on_matrix(char *matrix_string) {
-
-//   if (is_start_symbol_special(matrix_string)) {
-//     draw_special_symbols(matrix_string);
-//   } else {
-//     draw_symbols(matrix_string);
-//   }
-// }
+void draw_string(char *matrix_string) {
+  set_symbols(char_to_symbol(matrix_string[0]),
+              char_to_symbol(matrix_string[1]),
+              char_to_symbol(matrix_string[2]));
+  draw_symbols();
+}
 
 extern volatile bool is_time_ms_for_display_str_elapsed;
 /**
@@ -447,10 +371,13 @@ extern volatile bool is_time_ms_for_display_str_elapsed;
  * @param  matrix_string: Указатель на строку, которая будет отображаться.
  * @retval None
  */
-// void display_symbols_during_ms(char *matrix_string) {
-//   is_time_ms_for_display_str_elapsed = false;
+void display_string_during_ms(char *matrix_string) {
+  is_time_ms_for_display_str_elapsed = false;
 
-//   while (!is_time_ms_for_display_str_elapsed) {
-//     draw_string_on_matrix(matrix_string);
-//   }
-// }
+  while (!is_time_ms_for_display_str_elapsed) {
+    draw_string(matrix_string);
+  }
+
+  set_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
+  draw_symbols();
+}

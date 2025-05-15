@@ -1,45 +1,23 @@
 /**
  * @file    font.h
- * @brief   Этот файл содержит прототипы функций для файла font.c
  */
 #ifndef __FONT_H__
 #define __FONT_H__
 
 #include <stdint.h>
 
-#define BINARY_SYMBOL_SIZE 8 ///< 8 бит в строке символа
-
-/**
- * @brief  Преобразование десятичного числа в двоичный массив (для получения
- *         двоичных строк символа в drawing.c).
- * @param  number:     Число для двоичной строки символа.
- * @param  binary_mas: Указатель на массив с двоичным представлением строки
- *                     символа (из font.c symbols[]).
- * @param  bin_size:   Размер двоичной строки символа.
- * @retval None
- */
-void convert_number_from_dec_to_bin(uint8_t number, uint8_t *binary_mas,
-                                    uint8_t bin_size);
-
-/**
- * @brief  Получение кода символа из массива symbols[].
- * @param  symbol:                 Символ из symbols[] (font.c).
- * @retval Указатель на buff_code: Код символа.
- */
-uint8_t *get_symbol_code(char symbol);
-
 /// @brief symbol_e - перечисление поддерживаемых символов
 typedef enum {
-  SYMBOL_ZERO = 0,
-  SYMBOL_ONE = 1,
-  SYMBOL_TWO = 2,
-  SYMBOL_THREE = 3,
-  SYMBOL_FOUR = 4,
-  SYMBOL_FIVE = 5,
-  SYMBOL_SIX = 6,
-  SYMBOL_SEVEN = 7,
-  SYMBOL_EIGHT = 8,
-  SYMBOL_NINE = 9,
+  SYMBOL_0 = 0,
+  SYMBOL_1 = 1,
+  SYMBOL_2 = 2,
+  SYMBOL_3 = 3,
+  SYMBOL_4 = 4,
+  SYMBOL_5 = 5,
+  SYMBOL_6 = 6,
+  SYMBOL_7 = 7,
+  SYMBOL_8 = 8,
+  SYMBOL_9 = 9,
 
   SYMBOL_ARROW_UP = 10,
   SYMBOL_ARROW_DOWN = 11,
@@ -72,10 +50,16 @@ typedef enum {
   SYMBOL_G = 37,                       // Символ G
   SYMBOL_B = 38,                       // Символ B
   SYMBOL_T = 39,                       // Символ T
+  SYMBOL_I = 40,                       // Символ I
+  SYMBOL_D = 41,                       // Символ D
+  SYMBOL_PLUS = 42,                    // Символ +
+  SYMBOL_DOT = 43,                     // Символ .
+  SYMBOL_ALL_ON = 44, // Символ Включить все точки (для DEMO_MODE)
+
   SYMBOLS_NUMBER
 } symbol_e;
 
-#define NUMBER_OF_SYMBOLS 40
+#define NUMBER_OF_SYMBOLS SYMBOLS_NUMBER
 #define NUMBER_OF_ROWS 8
 
 extern const uint8_t bitmap[NUMBER_OF_SYMBOLS][NUMBER_OF_ROWS];

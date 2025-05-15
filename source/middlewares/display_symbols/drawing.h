@@ -31,8 +31,6 @@ typedef struct {
   symbol_e symbol_code_3;
 } displayed_symbols_t;
 
-extern displayed_symbols_t symbols;
-
 /**
  * Структура содержит код местоположения и соответствующую ему строку для
  * отображения (для протоколов).
@@ -42,67 +40,17 @@ typedef struct {
   char symbols[3];
 } code_location_symbols_t;
 
-/**
- * Индексы строки, которая будет отображаться на матрице.
- * Направление имеет позицию 0;
- * MSB (старший бит, первый символ) имеет позицию 1;
- * LSB (младший бит, второй символ) имеет позицию 2.
- */
-enum { DIRECTION = 0, MSB = 1, LSB = 2 };
 
-/**
- * @brief Установка значений структуры drawing_data_t.
- * @param  drawing_data: Указатель на структуру.
- * @param  floor:         Этаж (код).
- * @param  direction:     Направление движения.
- * @retval None
- */
-void drawing_data_setter(drawing_data_t *drawing_data, uint16_t floor,
-                         directionType direction);
 
-/**
- * @brief  Установка символа направления в matrix_string по индексу = DIRECTION.
- * @param  matrix_string: Указатель на строку.
- * @param  direction:     Направление движения directionType:
- *                        DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION.
- * @retval None
- */
-void set_direction_symbol(char *matrix_string, directionType direction);
+void set_symbols(symbol_e s1, symbol_e s2, symbol_e s3);
 
-/**
- * @brief  Установка строки для отображения.
- * @param  matrix_string:                 Указатель на строку.
- * @param  drawing_data:                  Указатель на структуру с этажом и
- *                                        направлением движения.
- * @param  max_positive_number_location:  Максимвльное значение для
- *                                        положительного номера этажа в
- *                                        протоколе.
- * @param  special_symbols_code_location: Указатель на буфер с символами для
- *                                        спец. режимов/символов протокола.
- * @param  spec_symbols_buff_size:        Кол-во элементов в буфере
- *                                        special_symbols_code_location.
- * @retval None
- */
-void setting_symbols(char *matrix_string,
-                     const drawing_data_t *const drawing_data,
-                     uint8_t max_positive_number_location,
-                     const code_location_symbols_t *code_location_symbols,
-                     uint8_t spec_symbols_buff_size);
+void draw_symbols();
 
-/**
- * @brief  Отображение matrix_string в зависимости от типа строки.
- * @param  matrix_string: Указатель на строку для отображения.
- * @retval None
- */
-void draw_string_on_matrix(char *matrix_string);
+void draw_string();
 
-/**
- * @brief Преобразование числа в символ (для этажей 0..9).
- *
- * @param number: номер этажа 0..9.
- * @return char:  символ '0'..'9'.
- */
-char convert_int_to_char(uint8_t number);
+void set_direction_symbol(symbol_e direction_code);
+
+void set_floor_symbols(symbol_e left_symbol_code, symbol_e right_symbol_code);
 
 /**
  * @brief  Отображение символов на матрице в течение
@@ -111,6 +59,6 @@ char convert_int_to_char(uint8_t number);
  * @param  matrix_string: Указатель на строку, которая будет отображаться.
  * @retval None
  */
-void display_symbols_during_ms(char *matrix_string);
+void display_string_during_ms(char *matrix_string);
 
 #endif /*__ DRAWING_H__ */
