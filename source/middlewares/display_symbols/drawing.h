@@ -25,12 +25,6 @@ typedef struct drawing_data {
   directionType direction;
 } drawing_data_t;
 
-typedef struct {
-  symbol_e symbol_code_1;
-  symbol_e symbol_code_2;
-  symbol_e symbol_code_3;
-} displayed_symbols_t;
-
 /**
  * Структура содержит код местоположения и соответствующую ему строку для
  * отображения (для протоколов).
@@ -40,24 +34,49 @@ typedef struct {
   char symbols[3];
 } code_location_symbols_t;
 
-
-
-void set_symbols(symbol_e s1, symbol_e s2, symbol_e s3);
-
-void draw_symbols();
-
-void draw_string();
-
-void set_direction_symbol(symbol_e direction_code);
-
-void set_floor_symbols(symbol_e left_symbol_code, symbol_e right_symbol_code);
+/**
+ * @brief Заполнение структуры: битмап и ширина символа
+ */
+void init_symbols_width();
 
 /**
- * @brief  Отображение символов на матрице в течение
+ * @brief  Установка символа направления движения
+ * @param  direction_code: Код направления (из перечисления symbol_code_e)
+ */
+void set_direction_symbol(symbol_code_e direction_code);
+
+/**
+ * @brief  Установка символов для этажей
+ * @param  left_symbol_code:  Код символа 1
+ * @param  right_symbol_code: Код символа 2
+ */
+void set_floor_symbols(symbol_code_e left_symbol_code,
+                       symbol_code_e right_symbol_code);
+
+/**
+ * @brief  Установка символов (направление + этаж)
+ * @param  s1_code:  Код символа 1
+ * @param  s2_code:  Код символа 2
+ * @param  s3_code:  Код символа 3
+ */
+void set_symbols(symbol_code_e s1, symbol_code_e s2, symbol_code_e s3);
+
+/**
+ * @brief Отображение символов, заранее установленных в структуру symbols
+ */
+void draw_symbols();
+
+/**
+ * @brief Отображение строки
+ * @param matrix_string: Указатель на строку, которая будет отображаться
+ */
+void draw_string(char *matrix_string);
+
+/**
+ * @brief  Отображение строки на матрице в течение
  *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
- * @note   Для DEMO_MODE и для протоколов при запуске индикатора.
- * @param  matrix_string: Указатель на строку, которая будет отображаться.
- * @retval None
+ * @note   Для DEMO_MODE и для протоколов при запуске индикатора
+ * @param  matrix_string: Указатель на строку, которая будет отображаться
  */
 void display_string_during_ms(char *matrix_string);
 

@@ -141,19 +141,32 @@ int main(void) {
 #include "conf.h" // Для номера версии ПО (из файла config.h.in)
 #include "drawing.h"
 
-  // display_string_during_ms(PROTOCOL_NAME);
-  // display_string_during_ms(PROJECT_VER);
+  init_symbols_width();
+
+  display_string_during_ms(PROTOCOL_NAME);
+  display_string_during_ms(PROJECT_VER);
 
   read_settings(&matrix_settings);
   protocol_init();
 
 #include "font.h"
 
-  set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_G_RU);
-  while (1) {
-    draw_symbols();
+  // set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_G_RU);
+  // set_symbols(SYMBOL_EMPTY, SYMBOL_2, SYMBOL_2);
+  // set_symbols(SYMBOL_EMPTY, SYMBOL_F, SYMBOL_EMPTY);
+  // set_symbols(SYMBOL_U_BIG, SYMBOL_K, SYMBOL_L);
+  // set_symbols(SYMBOL_V, SYMBOL_0, SYMBOL_L);
 
-#if 0
+  // display_string_during_ms("c22");
+  // set_symbols(SYMBOL_ARROW_DOWN, SYMBOL_PLUS, SYMBOL_2);
+  // set_symbols(SYMBOL_ARROW_DOWN, SYMBOL_B, SYMBOL_EMPTY);
+  while (1) {
+    // draw_symbols();
+    // HAL_Delay(2000);
+
+    // set_symbols(SYMBOL_EMPTY, SYMBOL_F, SYMBOL_EMPTY);
+
+#if 1
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();
