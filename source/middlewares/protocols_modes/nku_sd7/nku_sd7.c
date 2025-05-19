@@ -19,6 +19,8 @@
 #define FIRE_DANGER_MASK 0x04
 #define CABIN_OVERLOAD_MASK 0x08
 #define GONG_MASK 0x10
+#define MOVE_DOWN_MASK 0x20
+#define MOVE_UP_MASK 0x40
 
 // Маски для control_byte_second
 #define ACCIDENT_MASK 0x02
@@ -97,6 +99,12 @@ typedef enum SYMBOLS {
 /// Структура с данными для отображения (direction, floor).
 static drawing_data_t drawing_data = {0, 0};
 
+// Маппинг символов nku_symbols_t в код symbol_code_e
+// static const symbol_code_e nku_direction_to_common_table[128] = {
+//     [NKU_SD7_MOVE_UP] = SYMBOL_ARROW_UP,
+//     [NKU_SD7_MOVE_DOWN] = SYMBOL_ARROW_DOWN,
+//     [NKU_SD7_NO_MOVE] = SYMBOL_EMPTY};
+
 static inline symbol_code_e
 map_direction_to_common_symbol(direction_nku_sd7_t direction) {
   switch (direction) {
@@ -104,6 +112,9 @@ map_direction_to_common_symbol(direction_nku_sd7_t direction) {
     return SYMBOL_ARROW_UP;
   case NKU_SD7_MOVE_DOWN:
     return SYMBOL_ARROW_DOWN;
+
+  case NKU_SD7_NO_MOVE:
+    return SYMBOL_EMPTY;
   default:
     return SYMBOL_EMPTY;
   }
@@ -170,15 +181,42 @@ static void set_loading_symbol(uint8_t control_byte_first) {
 }
 
 /// Флаг для контроля перегруза кабины
-static bool is_cabin_overload = false;
+bool is_cabin_overload = false;
+
+bool is_overload_sound_on = false; // состояние звука
+
+static overload_disable_sound_cnt = 0;
+static overload_sound_cnt = 0;
+
+extern uint16_t overload_sound_ms;
+extern volatile bool is_time_ms_for_overload_elapsed;
 
 // Режим Перегрузка (символы и звук)
 static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
+
   if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
 
     if (matrix_settings.volume != VOLUME_0) {
-      is_cabin_overload = true;
-      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+
+      // Первый вход в режим перегрузки
+      if (!is_cabin_overload) {
+        is_cabin_overload = true;
+        overload_sound_ms = 0;
+        is_overload_sound_on = true;
+        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+
+      if (is_time_ms_for_overload_elapsed) {
+        is_time_ms_for_overload_elapsed = false;
+
+        if (is_overload_sound_on) {
+          stop_buzzer_sound();
+          is_overload_sound_on = false;
+        } else {
+          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+          is_overload_sound_on = true;
+        }
+      }
     }
 
     set_symbols(map_to_common_symbol(NKU_SYMBOL_EMPTY),
@@ -187,7 +225,61 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
   } else if (is_cabin_overload) {
     stop_buzzer_sound();
     is_cabin_overload = false;
+    is_overload_sound_on = false;
+    overload_sound_ms = 0;
   }
+
+#if 0
+  if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+      is_cabin_overload = true;
+      // overload_sound_ms++;
+      // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+
+#if 0
+      if (overload_disable_sound_cnt == 0) {
+
+        // stop_buzzer_sound();
+        overload_sound_cnt = 0;
+
+        if (matrix_settings.volume != VOLUME_0) {
+          // BIP_DURATION_MS = 500 ms
+          // play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
+          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+        }
+
+      }
+
+      /** Не воспроизводить */
+      if (is_cabin_overload) {
+        overload_disable_sound_cnt++;
+        if (overload_disable_sound_cnt == 3) { // 230 ms * n
+          overload_disable_sound_cnt = 0;
+          // is_press_order_button = false;
+          stop_buzzer_sound();
+          // is_cabin_overload = false;
+        }
+      }
+
+#endif
+    }
+
+    // if (is_cabin_overload) {
+    //   overload_sound_ms++;
+    // }
+
+    set_symbols(map_to_common_symbol(NKU_SYMBOL_EMPTY),
+                map_to_common_symbol(NKU_SYMBOL_K),
+                map_to_common_symbol(NKU_SYMBOL_G_RU));
+  } else if (is_cabin_overload) {
+    stop_buzzer_sound();
+    is_cabin_overload = false;
+    overload_sound_cnt = 0;
+    overload_disable_sound_cnt = 0;
+    // is_press_order_button = false;
+  }
+#endif
 }
 
 // Режим Авария (символы)
@@ -235,8 +327,9 @@ static void setting_gong(uint8_t direction_code, uint8_t control_byte_first,
                          uint8_t volume) {
   uint8_t arrival = control_byte_first & GONG_MASK;
 
-  // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
-  gong[0] = (arrival == GONG_MASK) != 0 ? 1 : 0;
+  /*  Если сигнал Гонг из 0 меняется на 1 и быты Движение Вверх и Вниз равны 0,
+   * тогда детектируем прибытие на этаж */
+  gong[0] = ((arrival == GONG_MASK) == 1) ? 1 : 0;
 
   if (gong[0] && !gong[1]) {
 
@@ -245,18 +338,37 @@ static void setting_gong(uint8_t direction_code, uint8_t control_byte_first,
       play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     case NKU_SD7_MOVE_DOWN:
-      play_gong(2, GONG_BUZZER_FREQ, volume);
+      play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     case NKU_SD7_NO_MOVE:
-      play_gong(3, GONG_BUZZER_FREQ, volume);
+      // play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     default:
-      __NOP();
-      play_gong(3, GONG_BUZZER_FREQ, volume);
+      //  play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     }
   }
   gong[1] = gong[0];
+}
+
+static uint8_t gong_stop_floor[2] = {
+    0,
+};
+
+// Гонг
+static void setting_gong_stop(uint8_t direction_code,
+                              uint8_t control_byte_first, uint8_t volume) {
+  uint8_t arrival = control_byte_first & GONG_MASK;
+
+  bool is_stop = ((control_byte_first & MOVE_DOWN_MASK) == 0) &&
+                 ((control_byte_first & MOVE_UP_MASK) == 0);
+
+  gong_stop_floor[0] = (((arrival == GONG_MASK) != 0) && is_stop) ? 1 : 0;
+
+  if (gong_stop_floor[0] && !gong_stop_floor[1]) {
+    play_gong(3, GONG_BUZZER_FREQ, volume);
+  }
+  gong_stop_floor[1] = gong_stop_floor[0];
 }
 
 /// Флаг для контроля воспроизведения оповещения при пожарной опасности
@@ -272,6 +384,8 @@ static void cabin_indicator_special_regime(uint8_t direction_code,
   // Гонг
   if (matrix_settings.volume != VOLUME_0) {
     setting_gong(direction_code, control_byte_first, matrix_settings.volume);
+    setting_gong_stop(direction_code, control_byte_first,
+                      matrix_settings.volume);
   }
 
   // Погрузка
@@ -424,7 +538,7 @@ typedef struct {
 } msg_t;
 
 msg_t messgae_nku_sd7 = {
-
+    0x00,
 };
 
 uint8_t first_symbol_code;

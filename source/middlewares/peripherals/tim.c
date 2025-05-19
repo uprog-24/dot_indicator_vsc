@@ -155,6 +155,9 @@ static uint32_t _bip_duration_ms = 0;
 /// Уровень громкости тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint16_t _bip_volume = 0;
 
+uint16_t overload_sound_ms = 0;
+volatile bool is_time_ms_for_overload_elapsed = false;
+
 /**
  * @brief  Обработка прерываний по завершении периода таймеров.
  * @param  htim: Указатель на структуру таймера.
@@ -165,6 +168,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Текущее состояние индикатора: MATRIX_STATE_START, MATRIX_STATE_WORKING,
   /// MATRIX_STATE_MENU
   extern matrix_state_t matrix_state;
+
+  extern bool is_cabin_overload;
+  extern bool is_overload_sound_on;
 
   if (htim->Instance == TIM3) {
     is_tim3_period_elapsed = true; // для TEST_MODE
@@ -218,6 +224,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
 #endif
+
+    if (is_cabin_overload) {
+      overload_sound_ms++;
+
+      if (overload_sound_ms >= 500) {
+        overload_sound_ms = 0;
+        is_time_ms_for_overload_elapsed = true;
+      }
+    }
 
     /* Управление продолжительностью тонов гонга */
     if (_bip_counter != 0) {

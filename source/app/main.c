@@ -143,8 +143,8 @@ int main(void) {
 
   init_symbols_width();
 
-  display_string_during_ms(PROTOCOL_NAME);
-  display_string_during_ms(PROJECT_VER);
+  // display_string_during_ms(PROTOCOL_NAME);
+  // display_string_during_ms(PROJECT_VER);
 
   read_settings(&matrix_settings);
   protocol_init();
