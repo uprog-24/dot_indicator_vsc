@@ -552,8 +552,12 @@ void press_button() {
       } else {
         id++;
       }
-#else
-      id++;
+#elif PROTOCOL_UEL
+      if (id == ADDR_ID_LIMIT) {
+        id = ADDR_ID_MIN;
+      } else {
+        id++;
+      }
 #endif
     }
 #endif

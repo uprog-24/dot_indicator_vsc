@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.22)
 set(PROJECT_VERSION "0.1")
 configure_file(config.h.in conf.h)
 
+# Указываем toolchain перед вызовом project()
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/gcc-arm-none-eabi.cmake" CACHE STRING "Toolchain file" FORCE)
+
 # Core project settings
 project(dot_indicator_copy)
 enable_language(C CXX ASM)
@@ -111,6 +114,7 @@ if(USE_DOT_PIN)
 
         # ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
         ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/uel/uel.c
     )
 
     file(GLOB_RECURSE STM32CUBEMX_SOURCES
@@ -166,6 +170,7 @@ elseif(USE_DOT_SPI)
         ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
         ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
         ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/test_mode.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/uel/uel.c
         # ${PROJECT_DIR}/middlewares/peripherals/gpio.c
     )
 

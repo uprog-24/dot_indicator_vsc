@@ -14,8 +14,8 @@
 /* Select protocol, demo/test mode */
 #define TEST_MODE 0
 #define DEMO_MODE 0
-#define PROTOCOL_UIM_6100 1
-#define PROTOCOL_UEL 0
+#define PROTOCOL_UIM_6100 0
+#define PROTOCOL_UEL 1
 #define PROTOCOL_UKL 0
 #define PROTOCOL_ALPACA 0
 #if DOT_PIN
@@ -30,6 +30,19 @@
         ///< in
 ///< SETTINGS mode of matrix
 
+#define config_MU_IT_04_10
+//#define config_MU_IT_05_10
+//#define config_MU_IT_06_10
+
+#if defined(config_MU_IT_04_10) || defined(config_MU_IT_05_10)
+#define config_SPLIT_SYMBOL
+#endif
+
+#define __BITMAP_STANDART // стандартный bitmap
+// выбор стрелки (направление движения при остановке)
+//#define __ARROW_ORDINAR
+#define __ARROW_DOUBLE
+
 #endif
 /* Protocol UEL (UART) */
 #if PROTOCOL_UEL && !PROTOCOL_UIM_6100 && !PROTOCOL_UKL && !PROTOCOL_ALPACA && \
@@ -43,9 +56,9 @@
 #define ADDR_ID_MIN 0
 #define ADDR_ID_LIMIT 50
 #define MAX_POSITIVE_NUMBER_LOCATION 39
-#define MAIN_CABIN_ID 0
+#define MAIN_CABIN_ID ADDR_ID_MIN
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3 ///< Time in ms to check interface connection
+  3000 ///< Time in ms to check interface connection
 
 /* Protocol UIM_6100 (CAN) */
 #elif PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&                   \

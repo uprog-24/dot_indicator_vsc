@@ -137,12 +137,12 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       stop_buzzer_sound();
     }
 
-#if 0
-      if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
-        matrix_string[MSB] = 'F';
-        matrix_string[LSB] = 'c';
-        stop_buzzer_sound();
-      }
+#if 1
+    if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
+      matrix_string[MSB] = 'F';
+      matrix_string[LSB] = 'c';
+      stop_buzzer_sound();
+    }
 #endif
 
     if ((current_location & GONG_ARRIVAL) == GONG_ARRIVAL) {
@@ -160,20 +160,6 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       is_gong_play = false;
     }
 
-#if 0
-      if ((code_msg_byte_w_1 & 0b00111111) == VOICE_CABIN_OVERLOAD) {
-        is_cabin_overload = true;
-#if 1
-        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, level_volume);
-#endif
-      }
-      // next received bytes by CAN
-      else if (is_cabin_overload) {
-        TIM2_Stop_bip();
-        is_cabin_overload = false;
-      }
-#endif
-
     if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
 #if 1
       if (matrix_settings.volume != VOLUME_0 &&
@@ -183,8 +169,12 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
 #endif
       is_cabin_overload_sound = true;
 
+      matrix_string[DIRECTION] = 'c';
+      matrix_string[MSB] = 'K';
+      matrix_string[LSB] = 'g';
+
     } else if (is_cabin_overload_sound) {
-      TIM2_Stop_bip();
+      stop_buzzer_sound();
       is_cabin_overload_sound = false;
     }
 
@@ -313,6 +303,10 @@ void process_data_uel(uint16_t *received_data) {
   setting_sound_uel(matrix_string, drawing_data.floor, control_bits);
 
   while (is_rx_data_completed == false && is_interface_connected == true) {
+#if DOT_PIN
     draw_string_on_matrix(matrix_string);
+#elif DOT_SPI
+    display_symbols_spi(matrix_string);
+#endif
   }
 }

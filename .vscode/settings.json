@@ -27,6 +27,7 @@
     "tim.h": "c",
     "buzzer.h": "c",
     "stdio.h": "c",
-    "stdbool.h": "c"
+    "stdbool.h": "c",
+    "usart.h": "c"
   }
 }

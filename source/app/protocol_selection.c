@@ -37,7 +37,7 @@ void protocol_init() {
 #if PROTOCOL_UIM_6100
   MX_CAN_Init();
 #elif PROTOCOL_UEL
-  MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
 #elif PROTOCOL_UKL
 
   __HAL_RCC_GPIOA_CLK_ENABLE();

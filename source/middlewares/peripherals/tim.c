@@ -225,7 +225,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     read_data_bit();
 
-#elif (PROTOCOL_UIM_6100) && (DOT_SPI)
+#elif (PROTOCOL_UIM_6100 || PROTOCOL_UEL) && (DOT_SPI)
     extern volatile uint32_t
         button_press_time; // Время удержания кнопки (в миллисекундах)
     extern volatile uint8_t is_button_pressed;
