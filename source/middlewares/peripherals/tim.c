@@ -16,10 +16,16 @@
   3000 ///< Время в мс, в течение которого отображается строка при подаче
        ///< питания
 
+#define SOUND_ON_OFF_DURING_MS 500
+
 #elif DEMO_MODE
 #define TIME_DISPLAY_STRING_DURING_MS                                          \
   2000 ///< Время в мс, в течение которого отображается строка
 
+#endif
+
+#if PROTOCOL_NKU_SD7
+#include "nku_sd7.h"
 #endif
 
 /**
@@ -155,7 +161,10 @@ static uint32_t _bip_duration_ms = 0;
 /// Уровень громкости тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint16_t _bip_volume = 0;
 
+/// Прошедшее время в мс для звука Перегрузка
 uint16_t overload_sound_ms = 0;
+
+/// Флаг для отсчета продолжительности для звука Перегрузка
 volatile bool is_time_ms_for_overload_elapsed = false;
 
 /**
@@ -228,7 +237,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (is_cabin_overload) {
       overload_sound_ms++;
 
-      if (overload_sound_ms >= 500) {
+      if (overload_sound_ms >= SOUND_ON_OFF_DURING_MS) {
         overload_sound_ms = 0;
         is_time_ms_for_overload_elapsed = true;
       }

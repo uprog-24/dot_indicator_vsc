@@ -125,8 +125,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /// Flag to control is start bit is received (state DATA_Pin from 1 to 0)
   extern bool is_start_bit_received;
 
-  /// Buffer with timings for reading data bits
-  extern const uint16_t nku_sd7_timings[];
+  extern const uint16_t nku_sd7_timing;
 
   // Детектируем спад по фронту из 1 в 0 (старт-бит для NKU_SD7)
   if (GPIO_Pin == DATA_Pin) {
@@ -135,7 +134,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         if (HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin) == GPIO_PIN_RESET) {
           is_start_bit_received = true;
           HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
-          TIM3_Start(PRESCALER_FOR_US, (nku_sd7_timings[0]) / 2);
+          TIM3_Start(PRESCALER_FOR_US, nku_sd7_timing / 2);
         }
       }
     }
@@ -359,10 +358,6 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
     is_first_btn_clicked = true;
     time_since_last_press_ms = 0;
 
-    // matrix_string[DIRECTION] = 'c';
-    // matrix_string[MSB] = 'c';
-    // matrix_string[LSB] = 'c';
-
     matrix_state = MATRIX_STATE_START;
     *menu_state = MENU_STATE_OPEN;
     menu.current_state = MENU_STATE_IDLE;
@@ -385,9 +380,6 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
     is_first_btn_clicked = true;
     time_since_last_press_ms = 0;
 
-    // matrix_string[DIRECTION] = 'c';
-    // matrix_string[MSB] = 'c';
-    // matrix_string[LSB] = 'c';
     *menu_state = MENU_STATE_CLOSE;
 
     break;

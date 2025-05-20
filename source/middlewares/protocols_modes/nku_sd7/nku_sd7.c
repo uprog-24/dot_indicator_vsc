@@ -132,15 +132,16 @@ static const symbol_code_e nku_symbol_to_common_table[NKU_SYMBOL_NUMBER] = {
     [NKU_SYMBOL_7] = SYMBOL_7,
     [NKU_SYMBOL_8] = SYMBOL_8,
     [NKU_SYMBOL_9] = SYMBOL_9,
-    [NKU_SYMBOL_A] = SYMBOL_A,
-    [NKU_SYMBOL_b] = SYMBOL_b,
-    [NKU_SYMBOL_C] = SYMBOL_C,
-    [NKU_SYMBOL_d] = SYMBOL_d,
-    [NKU_SYMBOL_E] = SYMBOL_E,
-    [NKU_SYMBOL_F] = SYMBOL_F,
-    [NKU_SYMBOL_EMPTY] = SYMBOL_EMPTY,
-    [NKU_SYMBOL_UNDERGROUND_FLOOR_BIG] = SYMBOL_UNDERGROUND_FLOOR_BIG,
-    [NKU_SYMBOL_P] = SYMBOL_P, // Символ P
+    [NKU_SYMBOL_A] = SYMBOL_A,         // Символ A
+    [NKU_SYMBOL_b] = SYMBOL_b,         // Символ b
+    [NKU_SYMBOL_C] = SYMBOL_C,         // Символ C
+    [NKU_SYMBOL_d] = SYMBOL_d,         // Символ d
+    [NKU_SYMBOL_E] = SYMBOL_E,         // Символ E
+    [NKU_SYMBOL_F] = SYMBOL_F,         // Символ F
+    [NKU_SYMBOL_EMPTY] = SYMBOL_EMPTY, // Символ Пусто
+    [NKU_SYMBOL_UNDERGROUND_FLOOR_BIG] =
+        SYMBOL_UNDERGROUND_FLOOR_BIG, // Символ П
+    [NKU_SYMBOL_P] = SYMBOL_P,        // Символ P
     [NKU_SYMBOL_UNDERGROUND_FLOOR_SMALL] =
         SYMBOL_UNDERGROUND_FLOOR_SMALL,          // Символ п
     [NKU_SYMBOL_H] = SYMBOL_H,                   // Символ H
@@ -185,9 +186,6 @@ bool is_cabin_overload = false;
 
 bool is_overload_sound_on = false; // состояние звука
 
-static overload_disable_sound_cnt = 0;
-static overload_sound_cnt = 0;
-
 extern uint16_t overload_sound_ms;
 extern volatile bool is_time_ms_for_overload_elapsed;
 
@@ -228,58 +226,6 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
     is_overload_sound_on = false;
     overload_sound_ms = 0;
   }
-
-#if 0
-  if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
-
-    if (matrix_settings.volume != VOLUME_0) {
-      is_cabin_overload = true;
-      // overload_sound_ms++;
-      // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
-
-#if 0
-      if (overload_disable_sound_cnt == 0) {
-
-        // stop_buzzer_sound();
-        overload_sound_cnt = 0;
-
-        if (matrix_settings.volume != VOLUME_0) {
-          // BIP_DURATION_MS = 500 ms
-          // play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume);
-          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
-        }
-
-      }
-
-      /** Не воспроизводить */
-      if (is_cabin_overload) {
-        overload_disable_sound_cnt++;
-        if (overload_disable_sound_cnt == 3) { // 230 ms * n
-          overload_disable_sound_cnt = 0;
-          // is_press_order_button = false;
-          stop_buzzer_sound();
-          // is_cabin_overload = false;
-        }
-      }
-
-#endif
-    }
-
-    // if (is_cabin_overload) {
-    //   overload_sound_ms++;
-    // }
-
-    set_symbols(map_to_common_symbol(NKU_SYMBOL_EMPTY),
-                map_to_common_symbol(NKU_SYMBOL_K),
-                map_to_common_symbol(NKU_SYMBOL_G_RU));
-  } else if (is_cabin_overload) {
-    stop_buzzer_sound();
-    is_cabin_overload = false;
-    overload_sound_cnt = 0;
-    overload_disable_sound_cnt = 0;
-    // is_press_order_button = false;
-  }
-#endif
 }
 
 // Режим Авария (символы)
@@ -631,8 +577,8 @@ void process_data_pin() {
 /// Flag to control is start bit is received (state DATA_Pin from 1 to 0)
 volatile bool is_start_bit_received = false;
 
-/// Buffer with timings for reading data bits
-const uint16_t nku_sd7_timings[1] = {2556};
+/// Тайминг для чтения бита
+const uint16_t nku_sd7_timing = 2556;
 
 /// Value of the current received bit
 volatile uint8_t bit = 1;
@@ -708,5 +654,5 @@ void read_data_bit(void) {
     bit_index = 0;
   }
 
-  __HAL_TIM_SET_AUTORELOAD(&htim3, nku_sd7_timings[0]);
+  __HAL_TIM_SET_AUTORELOAD(&htim3, nku_sd7_timing);
 }

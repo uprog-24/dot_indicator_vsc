@@ -19,6 +19,7 @@
     "demo_mode.h": "c",
     "type_traits": "c",
     "buzzer.h": "c",
-    "font.h": "c"
+    "font.h": "c",
+    "nku_sd7.h": "c"
   }
 }
