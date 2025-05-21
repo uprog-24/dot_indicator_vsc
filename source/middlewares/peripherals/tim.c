@@ -26,6 +26,8 @@
 #include "drawing.h"
 #include "ukl.h"
 
+#define SOUND_ON_OFF_DURING_MS 500
+
 /**
  * @brief  Запуск ШИМ для бузера
  * @retval None
@@ -180,6 +182,12 @@ static uint16_t _bip_volume = 0;
 static volatile bool is_start_indicator = true; // Флаг 1 мс
 static uint16_t tim4_ms_counter = 0;
 
+/// Прошедшее время в мс для звука Перегрузка
+uint16_t overload_sound_ms = 0;
+
+/// Флаг для отсчета продолжительности для звука Перегрузка
+volatile bool is_time_ms_for_overload_elapsed = false;
+
 /**
  * @brief  Handle Interrupt by TIM's period is elapsed,
  *         setting the state of the flags.
@@ -214,6 +222,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING, MENU_STATE_CLOSE
   extern menu_state_t menu_state;
 
+  extern bool is_cabin_overload;
+  extern bool is_overload_sound_on;
+
   if (htim->Instance == TIM2) {
     is_tim2_period_elapsed = true;
   }
@@ -245,6 +256,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       if (tim4_ms_counter >= 3000) {
         tim4_ms_counter = 0;
         is_start_indicator = false;
+      }
+    }
+
+    if (is_cabin_overload) {
+      overload_sound_ms++;
+
+      if (overload_sound_ms >= SOUND_ON_OFF_DURING_MS) {
+        overload_sound_ms = 0;
+        is_time_ms_for_overload_elapsed = true;
       }
     }
 

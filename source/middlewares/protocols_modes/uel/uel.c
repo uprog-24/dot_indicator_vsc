@@ -16,7 +16,7 @@
 #define SPECIAL_SYMBOLS_BUFF_SIZE 13 ///< Number of special symbols
 #define GONG_BUZZER_FREQ 3000        ///< Frequency of bip for ARRIVAL gong
 #define BUZZER_FREQ_CABIN_OVERLOAD                                             \
-  5000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
+  3000 ///< Frequency of bip for VOICE_CABIN_OVERLOAD
 #define BUZZER_FREQ_FIRE_DANGER                                                \
   BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
 
@@ -145,6 +145,8 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
     }
 #endif
 
+#if 0
+
     if ((current_location & GONG_ARRIVAL) == GONG_ARRIVAL) {
       if (!is_gong_play) {
         stop_buzzer_sound();
@@ -160,6 +162,9 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       is_gong_play = false;
     }
 
+#endif
+
+#if 0
     if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
 #if 1
       if (matrix_settings.volume != VOLUME_0 &&
@@ -177,6 +182,8 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       stop_buzzer_sound();
       is_cabin_overload_sound = false;
     }
+
+#endif
 
     if ((current_location & FARE_DANGER_SOUND) == FARE_DANGER_SOUND) {
       fire_danger_cnt++;
@@ -213,6 +220,131 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
     //      stop_buzzer_sound();
     break;
   }
+}
+
+static uint8_t gong[2] = {
+    0,
+};
+
+// Гонг
+static void setting_gong(control_bits_states_t control_bits,
+                         uint8_t current_location, uint8_t volume) {
+  uint8_t arrival = current_location & GONG_ARRIVAL;
+
+  /*  Если сигнал Гонг из 0 меняется на 1 и быты Движение Вверх и Вниз равны 0,
+   * тогда детектируем прибытие на этаж */
+  gong[0] = ((arrival == GONG_ARRIVAL) == 1) ? 1 : 0;
+
+  if (gong[0] && !gong[1]) {
+
+    switch (control_bits) {
+    case UEL_MOVE_UP:
+      play_gong(1, GONG_BUZZER_FREQ, volume);
+      break;
+    case UEL_MOVE_DOWN:
+      play_gong(1, GONG_BUZZER_FREQ, volume);
+      break;
+    case UEL_NO_MOVE:
+      play_gong(3, GONG_BUZZER_FREQ, volume);
+      break;
+    default:
+      //  play_gong(1, GONG_BUZZER_FREQ, volume);
+      break;
+    }
+  }
+  gong[1] = gong[0];
+}
+
+/// Флаг для контроля перегруза кабины
+bool is_cabin_overload = false;
+
+bool is_overload_sound_on = false; // состояние звука
+
+extern uint16_t overload_sound_ms;
+extern volatile bool is_time_ms_for_overload_elapsed;
+
+// Режим Перегрузка (символы и звук)
+static void set_cabin_overload_symbol_sound(uint8_t current_location) {
+
+  if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
+
+    if (matrix_settings.volume != VOLUME_0) {
+
+      // Первый вход в режим перегрузки
+      if (!is_cabin_overload) {
+        is_cabin_overload = true;
+        overload_sound_ms = 0;
+        is_overload_sound_on = true;
+        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+
+      if (is_time_ms_for_overload_elapsed) {
+        is_time_ms_for_overload_elapsed = false;
+
+        if (is_overload_sound_on) {
+          stop_buzzer_sound();
+          is_overload_sound_on = false;
+        } else {
+          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+          is_overload_sound_on = true;
+        }
+      }
+    }
+
+    matrix_string[DIRECTION] = 'c';
+    matrix_string[MSB] = 'K';
+    matrix_string[LSB] = 'g';
+  } else if (is_cabin_overload) {
+    stop_buzzer_sound();
+    is_cabin_overload = false;
+    is_overload_sound_on = false;
+    overload_sound_ms = 0;
+  }
+}
+
+static void cabin_indicator_special_regime(char *matrix_string,
+                                           uint8_t current_location,
+                                           control_bits_states_t control_bits) {
+
+  // Гонг
+  if (matrix_settings.volume != VOLUME_0) {
+    setting_gong(control_bits, current_location, matrix_settings.volume);
+  }
+
+  // Погрузка
+  // set_loading_symbol(control_byte_first);
+
+  // Перегруз
+  // set_cabin_overload_symbol_sound(current_location);
+
+  // Авария
+  // set_accident_symbol(control_byte_second);
+
+  // Пожар, символ F
+  // set_fire_danger_symbol(control_byte_first);
+
+  // Пожар, звук по фронту
+  if (matrix_settings.volume != VOLUME_0) {
+    // set_fire_danger_sound(control_byte_second);
+  }
+}
+
+static void floor_indicator_special_regime(uint8_t direction_code,
+                                           uint8_t control_byte_first,
+                                           uint8_t control_byte_second) {
+
+  // Гонг, прибытие на этаж с номером matrix_settings.addr_id
+  if (matrix_settings.addr_id == drawing_data.floor) {
+    if (matrix_settings.volume != VOLUME_0) {
+      setting_gong(direction_code, control_byte_first, matrix_settings.volume);
+    }
+  }
+
+  // Авария
+  // set_accident_symbol(control_byte_second);
+
+  // Пожар, символ F
+  // set_fire_danger_symbol(control_byte_first);
 }
 
 /**
@@ -298,6 +430,30 @@ void process_data_uel(uint16_t *received_data) {
             special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
       }
     }
+  }
+
+  // Кабинный индикатор
+  if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+    // Спец. режимы для кабинного индикатора
+    cabin_indicator_special_regime(matrix_string, drawing_data.floor,
+                                   control_bits);
+  } else {
+    // Этажный индикатор
+    /* Установка drawing_data.floor для гонга */
+    // Этажи 0, с 1 по 9
+    // if (first_symbol_code == 0 || first_symbol_code == SYMBOL_EMPTY) {
+    //   drawing_data.floor = second_symbol_code;
+    // }
+
+    // // Этажи с 10 по 99
+    // if (first_symbol_code >= 1 && first_symbol_code <= 9 &&
+    //     second_symbol_code >= 0 && second_symbol_code <= 9) {
+    //   drawing_data.floor = first_symbol_code * 10 + second_symbol_code;
+    // }
+
+    // Спец. режимы для этажного индикатора
+    floor_indicator_special_regime(matrix_string, drawing_data.floor,
+                                   control_bits);
   }
 
   setting_sound_uel(matrix_string, drawing_data.floor, control_bits);

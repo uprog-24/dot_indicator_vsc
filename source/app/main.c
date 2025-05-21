@@ -141,13 +141,15 @@ int main(void) {
 
   // start_buzzer_sound(5000, VOLUME_3); // 65
   // start_buzzer_sound(7000, VOLUME_3); // 70
-  // start_buzzer_sound(3000, 55); // 70 работает
+  start_buzzer_sound(3000, 55); // 70 работает
+  HAL_Delay(2000);
+  stop_buzzer_sound();
 
   // start_buzzer_sound(3100, 55); // 73-78 !!!
 
   // start_buzzer_sound(7500, 55); // для плоского бузера 75 дБ
 
-  play_gong(3, 1000, VOLUME_3);
+  // play_gong(3, 1000, VOLUME_3);
 
   while (1) {
     // demo_mode_start();
@@ -166,9 +168,6 @@ int main(void) {
   protocol_init();
 
   while (1) {
-#if PROTOCOL_ALPACA
-    is_interface_connected = true;
-#endif
     switch (matrix_state) {
     case MATRIX_STATE_START:
       protocol_start();
