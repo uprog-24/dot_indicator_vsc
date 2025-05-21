@@ -259,6 +259,7 @@ static void set_fire_danger_sound(uint8_t control_byte_second) {
       (fire_danger_sound_bit == FIRE_DANGER_SOUND_MASK) != 0 ? 1 : 0;
 
   if (fire_sound_edge[0] && !fire_sound_edge[1]) {
+    stop_buzzer_sound();
     play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
   }
   fire_sound_edge[1] = fire_sound_edge[0];
@@ -346,7 +347,7 @@ static void cabin_indicator_special_regime(uint8_t direction_code,
   // Пожар, символ F
   set_fire_danger_symbol(control_byte_first);
 
-  // Пожар, звук по фронту
+  // Пожар, звук по фронту (на этаже старта и на 1-ом этаже)
   if (matrix_settings.volume != VOLUME_0) {
     set_fire_danger_sound(control_byte_second);
   }
@@ -359,7 +360,8 @@ static void floor_indicator_special_regime(uint8_t direction_code,
   // Гонг, прибытие на этаж с номером matrix_settings.addr_id
   if (matrix_settings.addr_id == drawing_data.floor) {
     if (matrix_settings.volume != VOLUME_0) {
-      setting_gong(direction_code, control_byte_first, matrix_settings.volume);
+      setting_gong_stop(direction_code, control_byte_first,
+                        matrix_settings.volume);
     }
   }
 
@@ -535,6 +537,7 @@ void process_data_nku_sd7() {
                         map_to_common_symbol(second_symbol_code));
     }
 
+    // Спец. режимы и звуковые оповещения
     // Кабинный индикатор
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
       // Спец. режимы для кабинного индикатора
@@ -544,13 +547,13 @@ void process_data_nku_sd7() {
       // Этажный индикатор
       /* Установка drawing_data.floor для гонга */
       // Этажи 0, с 1 по 9
-      if (first_symbol_code == 0 || first_symbol_code == SYMBOL_EMPTY) {
+      if (first_symbol_code == 0 || first_symbol_code == NKU_SYMBOL_EMPTY) {
         drawing_data.floor = second_symbol_code;
       }
 
       // Этажи с 10 по 99
-      if (first_symbol_code >= 1 && first_symbol_code <= 9 &&
-          second_symbol_code >= 0 && second_symbol_code <= 9) {
+      if ((first_symbol_code >= 1 && first_symbol_code <= 9) &&
+          (second_symbol_code >= 0 && second_symbol_code <= 9)) {
         drawing_data.floor = first_symbol_code * 10 + second_symbol_code;
       }
 
