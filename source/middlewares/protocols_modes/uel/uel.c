@@ -120,7 +120,7 @@ static uint16_t data = 0;
  * @param  control_bits:     Control bits
  * @retval None
  */
-static void setting_sound_uel(char *matrix_string, uint8_t current_location,
+static void setting_sound_uel(char *matrix_string, uint16_t current_location,
                               control_bits_states_t control_bits) {
   switch (control_bits) {
   case SPECIAL_FORMAT:
@@ -137,7 +137,10 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       stop_buzzer_sound();
     }
 
-#if 1
+    cabin_indicator_special_regime(matrix_string, current_location,
+                                   control_bits);
+
+#if 0
     if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
       matrix_string[MSB] = 'F';
       matrix_string[LSB] = 'c';
@@ -185,18 +188,18 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
 
 #endif
 
+#if 0
     if ((current_location & FARE_DANGER_SOUND) == FARE_DANGER_SOUND) {
       fire_danger_cnt++;
       if (fire_danger_cnt > 5U) {
         stop_buzzer_sound();
         fire_danger_cnt = 0;
-#if 1
+
         if (matrix_settings.volume != VOLUME_0 &&
             matrix_settings.addr_id == MAIN_CABIN_ID) {
           start_buzzer_sound(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
         }
 //          play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
-#endif
         is_fire_danger_sound = true;
       }
 
@@ -214,6 +217,8 @@ static void setting_sound_uel(char *matrix_string, uint8_t current_location,
       fire_disable_cnt = 0;
       fire_danger_cnt = 0;
     }
+
+#endif
     break;
 
   default:
@@ -228,7 +233,7 @@ static uint8_t gong[2] = {
 
 // Гонг
 static void setting_gong(control_bits_states_t control_bits,
-                         uint8_t current_location, uint8_t volume) {
+                         uint16_t current_location, uint8_t volume) {
   uint8_t arrival = current_location & GONG_ARRIVAL;
 
   /*  Если сигнал Гонг из 0 меняется на 1 и быты Движение Вверх и Вниз равны 0,
@@ -264,7 +269,7 @@ extern uint16_t overload_sound_ms;
 extern volatile bool is_time_ms_for_overload_elapsed;
 
 // Режим Перегрузка (символы и звук)
-static void set_cabin_overload_symbol_sound(uint8_t current_location) {
+static void set_cabin_overload_symbol_sound(uint16_t current_location) {
 
   if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
 
@@ -302,9 +307,37 @@ static void set_cabin_overload_symbol_sound(uint8_t current_location) {
   }
 }
 
-static void cabin_indicator_special_regime(char *matrix_string,
-                                           uint8_t current_location,
-                                           control_bits_states_t control_bits) {
+static bool is_fire_danger_symbol = false;
+
+// Режим Пожар (символы)
+static void set_fire_danger_symbol(uint8_t current_location) {
+  if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
+    is_fire_danger_symbol = true;
+    matrix_string[MSB] = 'F';
+    matrix_string[LSB] = 'c';
+  }
+}
+
+static uint8_t fire_sound_edge[2] = {
+    0,
+};
+
+// Режим Пожар (звук)
+static void set_fire_danger_sound(uint8_t current_location) {
+  uint8_t fire_danger_sound_bit = current_location & FARE_DANGER_SOUND;
+
+  fire_sound_edge[0] =
+      (fire_danger_sound_bit == FARE_DANGER_SOUND) != 0 ? 1 : 0;
+
+  if (fire_sound_edge[0] && !fire_sound_edge[1]) {
+    play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+  }
+  fire_sound_edge[1] = fire_sound_edge[0];
+}
+
+void cabin_indicator_special_regime(char *matrix_string,
+                                    uint16_t current_location,
+                                    control_bits_states_t control_bits) {
 
   // Гонг
   if (matrix_settings.volume != VOLUME_0) {
@@ -321,7 +354,7 @@ static void cabin_indicator_special_regime(char *matrix_string,
   // set_accident_symbol(control_byte_second);
 
   // Пожар, символ F
-  // set_fire_danger_symbol(control_byte_first);
+  set_fire_danger_symbol(current_location);
 
   // Пожар, звук по фронту
   if (matrix_settings.volume != VOLUME_0) {
@@ -434,9 +467,10 @@ void process_data_uel(uint16_t *received_data) {
 
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+    setting_sound_uel(matrix_string, drawing_data.floor, control_bits);
     // Спец. режимы для кабинного индикатора
-    cabin_indicator_special_regime(matrix_string, drawing_data.floor,
-                                   control_bits);
+    // cabin_indicator_special_regime(matrix_string, drawing_data.floor,
+    //                                control_bits);
   } else {
     // Этажный индикатор
     /* Установка drawing_data.floor для гонга */
@@ -452,11 +486,11 @@ void process_data_uel(uint16_t *received_data) {
     // }
 
     // Спец. режимы для этажного индикатора
-    floor_indicator_special_regime(matrix_string, drawing_data.floor,
-                                   control_bits);
+    // floor_indicator_special_regime(matrix_string, drawing_data.floor,
+    //                                control_bits);
   }
 
-  setting_sound_uel(matrix_string, drawing_data.floor, control_bits);
+  // setting_sound_uel(matrix_string, drawing_data.floor, control_bits);
 
   while (is_rx_data_completed == false && is_interface_connected == true) {
 #if DOT_PIN
