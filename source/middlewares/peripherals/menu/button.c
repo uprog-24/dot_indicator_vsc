@@ -59,7 +59,7 @@ static bool is_level_volume_2_displayed = false;
 /// Флаг для контроля проигрывания гонга прибытия для level_volume_3
 static bool is_level_volume_3_displayed = false;
 
-/// Flag to control BUTTON_1 state
+/// Флаг для контроля первого нажатия кнопки 2
 volatile bool is_button_2_pressed_first = true;
 
 /**
@@ -74,15 +74,15 @@ static void reset_volume_flags() {
 }
 
 /**
- * @brief Открытие меню настроек.
+ * @brief Открытие меню настроек
  *
- * @param matrix_state Указатель на состояние индикатора.
+ * @param matrix_state Указатель на состояние индикатора
  */
 static void go_to_menu(matrix_state_t *matrix_state) {
   *matrix_state = MATRIX_STATE_MENU; // Переход индикатора в режим меню
   is_button_1_pressed =
       true; // Нажатие кнопки (обработка в функции press_button())
-  is_interface_connected = false;
+  is_interface_connected = false; // Сброс флага подключения интерфейса
 }
 
 extern volatile bool is_time_sec_for_settings_elapsed;
@@ -95,23 +95,22 @@ extern matrix_state_t matrix_state;
  * @retval None
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  /* Текущее состояние матрицы: MATRIX_STATE_START,
-   MATRIX_STATE_WORKING, MATRIX_STATE_MENU */
-  extern matrix_state_t matrix_state;
 
   /// Счетчик прошедшего в мс времени между последними нажатиями кнопок.
   extern uint32_t time_since_last_press_ms;
 
   /* Нажатие кнопки 1 */
   if (GPIO_Pin == BUTTON_1_Pin) {
-    matrix_state = MATRIX_STATE_MENU; // Переход индикатора в режим меню
-    is_button_1_pressed = true;
-    is_interface_connected = false; // Сброс флага подключения интерфейса
+    go_to_menu(&matrix_state);
   }
 
   /* Нажатие кнопки 2 */
   if (GPIO_Pin == BUTTON_2_Pin) {
-    is_button_2_pressed = true;
+    /* Детектируем нажатие кнопки 2, если уже вошли в режиме Меню (была нажата
+     * кнопка 1) */
+    if (matrix_state == MATRIX_STATE_MENU) {
+      is_button_2_pressed = true;
+    }
   }
 
   /* Если нажата кнопка 1 или кнопка 2, то остаемся в режиме меню, сбрасываем
@@ -149,8 +148,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @param selected_level_volume Выбранная громкость звуковых оповещений.
  * @param selected_id Выбранный адрес индикатора.
  */
-void update_matrix_settings(uint8_t *selected_level_volume,
-                            uint8_t *selected_id, uint8_t *selected_group_id) {
+static void update_matrix_settings(uint8_t *selected_level_volume,
+                                   uint8_t *selected_id,
+                                   uint8_t *selected_group_id) {
   switch (*selected_level_volume) {
   case 0:
     update_structure(&matrix_settings, VOLUME_0, *selected_id,
@@ -212,12 +212,13 @@ typedef enum {
   BUTTON_2_PRESSED
 } button_state_t;
 
+/* Режимы меню */
 typedef enum {
   MENU_STATE_IDLE = 0, // Ожидание
   MENU_STATE_VOLUME,   // Уровень громкости
   MENU_STATE_ID,       // Настройка ID
-  MENU_STATE_GROUP_ID, // Настройка группы
-  MENU_STATE_EXIT      // Выход
+  MENU_STATE_GROUP_ID, // Доп. настройка (настройка группы)
+  MENU_STATE_EXIT // Выход
 } menu_state_regimes_t;
 
 /**
@@ -237,8 +238,12 @@ typedef struct {
 static menu_context_t menu = {.current_state = MENU_STATE_IDLE,
                               .button_1 = BUTTON_NONE,
                               .button_2 = BUTTON_NONE};
-
-void set_new_selected_id(uint8_t *selected_id) {
+/**
+ * @brief Настройка значения адреса
+ *
+ * @param selected_id: Выбранное значение адреса
+ */
+static void set_new_selected_id(uint8_t *selected_id) {
 #if PROTOCOL_UIM_6100
   if (*selected_id == 47) {
     *selected_id = 1;
@@ -270,7 +275,13 @@ void set_new_selected_id(uint8_t *selected_id) {
 #endif
 }
 
-void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
+/**
+ * @brief Настройка символов адреса
+ *
+ * @param selected_id:  Выбранное значение адреса
+ * @param drawing_data: Указатель на структуру (этаж, направление)
+ */
+static void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
 #if PROTOCOL_UKL
   if (*selected_id >= 57 && *selected_id <= 59) {
     matrix_string[DIRECTION] = 'c';
@@ -297,8 +308,14 @@ void set_symbols_id(uint8_t *selected_id, drawing_data_t *drawing_data) {
 #endif
 }
 
-void set_symbols_extra_mode(uint8_t *selected_group_id,
-                            drawing_data_t *drawing_data) {
+/**
+ * @brief Настройка символов доп. параметра
+ *
+ * @param selected_group_id: Выбранное значение параметра
+ * @param drawing_data:      Указатель на структуру (этаж, направление)
+ */
+static void set_symbols_extra_mode(uint8_t *selected_group_id,
+                                   drawing_data_t *drawing_data) {
 #if PROTOCOL_ALPACA
   if (*selected_group_id == ADDR_ID_MIN) {
     matrix_string[DIRECTION] = 'c';
@@ -337,10 +354,7 @@ void set_symbols_extra_mode(uint8_t *selected_group_id,
 #endif
 }
 
-/// Current menu state: MENU_STATE_OPEN, MENU_STATE_WORKING,
-/// MENU_STATE_CLOSE
 extern menu_state_t menu_state;
-
 extern uint32_t time_since_last_press_ms;
 
 /**
@@ -386,7 +400,7 @@ void menu_exit(menu_state_t *menu_state, menu_exit_actions_t menu_exit_action) {
   }
 }
 
-void handle_button_press(menu_context_t *menu, button_state_t button) {
+static void handle_button_press(menu_context_t *menu, button_state_t button) {
 
   switch (menu->current_state) {
     /* ===== Состояние ожидания ===== */
@@ -431,8 +445,6 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
              is_time_sec_for_settings_elapsed != true) {
         switch (selected_level_volume) {
         case 0:
-
-          // draw_symbols(SYMBOL_EMPTY, SYMBOL_L, SYMBOL_ZERO);
           draw_string(LEVEL_VOLUME_0);
 
           play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
@@ -481,11 +493,8 @@ void handle_button_press(menu_context_t *menu, button_state_t button) {
 
       is_button_2_pressed_first = true;
 
-      // set_symbols(SYMBOL_EMPTY, SYMBOL_I, SYMBOL_D);
-
       while (is_button_1_pressed == false && is_button_2_pressed == false &&
              is_time_sec_for_settings_elapsed != true) {
-        // draw_symbols(SYMBOL_EMPTY, SYMBOL_I, SYMBOL_D);
         draw_string(SETTINGS_MODE_ID);
       }
 

@@ -11,9 +11,9 @@
  * Структура для хранения настроек индикатора.
  */
 typedef struct {
-  uint8_t addr_id; // Адрес индикатора
-  volume_t volume; // Уровень громкости бузера
-  uint8_t group_id;
+  uint8_t addr_id;  // Адрес индикатора
+  volume_t volume;  // Уровень громкости бузера
+  uint8_t group_id; // Доп. параметр
 } settings_t;
 
 /**

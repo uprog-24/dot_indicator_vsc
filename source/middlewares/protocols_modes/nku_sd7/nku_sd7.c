@@ -35,15 +35,13 @@
   BUZZER_FREQ_CABIN_OVERLOAD ///< Частота для тона бузера при пожарной опасности
                              ///< VOICE_FIRE_DANGER
 
-#define SPECIAL_SYMBOLS_BUFF_SIZE 19 ///< Кол-во спец. символов
+#define MESSAGE_BYTES 4    ///< Длина сообщения в байтах
+#define FILTER_BUFF_SIZE 5 ///< Ширина фильтра (5 сообщений)
 
-#define MESSAGE_BYTES 4 ///< Длина сообщения в байтах
-
-#define FILTER_BUFF_SIZE                                                       \
-  5 ///< Size of buffer with received data (width of filter)
-
-uint8_t byte_buf[4] = {0, 0, 0, 0}; ///< Буфер для полученных данных
-uint8_t byte_buf_copy[4] = {0, 0, 0, 0}; ///< Буфер для полученных данных
+static uint8_t byte_buf[MESSAGE_BYTES] = {0, 0, 0,
+                                          0}; ///< Буфер для полученных данных
+static uint8_t byte_buf_copy[MESSAGE_BYTES] = {
+    0, 0, 0, 0}; ///< Буфер для полученных данных
 
 /**
  * Направления движения.
@@ -99,12 +97,12 @@ typedef enum SYMBOLS {
 /// Структура с данными для отображения (direction, floor).
 static drawing_data_t drawing_data = {0, 0};
 
-// Маппинг символов nku_symbols_t в код symbol_code_e
-// static const symbol_code_e nku_direction_to_common_table[128] = {
-//     [NKU_SD7_MOVE_UP] = SYMBOL_ARROW_UP,
-//     [NKU_SD7_MOVE_DOWN] = SYMBOL_ARROW_DOWN,
-//     [NKU_SD7_NO_MOVE] = SYMBOL_EMPTY};
-
+/**
+ * @brief Маппинг направления движения в код symbol_code_e
+ *
+ * @param direction
+ * @return symbol_code_e
+ */
 static inline symbol_code_e
 map_direction_to_common_symbol(direction_nku_sd7_t direction) {
   switch (direction) {
@@ -164,6 +162,13 @@ static const symbol_code_e nku_symbol_to_common_table[NKU_SYMBOL_NUMBER] = {
     [NKU_SYMBOL_T] = SYMBOL_T,                   // Символ T
 };
 
+/**
+ * @brief Маппинг символов nku_symbols_t в код symbol_code_e с применением
+ *        таблицы nku_symbol_to_common_table
+ *
+ * @param symbol_code
+ * @return symbol_code_e
+ */
 static inline symbol_code_e map_to_common_symbol(uint8_t symbol_code) {
   if (symbol_code < NKU_SYMBOL_NUMBER) {
     return nku_symbol_to_common_table[symbol_code];
@@ -172,7 +177,11 @@ static inline symbol_code_e map_to_common_symbol(uint8_t symbol_code) {
   }
 }
 
-// Режим Погрузка (символы)
+/**
+ * @brief Режим Погрузка (символы)
+ *
+ * @param control_byte_first
+ */
 static void set_loading_symbol(uint8_t control_byte_first) {
   if ((control_byte_first & LOADING_MASK) == LOADING_MASK) {
     set_symbols(map_to_common_symbol(NKU_SYMBOL_EMPTY),
@@ -184,12 +193,17 @@ static void set_loading_symbol(uint8_t control_byte_first) {
 /// Флаг для контроля перегруза кабины
 bool is_cabin_overload = false;
 
-bool is_overload_sound_on = false; // состояние звука
+/// Состояние звука (вкл/выкл)
+bool is_overload_sound_on = false;
 
 extern uint16_t overload_sound_ms;
 extern volatile bool is_time_ms_for_overload_elapsed;
 
-// Режим Перегрузка (символы и звук)
+/**
+ * @brief Режим Перегрузка (символы и звук)
+ *
+ * @param control_byte_first
+ */
 static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
 
   if ((control_byte_first & CABIN_OVERLOAD_MASK) == CABIN_OVERLOAD_MASK) {
@@ -228,7 +242,11 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
   }
 }
 
-// Режим Авария (символы)
+/**
+ * @brief Режим Авария (символы)
+ *
+ * @param control_byte_second
+ */
 static void set_accident_symbol(uint8_t control_byte_second) {
   if ((control_byte_second & ACCIDENT_MASK) == ACCIDENT_MASK) {
     set_floor_symbols(map_to_common_symbol(NKU_SYMBOL_A),
@@ -238,7 +256,11 @@ static void set_accident_symbol(uint8_t control_byte_second) {
 
 static bool is_fire_danger_symbol = false;
 
-// Режим Пожар (символы)
+/**
+ * @brief Режим Пожар (символы)
+ *
+ * @param control_byte_first
+ */
 static void set_fire_danger_symbol(uint8_t control_byte_first) {
   if ((control_byte_first & FIRE_DANGER_MASK) == FIRE_DANGER_MASK) {
     is_fire_danger_symbol = true;
@@ -251,7 +273,11 @@ static uint8_t fire_sound_edge[2] = {
     0,
 };
 
-// Режим Пожар (звук)
+/**
+ * @brief Режим Пожар (звук)
+ *
+ * @param control_byte_second
+ */
 static void set_fire_danger_sound(uint8_t control_byte_second) {
   uint8_t fire_danger_sound_bit = control_byte_second & FIRE_DANGER_SOUND_MASK;
 
@@ -269,7 +295,13 @@ static uint8_t gong[2] = {
     0,
 };
 
-// Гонг
+/**
+ * @brief Гонг до прибытия на этаж
+ *
+ * @param direction_code
+ * @param control_byte_first
+ * @param volume
+ */
 static void setting_gong(uint8_t direction_code, uint8_t control_byte_first,
                          uint8_t volume) {
   uint8_t arrival = control_byte_first & GONG_MASK;
@@ -288,10 +320,8 @@ static void setting_gong(uint8_t direction_code, uint8_t control_byte_first,
       play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     case NKU_SD7_NO_MOVE:
-      // play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     default:
-      //  play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     }
   }
@@ -302,7 +332,13 @@ static uint8_t gong_stop_floor[2] = {
     0,
 };
 
-// Гонг
+/**
+ * @brief Гонг по прибытии на этаж
+ *
+ * @param direction_code
+ * @param control_byte_first
+ * @param volume
+ */
 static void setting_gong_stop(uint8_t direction_code,
                               uint8_t control_byte_first, uint8_t volume) {
   uint8_t arrival = control_byte_first & GONG_MASK;
@@ -318,12 +354,16 @@ static void setting_gong_stop(uint8_t direction_code,
   gong_stop_floor[1] = gong_stop_floor[0];
 }
 
-/// Флаг для контроля воспроизведения оповещения при пожарной опасности
-static bool is_fire_danger = false;
-
 /// Флаг контроля 4-х байтов
 volatile bool is_read_data_completed = false;
 
+/**
+ * @brief Обработка спец. режимов для кабинного индикатора
+ *
+ * @param direction_code
+ * @param control_byte_first
+ * @param control_byte_second
+ */
 static void cabin_indicator_special_regime(uint8_t direction_code,
                                            uint8_t control_byte_first,
                                            uint8_t control_byte_second) {
@@ -353,6 +393,13 @@ static void cabin_indicator_special_regime(uint8_t direction_code,
   }
 }
 
+/**
+ * @brief Обработка спец. режимов для этажного индикатора
+ *
+ * @param direction_code
+ * @param control_byte_first
+ * @param control_byte_second
+ */
 static void floor_indicator_special_regime(uint8_t direction_code,
                                            uint8_t control_byte_first,
                                            uint8_t control_byte_second) {
@@ -372,53 +419,43 @@ static void floor_indicator_special_regime(uint8_t direction_code,
   set_fire_danger_symbol(control_byte_first);
 }
 
-/// Flag to control is data filtered before displaying it on matrix
+/// Флаг для контроля фильтрации данных
 static bool is_data_filtered = false;
 
-/// Number of received data
+/// Кол-во полученных данных
 static uint8_t number_received_data = 0;
 
-/// Current index of the element in filter_buff
+/// Текущий индекс элемента в filter_buff
 static uint8_t current_index_buff = 0;
 
-/**
- * Stores the parameters for filtering received data that will be displayed on
- * matrix: floor, direction, control_bits and counter that save number of
- * repetitions of the data
- */
 typedef struct {
-  uint8_t buffer[4];
-  uint8_t counter;
+  uint8_t buffer[MESSAGE_BYTES]; // 4 байта полученных данных
+  uint8_t counter;               // счетчик повторений
 } floor_counter_t;
 
-/// Buffer that store received data and its repetitions
+/// Буфер полученных данных с повторениями
 static floor_counter_t filter_buff[FILTER_BUFF_SIZE];
 
-/// Copy of received_data_ukl (13 bits received by UKL)
-static volatile uint16_t received_data_ukl_copy = 1;
-
 /**
- * @brief  Setting structure with type floor_counter_t
- * @param  filter_struct: Pointer to the structure with type floor_counter_t
- * @param  floor:         Received floor
- * @param  direction:     Received direction
- * @param  control_bits:  Received control_bits
- * @param  counter:       Save number of repetitions of the data
- * @retval None
+ * @brief  Запонение структуры floor_counter_t
+ * @param  filter_struct: Указатель на структуру floor_counter_t
+ * @param  buffer:        Указатель на буфер с полученными данными
+ * @param  counter:       Кол-во повторений данных
  */
 static void set_filter_structure(floor_counter_t *filter_struct,
                                  uint8_t *buffer, uint8_t counter) {
   memcpy(filter_struct->buffer, buffer, sizeof(filter_struct->buffer));
+  // memcpy(filter_struct->buffer, buffer, MESSAGE_BYTES * sizeof(uint8_t));
   filter_struct->counter = counter;
 }
 
 /**
- * @brief  Sorting filter_buff in descending order using the bubble method.
- * @note   filter_buff[0].counter has maximum value and will be displayed on
- *         matrix
- * @param  filter_buff: Pointer to the buffer with received data by UKL
- * @param  buff_size:   Size of filter_buff
- * @retval None
+ * @brief  Сортировка filter_buff в порядке убывания с использованием метода
+ *         пузырьковой сортировки
+ * @note   filter_buff[0].counter имеет максимальное значение и будет
+ *         отображаться на индикаторе
+ * @param  filter_buff
+ * @param  buff_size
  */
 static void sort_bubble(floor_counter_t *filter_buff, uint8_t buff_size) {
   for (uint8_t i = 0; i < buff_size - 1; i++) {
@@ -434,6 +471,10 @@ static void sort_bubble(floor_counter_t *filter_buff, uint8_t buff_size) {
 
 uint8_t zero_buffer[4] = {0};
 
+/**
+ * @brief Фильтрация полученных данных
+ *
+ */
 static void filter_data() {
   if (current_index_buff == 0) {
     for (uint8_t i = 0; i < FILTER_BUFF_SIZE; i++) {
@@ -442,19 +483,11 @@ static void filter_data() {
     current_index_buff = 0;
   }
 
-  // uint8_t floor = received_data_ukl_copy & CODE_FLOOR_MASK;
-  // direction_ukl_t direction = received_data_ukl_copy & DIRECTION_MASK;
-  // control_bits_states_t control_bits =
-  //     received_data_ukl_copy & CONTROL_BITS_MASK;
-
   bool is_data_found = false;
   number_received_data++;
 
   for (uint8_t i = 0; i < current_index_buff; i++) {
-    if (filter_buff[i].buffer[0] == byte_buf_copy[0] &&
-        filter_buff[i].buffer[1] == byte_buf_copy[1] &&
-        filter_buff[i].buffer[2] == byte_buf_copy[2] &&
-        filter_buff[i].buffer[3] == byte_buf_copy[3]) {
+    if (memcmp(filter_buff[i].buffer, byte_buf_copy, MESSAGE_BYTES) == 0) {
       filter_buff[i].counter++;
       is_data_found = true;
       break;
@@ -483,23 +516,17 @@ typedef struct {
   uint8_t second_symbol_code;
   uint8_t control_byte_first;
   uint8_t control_byte_second;
-} msg_t;
+} nku_sd7_msg_t;
 
-msg_t messgae_nku_sd7 = {
+static nku_sd7_msg_t nku_sd7_msg = {
     0x00,
 };
 
-uint8_t first_symbol_code;
-uint8_t second_symbol_code;
-uint8_t control_byte_first;
-uint8_t control_byte_second;
-
-uint8_t direction_code;
+static uint8_t direction_code;
 
 /**
- * @brief  Обработка данных по протоколу NKU_SD7.
- * @param
- * @retval None
+ * @brief  Обработка данных по протоколу НКУ-SD7
+ * @note   Фильтрация, воспроизведение гонгов и отображение символов
  */
 void process_data_nku_sd7() {
 
@@ -508,58 +535,68 @@ void process_data_nku_sd7() {
   if (is_data_filtered) {
     is_data_filtered = false;
 
-    first_symbol_code = (filter_buff[0].buffer[0] & DATA_BITS_MASK) >> 1;
-    second_symbol_code = (filter_buff[0].buffer[1] & DATA_BITS_MASK) >> 1;
-    control_byte_first = filter_buff[0].buffer[2];
-    control_byte_second = filter_buff[0].buffer[3];
+    nku_sd7_msg.first_symbol_code =
+        (filter_buff[0].buffer[0] & DATA_BITS_MASK) >> 1;
+    nku_sd7_msg.second_symbol_code =
+        (filter_buff[0].buffer[1] & DATA_BITS_MASK) >> 1;
+    nku_sd7_msg.control_byte_first = filter_buff[0].buffer[2];
+    nku_sd7_msg.control_byte_second = filter_buff[0].buffer[3];
 
-    direction_code = control_byte_second & ARROW_MASK;
+    direction_code = nku_sd7_msg.control_byte_second & ARROW_MASK;
 
     // Настройка кода стрелки
     set_direction_symbol(map_direction_to_common_symbol(direction_code));
 
     // Настройка кода этажа
     // Этаж 0
-    bool is_zero_floor = (first_symbol_code == 0 && second_symbol_code == 0);
+    bool is_zero_floor = (nku_sd7_msg.first_symbol_code == 0 &&
+                          nku_sd7_msg.second_symbol_code == 0);
     // Этаж 1..9
-    bool is_first_symbol_empty = (first_symbol_code == NKU_SYMBOL_EMPTY);
+    bool is_first_symbol_empty =
+        (nku_sd7_msg.first_symbol_code == NKU_SYMBOL_EMPTY);
     // Этаж cП
     bool is_floor_underground_p =
         (is_first_symbol_empty &&
-         second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG);
+         nku_sd7_msg.second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG);
 
     if (is_zero_floor || is_first_symbol_empty || is_floor_underground_p) {
-      set_floor_symbols(map_to_common_symbol(second_symbol_code),
+      set_floor_symbols(map_to_common_symbol(nku_sd7_msg.second_symbol_code),
                         map_to_common_symbol(NKU_SYMBOL_EMPTY));
     } else {
       // Этажи с 10, спец. символы
-      set_floor_symbols(map_to_common_symbol(first_symbol_code),
-                        map_to_common_symbol(second_symbol_code));
+      set_floor_symbols(map_to_common_symbol(nku_sd7_msg.first_symbol_code),
+                        map_to_common_symbol(nku_sd7_msg.second_symbol_code));
     }
 
     // Спец. режимы и звуковые оповещения
     // Кабинный индикатор
     if (matrix_settings.addr_id == MAIN_CABIN_ID) {
       // Спец. режимы для кабинного индикатора
-      cabin_indicator_special_regime(direction_code, control_byte_first,
-                                     control_byte_second);
+      cabin_indicator_special_regime(direction_code,
+                                     nku_sd7_msg.control_byte_first,
+                                     nku_sd7_msg.control_byte_second);
     } else {
       // Этажный индикатор
       /* Установка drawing_data.floor для гонга */
       // Этажи 0, с 1 по 9
-      if (first_symbol_code == 0 || first_symbol_code == NKU_SYMBOL_EMPTY) {
-        drawing_data.floor = second_symbol_code;
+      if (nku_sd7_msg.first_symbol_code == 0 ||
+          nku_sd7_msg.first_symbol_code == NKU_SYMBOL_EMPTY) {
+        drawing_data.floor = nku_sd7_msg.second_symbol_code;
       }
 
       // Этажи с 10 по 99
-      if ((first_symbol_code >= 1 && first_symbol_code <= 9) &&
-          (second_symbol_code >= 0 && second_symbol_code <= 9)) {
-        drawing_data.floor = first_symbol_code * 10 + second_symbol_code;
+      if ((nku_sd7_msg.first_symbol_code >= 1 &&
+           nku_sd7_msg.first_symbol_code <= 9) &&
+          (nku_sd7_msg.second_symbol_code >= 0 &&
+           nku_sd7_msg.second_symbol_code <= 9)) {
+        drawing_data.floor =
+            nku_sd7_msg.first_symbol_code * 10 + nku_sd7_msg.second_symbol_code;
       }
 
       // Спец. режимы для этажного индикатора
-      floor_indicator_special_regime(direction_code, control_byte_first,
-                                     control_byte_second);
+      floor_indicator_special_regime(direction_code,
+                                     nku_sd7_msg.control_byte_first,
+                                     nku_sd7_msg.control_byte_second);
     }
   }
 
@@ -569,6 +606,10 @@ void process_data_nku_sd7() {
   }
 }
 
+/**
+ * @brief Если данные получены, то обработать их
+ *
+ */
 void process_data_pin() {
   if (is_read_data_completed) {
     is_read_data_completed = false;
@@ -577,26 +618,23 @@ void process_data_pin() {
   }
 }
 
-/// Flag to control is start bit is received (state DATA_Pin from 1 to 0)
+/// Флаг для контроля старт-бита (DATA_Pin из 1 в 0)
 volatile bool is_start_bit_received = false;
 
 /// Тайминг для чтения бита
 const uint16_t nku_sd7_timing = 2556;
 
-/// Value of the current received bit
+/// Значение полученного бита
 volatile uint8_t bit = 1;
 
-/// Number of data bits in received packet
-static const uint8_t packet_size = 8;
-
-/// Maximum index of received data
-static const uint8_t max_index_packet = packet_size - 1;
-
 volatile uint8_t current_byte = 0;
-
 volatile uint8_t bit_index = 0;
 volatile uint8_t byte_count = 0;
 
+/**
+ * @brief Сброс состояния для чтения очередного сообщения
+ *
+ */
 static void reset_state() {
   bit_index = 0;
   byte_count = 0;
@@ -607,7 +645,10 @@ static void reset_state() {
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
-// reset_state()
+/**
+ * @brief Сброс состояния перед переходом в режим меню
+ *
+ */
 void stop_sd7_before_menu_mode() {
   bit_index = 0;
   byte_count = 0;
@@ -617,6 +658,10 @@ void stop_sd7_before_menu_mode() {
   TIM3_Stop();
 }
 
+/**
+ * @brief Чтение бита, получение 4-х байтов по протоколу НКУ-SD7
+ *
+ */
 void read_data_bit(void) {
 
   uint8_t bit = HAL_GPIO_ReadPin(DATA_GPIO_Port, DATA_Pin);

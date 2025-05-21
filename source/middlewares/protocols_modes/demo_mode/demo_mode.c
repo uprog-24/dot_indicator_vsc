@@ -16,12 +16,25 @@
 /// буфер с этажами-остановками
 static uint8_t buff_stop_floors[STOP_FLOORS_BUFF_SIZE] = {7, 8, 10, 11};
 
+static inline symbol_code_e
+map_direction_to_common_symbol(directionType direction) {
+  switch (direction) {
+  case DIRECTION_UP:
+    return SYMBOL_ARROW_UP;
+  case DIRECTION_DOWN:
+    return SYMBOL_ARROW_DOWN;
+
+  case NO_DIRECTION:
+    return SYMBOL_EMPTY;
+  default:
+    return SYMBOL_EMPTY;
+  }
+}
+
 /**
- * @brief  Отображение строки на матрице (DEMO_MODE).
- * @note   1. Заполнение структуры drawing_data (направление, этаж);
- *         2. Установка строки matrix_string, которая будет отображаться на
- *            матрице;
- *         3. Отображение строки matrix_string в течение
+ * @brief  Отображение символов на матрице (DEMO_MODE).
+ * @note   1. Установка символов (направление, этаж);
+ *         2. Отображение символов в течение
  *            TIME_DISPLAY_STRING_DURING_MS (tim.c).
  * @param  floor:            Текущий этаж.
  * @param  direction:        Текущеее направление движения (directionType:
@@ -32,9 +45,19 @@ static void display_symbols(uint8_t floor, directionType direction) {
   char matrix_string[3];
   drawing_data_t drawing_data = {0, 0};
 
-  drawing_data_setter(&drawing_data, floor, direction);
-  setting_symbols(matrix_string, &drawing_data, floor, NULL, 0);
-  display_symbols_during_ms(matrix_string);
+  // Настройка кода стрелки
+  set_direction_symbol(map_direction_to_common_symbol(direction));
+
+  // Настройка кода этажа
+  // Этаж 0..9
+  if (floor >= 0 && floor <= 9) {
+    set_floor_symbols(floor, SYMBOL_EMPTY);
+  } else {
+    // Этажи с 10
+    set_floor_symbols(floor / 10, floor % 10);
+  }
+  
+  display_symbols_during_ms();
 }
 
 /**

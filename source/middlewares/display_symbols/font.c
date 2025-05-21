@@ -4,7 +4,6 @@
 #include "font.h"
 
 #include <stdio.h>
-#include <string.h>
 
 /// Буфер с бинарным представлением символов
 const uint8_t bitmap[NUMBER_OF_SYMBOLS][NUMBER_OF_ROWS] = {

@@ -35,7 +35,8 @@ typedef struct {
 } code_location_symbols_t;
 
 /**
- * @brief Заполнение структуры: битмап и ширина символа
+ * @brief Заполнение структуры: битмап и ширина символа (вызывается в main.c
+ *        перед отрисовкой!!!)
  */
 void init_symbols_width();
 
@@ -79,5 +80,12 @@ void draw_string(char *matrix_string);
  * @param  matrix_string: Указатель на строку, которая будет отображаться
  */
 void display_string_during_ms(char *matrix_string);
+
+/**
+ * @brief  Отображение строки на матрице в течение
+ *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
+ * @note   Для DEMO_MODE
+ */
+void display_symbols_during_ms();
 
 #endif /*__ DRAWING_H__ */

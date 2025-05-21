@@ -23,6 +23,6 @@
     📄 **[Schematic_Prints_for_Dot_Uni_v3_CPM.PDF](./board/Schematic_Prints_for_Dot_Uni_v3_CPM.PDF)** — электрическая схема платы Dot_Uni_v3_CPM.
 
 - 📂 **[/env](./env/)** <br>
-  Шаги по [сборке проекта](./env/env_build_project.md).
+  Шаги по [сборке проекта](./env/README.md).
 - 📂 **[/SDK](./SDK/)** <br>
   📄 **[sdk_versions.txt](./SDK/sdk_versions.txt)** — версии CubeIDE, CubeMX, HAL для открытия файла с настройками периферии в CubeMX **[dot_indicator.ioc](../CubeMX/dot_indicator.ioc)**.

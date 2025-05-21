@@ -193,7 +193,8 @@ typedef struct {
 static symbol_descriptor_t symbols_meta[NUMBER_OF_SYMBOLS];
 
 /**
- * @brief Заполнение структуры: битмап и ширина символа
+ * @brief Заполнение структуры: битмап и ширина символа (вызывается в main.c
+ *        перед отрисовкой!!!)
  */
 void init_symbols_width() {
   for (int i = 0; i < NUMBER_OF_SYMBOLS; i++) {
@@ -279,7 +280,7 @@ extern volatile bool is_time_ms_for_display_str_elapsed;
 /**
  * @brief  Отображение строки на матрице в течение
  *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
- * @note   Для DEMO_MODE и для протоколов при запуске индикатора
+ * @note   Для протоколов при запуске индикатора
  * @param  matrix_string: Указатель на строку, которая будет отображаться
  */
 void display_string_during_ms(char *matrix_string) {
@@ -291,4 +292,17 @@ void display_string_during_ms(char *matrix_string) {
 
   // Очищаем поля структуры с символами
   set_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
+}
+
+/**
+ * @brief  Отображение строки на матрице в течение
+ *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
+ * @note   Для DEMO_MODE
+ */
+void display_symbols_during_ms() {
+  is_time_ms_for_display_str_elapsed = false;
+
+  while (!is_time_ms_for_display_str_elapsed) {
+    draw_symbols();
+  }
 }

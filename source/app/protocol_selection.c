@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "drawing.h"
+#include "tim.h"
 
 /**
  * @brief  Инициализация интерфейса для протокола.

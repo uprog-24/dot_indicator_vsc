@@ -13,25 +13,8 @@
 #define TIME_MS_FOR_SETTINGS                                                   \
   20000 ///< Время в мс для проверки бездействия кнопок в режиме меню (20 с)
 
-/* Протокол UIM_6100 (CAN) */
-#if PROTOCOL_UIM_6100 && !DEMO_MODE && !TEST_MODE
-
-#include "can.h"
-#include "protocol_selection.h"
-#include "uim6100.h"
-
-#define PROTOCOL_NAME "SHK"
-#define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 47
-#define MAX_POSITIVE_NUMBER_FLOOR 40
-#define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
-#define TIME_MS_FOR_INTERFACE_CONNECTION                                       \
-  3000 ///< Время в мс для проверки подключения интерфейса (3 с)
-
-#define BUFFER_SIZE_BYTES 6
-
-/* Протокол UIM_6100 (CAN) */
-#elif PROTOCOL_NKU_SD7 && !DEMO_MODE && !TEST_MODE
+/* Протокол NKU_SD7 */
+#if PROTOCOL_NKU_SD7 && !DEMO_MODE && !TEST_MODE
 
 #include "nku_sd7.h"
 #include "protocol_selection.h"
@@ -45,16 +28,25 @@
 #define TIME_MS_FOR_INTERFACE_CONNECTION                                       \
   3000 ///< Время в мс для проверки подключения интерфейса (3 с)
 
+#define TIME_DISPLAY_STRING_DURING_MS                                          \
+  3000 ///< Время в мс, в течение которого отображается строка при подаче
+       ///< питания
+
+#define SOUND_ON_OFF_DURING_MS                                                 \
+  500 ///< Периодичность сигнала при Перегрузке (Вкл/Выкл)
+
 #define BUFFER_SIZE_BYTES 6
 
-#elif DEMO_MODE && !PROTOCOL_UIM_6100 && !TEST_MODE
+#elif DEMO_MODE && !PROTOCOL_NKU_SD7 && !TEST_MODE
 
 #include "demo_mode.h"
 
+#define TIME_DISPLAY_STRING_DURING_MS                                          \
+  2000 ///< Время в мс, в течение которого отображается строка
 #define BUFFER_SIZE_BYTES 1
 
 /* TEST_MODE */
-#elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100
+#elif TEST_MODE && !DEMO_MODE && !PROTOCOL_NKU_SD7
 
 #include "test_mode.h"
 
@@ -73,8 +65,5 @@ extern volatile bool is_interface_connected;
 
 // Настройки индикатора: адрес индикатора и уровень громкости пассивного бузера
 extern settings_t matrix_settings;
-
-/// Строка для отображения на матрице
-extern char matrix_string[3];
 
 #endif // CONFIG_H

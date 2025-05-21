@@ -77,9 +77,10 @@ void test_mode_start() {
   CAN_TxData(TEST_MODE_STD_ID);
 
   /* Отображение строки, если данные получены */
+  set_symbols(SYMBOL_EMPTY, SYMBOL_0, SYMBOL_K);
   while (1) {
     if (is_data_received) {
-      draw_string_on_matrix(str_ok);
+      draw_symbols();
     }
   }
 }

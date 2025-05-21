@@ -20,6 +20,7 @@
     "type_traits": "c",
     "buzzer.h": "c",
     "font.h": "c",
-    "nku_sd7.h": "c"
+    "nku_sd7.h": "c",
+    "drawing.h": "c"
   }
 }

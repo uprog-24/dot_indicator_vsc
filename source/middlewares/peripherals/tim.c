@@ -10,20 +10,6 @@
 
 #define TIM4_FREQ TIM2_FREQ ///< Частота линии APB1 для TIM4
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_ALPACA ||    \
-    PROTOCOL_NKU_SD7
-#define TIME_DISPLAY_STRING_DURING_MS                                          \
-  3000 ///< Время в мс, в течение которого отображается строка при подаче
-       ///< питания
-
-#define SOUND_ON_OFF_DURING_MS 500
-
-#elif DEMO_MODE
-#define TIME_DISPLAY_STRING_DURING_MS                                          \
-  2000 ///< Время в мс, в течение которого отображается строка
-
-#endif
-
 #if PROTOCOL_NKU_SD7
 #include "nku_sd7.h"
 #endif
@@ -209,7 +195,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 #endif
 
-#if PROTOCOL_UIM_6100 || PROTOCOL_UEL || PROTOCOL_UKL || PROTOCOL_NKU_SD7
+#if !DEMO_MODE && !TEST_MODE
 
     /* Счетчик для проверки подключения интерфейса */
     if (matrix_state == MATRIX_STATE_WORKING) {
@@ -234,6 +220,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 #endif
 
+#if !DEMO_MODE && !TEST_MODE
+    /* Периодичность для сигнала в режиме Перегрузка */
     if (is_cabin_overload) {
       overload_sound_ms++;
 
@@ -242,6 +230,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         is_time_ms_for_overload_elapsed = true;
       }
     }
+#endif
 
     /* Управление продолжительностью тонов гонга */
     if (_bip_counter != 0) {

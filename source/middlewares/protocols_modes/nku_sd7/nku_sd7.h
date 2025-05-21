@@ -16,9 +16,21 @@
 void process_data_nku_sd7();
 
 /**
- * @brief Прием битов сообщения по протоколу НКУ-SD7
+ * @brief Если данные получены, то обработать их
+ *
+ */
+void process_data_pin();
+
+/**
+ * @brief Чтение бита, получение 4-х байтов по протоколу НКУ-SD7
  *
  */
 void read_data_bit(void);
+
+/**
+ * @brief Сброс состояния перед переходом в режим меню
+ *
+ */
+void stop_sd7_before_menu_mode();
 
 #endif // NKU_SD7_H
