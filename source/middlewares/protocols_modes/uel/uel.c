@@ -23,16 +23,6 @@
 #define FILTER_BUFF_SIZE 5 ///< Ширина фильтра (5 сообщений)
 
 /**
- * Stores values of direction of the movement (UEL)
- */
-/* Контрольные биты посылки 1 */
-// typedef enum {
-//   UEL_MOVE_UP = 0x140,
-//   UEL_MOVE_DOWN = 0x180,
-//   UEL_NO_MOVE = 0x100
-// } direction_uel_t;
-
-/**
  * Stores values of control bits
  */
 typedef enum CONTROL_BITS_STATES {
@@ -287,7 +277,7 @@ static void set_cabin_overload_symbol_sound(uint16_t current_location) {
         is_cabin_overload = true;
         overload_sound_ms = 0;
         is_overload_sound_on = true;
-        // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
       }
 
       if (is_time_ms_for_overload_elapsed) {
@@ -297,7 +287,7 @@ static void set_cabin_overload_symbol_sound(uint16_t current_location) {
           stop_buzzer_sound();
           is_overload_sound_on = false;
         } else {
-          // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
           is_overload_sound_on = true;
         }
       }
@@ -339,7 +329,7 @@ static void set_fire_danger_sound(uint8_t current_location) {
       is_fire_danger_sound = true;
       fire_sound_on_cnt = 0;
       fire_sound_off_cnt = 0;
-      // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
     }
 
     fire_sound_on_cnt++;
