@@ -139,20 +139,12 @@ int main(void) {
 
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
 
-  // start_buzzer_sound(5000, VOLUME_3); // 65
-  // start_buzzer_sound(7000, VOLUME_3); // 70
-  start_buzzer_sound(3000, 55); // 70 работает
-  HAL_Delay(2000);
-  stop_buzzer_sound();
+#include "drawing.h"
 
-  // start_buzzer_sound(3100, 55); // 73-78 !!!
-
-  // start_buzzer_sound(7500, 55); // для плоского бузера 75 дБ
-
-  // play_gong(3, 1000, VOLUME_3);
-
+  set_symbols(SYMBOL_3, SYMBOL_2, SYMBOL_1);
   while (1) {
     // demo_mode_start();
+    display_symbols_spi();
   }
 
 #else
@@ -160,8 +152,8 @@ int main(void) {
 
 #if 1
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
-  display_protocol_name(PROTOCOL_NAME);
-  display_protocol_name(PROJECT_VER);
+  display_string_during_ms(PROTOCOL_NAME);
+  display_string_during_ms(PROJECT_VER);
 #endif
 
   read_settings(&matrix_settings);

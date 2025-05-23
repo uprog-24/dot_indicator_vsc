@@ -139,9 +139,9 @@ static void process_code_msg(uint8_t code_msg_byte_w_1, volume_t level_volume) {
     matrix_string[LSB] = 'g';
 #elif DOT_SPI
 
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'g';
+    // matrix_string[DIRECTION] = 'c';
+    // matrix_string[MSB] = 'K';
+    // matrix_string[LSB] = 'g';
 #endif
 #endif
   }

@@ -25,9 +25,6 @@
 #define LEVEL_VOLUME_2 "cL2" ///< String that displayed when level_volume = 2
 #define LEVEL_VOLUME_3 "cL3" ///< String that displayed when level_volume = 3
 
-#define SHIFT_P_FLOOR "pFL"
-#define SHIFT_MINUS_FLOOR "-FL"
-
 #if DOT_SPI
 #define DEBOUNCE_DELAY 150 // Задержка в миллисекундах для фильтрации дребезга
 #define LONG_PRESS_TIME 1000 // 1000 мс - долгое нажатие
@@ -480,22 +477,22 @@ void press_button() {
 
         switch (level_volume) {
         case 0:
-          display_symbols_spi(LEVEL_VOLUME_0);
+          draw_string(LEVEL_VOLUME_0);
           play_bip_for_menu(&is_level_volume_0_displayed, VOLUME_0);
           is_level_volume_3_displayed = false;
           break;
         case 1:
-          display_symbols_spi(LEVEL_VOLUME_1);
+          draw_string(LEVEL_VOLUME_1);
           play_bip_for_menu(&is_level_volume_1_displayed, VOLUME_1);
           is_level_volume_0_displayed = false;
           break;
         case 2:
-          display_symbols_spi(LEVEL_VOLUME_2);
+          draw_string(LEVEL_VOLUME_2);
           play_bip_for_menu(&is_level_volume_2_displayed, VOLUME_2);
           is_level_volume_1_displayed = false;
           break;
         case 3:
-          display_symbols_spi(LEVEL_VOLUME_3);
+          draw_string(LEVEL_VOLUME_3);
           play_bip_for_menu(&is_level_volume_3_displayed, VOLUME_3);
           is_level_volume_2_displayed = false;
           break;
@@ -520,20 +517,49 @@ void press_button() {
      */
     else if (is_short_press_detected) {
 
-      if (id == MAIN_CABIN_ID) {
-        matrix_string[DIRECTION] = 'c';
-        matrix_string[MSB] = 'K';
-        matrix_string[LSB] = 'c';
-      } else {
-        drawing_data.floor = id;
-        setting_symbols(matrix_string, &drawing_data, ADDR_ID_LIMIT, NULL, 0);
+      switch (id) {
+      case MAIN_CABIN_ID:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_EMPTY);
+        break;
+
+      case 40:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_2);
+        break;
+      case 41:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_1);
+        break;
+
+      case 42:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_EMPTY);
+        break;
+
+      case 43:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_4);
+        break;
+
+      case 44:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_3);
+        break;
+
+      case 45:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_2);
+        break;
+
+      case 46:
+        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_1);
+        break;
+
+      default:
+        set_symbols(SYMBOL_EMPTY, (id < 10) ? (id) % 10 : (id) / 10,
+                    (id < 10) ? SYMBOL_EMPTY : (id) % 10);
+        break;
       }
 
       selected_id = id;
 
       while (is_time_sec_for_settings_elapsed != true &&
              is_button_1_pressed == false) {
-        display_symbols_spi(matrix_string);
+        display_symbols_spi();
       }
 
       /* Выход из меню */
@@ -553,7 +579,7 @@ void press_button() {
         id++;
       }
 #elif PROTOCOL_UEL
-      if (id == ADDR_ID_LIMIT) {
+      if (id == 46) {
         id = ADDR_ID_MIN;
       } else {
         id++;

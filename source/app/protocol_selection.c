@@ -12,15 +12,6 @@
        ///< applied
 
 /**
- * @brief  Display protocol name - UKL/SHK/UEL - on the matrix
- * @param  protocol_name Protocol name declared in config.h
- * @retval None
- */
-void display_protocol_name(char *protocol_name) {
-  TIM4_Diaplay_symbols_on_matrix(TIME_MS_FOR_PROTOCOL_NAME, protocol_name);
-}
-
-/**
  * @brief  Initialize protocol UIM_6100/UEL/UKL
  * @param  None
  * @retval None
@@ -109,7 +100,7 @@ void protocol_process_data() {
 #if DOT_PIN
     draw_string_on_matrix("c--");
 #elif DOT_SPI
-    display_symbols_spi("c--");
+    draw_string("c--");
 #endif
   }
 }

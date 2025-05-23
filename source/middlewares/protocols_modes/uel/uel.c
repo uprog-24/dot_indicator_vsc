@@ -20,23 +20,36 @@
 #define BUZZER_FREQ_FIRE_DANGER                                                \
   BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
 
+#define FILTER_BUFF_SIZE 5 ///< Ширина фильтра (5 сообщений)
+
 /**
  * Stores values of direction of the movement (UEL)
  */
-typedef enum {
-  UEL_MOVE_UP = 0x140,
-  UEL_MOVE_DOWN = 0x180,
-  UEL_NO_MOVE = 0x100
-} direction_uel_t;
+/* Контрольные биты посылки 1 */
+// typedef enum {
+//   UEL_MOVE_UP = 0x140,
+//   UEL_MOVE_DOWN = 0x180,
+//   UEL_NO_MOVE = 0x100
+// } direction_uel_t;
 
 /**
  * Stores values of control bits
  */
 typedef enum CONTROL_BITS_STATES {
-  NUMBER_CLICKED_BTN = 0x1C0,
+
+  /* Контрольные биты посылки 1 */
+  UEL_MOVE_UP = 0x140,
+  UEL_MOVE_DOWN = 0x180,
+  UEL_NO_MOVE = 0x100,
+
+  NUMBER_CLICKED_BTN_ORDER = 0x1C0, // Контрольные биты посылки 2
+
+  // Контрольные биты посылки 3
   MOVE_UP_AFTER_STOP = 0x40,
   MOVE_DOWN_AFTER_STOP = 0x80,
   MOVE_UP_OR_DOWN_AFTER_STOP = 0xC0,
+
+  // Контрольные биты посылки 4
   SPECIAL_FORMAT = 0x0 //
 } control_bits_states_t;
 
@@ -61,11 +74,25 @@ typedef enum CODE_LOCATION_UEL {
   // repeated values
   CABIN_OVERLOAD = 1,
   GONG_ARRIVAL = 8,
-  FARE_DANGER_SYMBOL = 2,
-  FARE_DANGER_SOUND = 32,
+  FIRE_DANGER_SYMBOL = 2,
+  FIRE_DANGER_SOUND = 32,
   EVACUATION = 4,
   SEISMIC_DANGER = 16
 } code_location_uel_t;
+
+typedef enum SYMBOLS {
+  UEL_SYMBOL_0 = 0,
+  UEL_SYMBOL_1 = 1,
+  UEL_SYMBOL_2 = 2,
+  UEL_SYMBOL_3 = 3,
+  UEL_SYMBOL_4 = 4,
+  UEL_SYMBOL_5 = 5,
+  UEL_SYMBOL_6 = 6,
+  UEL_SYMBOL_7 = 7,
+  UEL_SYMBOL_8 = 8,
+  UEL_SYMBOL_9 = 9,
+  UEL_SYMBOL_NUMBER
+} uel_symbols_t;
 
 /// Buffer with code location and it's symbols
 static const code_location_symbols_t
@@ -114,116 +141,81 @@ static bool is_seismic_danger_sound = false;
 static uint16_t data = 0;
 
 /**
- * @brief  Setting symbols for UEL protocol
- * @param  str:              Pointer to the output string with symbols
- * @param  current_location: Code of current location
- * @param  control_bits:     Control bits
+ * @brief Маппинг направления движения в код symbol_code_e
+ *
+ * @param direction
+ * @return symbol_code_e
+ */
+static inline symbol_code_e
+map_direction_to_common_symbol(control_bits_states_t direction) {
+  switch (direction) {
+  case UEL_MOVE_UP:
+    return SYMBOL_ARROW_UP;
+  case UEL_MOVE_DOWN:
+    return SYMBOL_ARROW_DOWN;
+
+  case UEL_NO_MOVE:
+    return SYMBOL_EMPTY;
+
+  case MOVE_UP_AFTER_STOP:
+    return SYMBOL_ARROW_UP;
+
+  case MOVE_DOWN_AFTER_STOP:
+    return SYMBOL_ARROW_DOWN;
+
+  case MOVE_UP_OR_DOWN_AFTER_STOP:
+    return SYMBOL_ARROW_BOTH;
+
+    // default:
+    //   return SYMBOL_EMPTY;
+  }
+}
+
+// Маппинг символов nku_symbols_t в код symbol_code_e
+static const symbol_code_e nku_symbol_to_common_table[UEL_SYMBOL_NUMBER] = {
+    [UEL_SYMBOL_0] = SYMBOL_0, [UEL_SYMBOL_1] = SYMBOL_1,
+    [UEL_SYMBOL_2] = SYMBOL_2, [UEL_SYMBOL_3] = SYMBOL_3,
+    [UEL_SYMBOL_4] = SYMBOL_4, [UEL_SYMBOL_5] = SYMBOL_5,
+    [UEL_SYMBOL_6] = SYMBOL_6, [UEL_SYMBOL_7] = SYMBOL_7,
+    [UEL_SYMBOL_8] = SYMBOL_8, [UEL_SYMBOL_9] = SYMBOL_9};
+
+/**
+ * @brief Маппинг символов nku_symbols_t в код symbol_code_e с применением
+ *        таблицы nku_symbol_to_common_table
+ *
+ * @param symbol_code
+ * @return symbol_code_e
+ */
+static inline symbol_code_e map_to_common_symbol(uint8_t symbol_code) {
+  if (symbol_code < UEL_SYMBOL_NUMBER) {
+    return nku_symbol_to_common_table[symbol_code];
+  } else {
+    return SYMBOL_EMPTY;
+  }
+}
+
+/**
+ * @brief  Transform UIM6100 values of direction to common directionType that
+ *         defined in drawing.h
+ * @param  direction: Value from enum direction_uim_6100_t:
+ *                    UIM_6100_MOVE_UP/UIM_6100_MOVE_DOWN/UIM_6100_NO_MOVE
  * @retval None
  */
-static void setting_sound_uel(char *matrix_string, uint16_t current_location,
-                              control_bits_states_t control_bits) {
-  switch (control_bits) {
-  case SPECIAL_FORMAT:
-
-    if ((current_location & EVACUATION) == EVACUATION) {
-      matrix_string[MSB] = 'E';
-      matrix_string[LSB] = 'c';
-      stop_buzzer_sound();
-    }
-
-    if ((current_location & SEISMIC_DANGER) == SEISMIC_DANGER) {
-      matrix_string[MSB] = 'L';
-      matrix_string[LSB] = 'c';
-      stop_buzzer_sound();
-    }
-
-    cabin_indicator_special_regime(matrix_string, current_location,
-                                   control_bits);
-
-#if 0
-    if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
-      matrix_string[MSB] = 'F';
-      matrix_string[LSB] = 'c';
-      stop_buzzer_sound();
-    }
-#endif
-
-#if 0
-
-    if ((current_location & GONG_ARRIVAL) == GONG_ARRIVAL) {
-      if (!is_gong_play) {
-        stop_buzzer_sound();
-#if 1
-        if (matrix_settings.volume != VOLUME_0) {
-          play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
-        }
-
-#endif
-        is_gong_play = true;
-      }
-    } else {
-      is_gong_play = false;
-    }
-
-#endif
-
-#if 0
-    if ((current_location & CABIN_OVERLOAD) == CABIN_OVERLOAD) {
-#if 1
-      if (matrix_settings.volume != VOLUME_0 &&
-          matrix_settings.addr_id == MAIN_CABIN_ID) {
-        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
-      }
-#endif
-      is_cabin_overload_sound = true;
-
-      matrix_string[DIRECTION] = 'c';
-      matrix_string[MSB] = 'K';
-      matrix_string[LSB] = 'g';
-
-    } else if (is_cabin_overload_sound) {
-      stop_buzzer_sound();
-      is_cabin_overload_sound = false;
-    }
-
-#endif
-
-#if 0
-    if ((current_location & FARE_DANGER_SOUND) == FARE_DANGER_SOUND) {
-      fire_danger_cnt++;
-      if (fire_danger_cnt > 5U) {
-        stop_buzzer_sound();
-        fire_danger_cnt = 0;
-
-        if (matrix_settings.volume != VOLUME_0 &&
-            matrix_settings.addr_id == MAIN_CABIN_ID) {
-          start_buzzer_sound(BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
-        }
-//          play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
-        is_fire_danger_sound = true;
-      }
-
-      if (is_fire_danger_sound) {
-        fire_disable_cnt++;
-        if (fire_disable_cnt == 3) {
-          fire_disable_cnt = 0;
-          is_fire_danger_sound = false;
-          stop_buzzer_sound();
-        }
-      }
-
-    } else {
-      is_fire_danger_sound = false;
-      fire_disable_cnt = 0;
-      fire_danger_cnt = 0;
-    }
-
-#endif
+static void transform_direction_to_common(control_bits_states_t direction) {
+  switch (direction) {
+  case UEL_MOVE_UP:
+    drawing_data.direction = DIRECTION_UP;
+    break;
+  case UEL_MOVE_DOWN:
+    drawing_data.direction = DIRECTION_DOWN;
+    break;
+  case UEL_NO_MOVE:
+    drawing_data.direction = NO_DIRECTION;
     break;
 
-  default:
-    //      stop_buzzer_sound();
-    break;
+    // default:
+    //   drawing_data.direction = NO_DIRECTION;
+    //   break;
   }
 }
 
@@ -231,9 +223,8 @@ static uint8_t gong[2] = {
     0,
 };
 
-// Гонг
-static void setting_gong(control_bits_states_t control_bits,
-                         uint16_t current_location, uint8_t volume) {
+// Гонг на стоп-этаже
+static void setting_gong_stop(uint16_t current_location, uint8_t volume) {
   uint8_t arrival = current_location & GONG_ARRIVAL;
 
   /*  Если сигнал Гонг из 0 меняется на 1 и быты Движение Вверх и Вниз равны 0,
@@ -241,23 +232,39 @@ static void setting_gong(control_bits_states_t control_bits,
   gong[0] = ((arrival == GONG_ARRIVAL) == 1) ? 1 : 0;
 
   if (gong[0] && !gong[1]) {
-
-    switch (control_bits) {
-    case UEL_MOVE_UP:
+    switch (drawing_data.direction) {
+    case DIRECTION_UP:
       play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
-    case UEL_MOVE_DOWN:
-      play_gong(1, GONG_BUZZER_FREQ, volume);
+    case DIRECTION_DOWN:
+      play_gong(2, GONG_BUZZER_FREQ, volume);
       break;
-    case UEL_NO_MOVE:
+    case NO_DIRECTION:
       play_gong(3, GONG_BUZZER_FREQ, volume);
       break;
     default:
-      //  play_gong(1, GONG_BUZZER_FREQ, volume);
       break;
     }
   }
   gong[1] = gong[0];
+}
+
+// Режим Сейсмоопасность (символы)
+static void set_seismic_danger_symbol(uint8_t current_location) {
+  if ((current_location & SEISMIC_DANGER) == SEISMIC_DANGER) {
+    set_floor_symbols(SYMBOL_L, SYMBOL_EMPTY);
+  }
+}
+
+bool is_evacuation_symbol = false;
+// Режим Эвакуация (символы)
+static void set_evacuation_symbol(uint8_t current_location) {
+  if ((current_location & EVACUATION) == EVACUATION) {
+    set_floor_symbols(SYMBOL_E, SYMBOL_EMPTY);
+    is_evacuation_symbol = true;
+  } else {
+    is_evacuation_symbol = false;
+  }
 }
 
 /// Флаг для контроля перегруза кабины
@@ -280,7 +287,7 @@ static void set_cabin_overload_symbol_sound(uint16_t current_location) {
         is_cabin_overload = true;
         overload_sound_ms = 0;
         is_overload_sound_on = true;
-        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+        // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
       }
 
       if (is_time_ms_for_overload_elapsed) {
@@ -290,15 +297,12 @@ static void set_cabin_overload_symbol_sound(uint16_t current_location) {
           stop_buzzer_sound();
           is_overload_sound_on = false;
         } else {
-          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+          // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
           is_overload_sound_on = true;
         }
       }
     }
-
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'g';
+    set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_G_RU);
   } else if (is_cabin_overload) {
     stop_buzzer_sound();
     is_cabin_overload = false;
@@ -311,10 +315,11 @@ static bool is_fire_danger_symbol = false;
 
 // Режим Пожар (символы)
 static void set_fire_danger_symbol(uint8_t current_location) {
-  if ((current_location & FARE_DANGER_SYMBOL) == FARE_DANGER_SYMBOL) {
+  if ((current_location & FIRE_DANGER_SYMBOL) == FIRE_DANGER_SYMBOL) {
     is_fire_danger_symbol = true;
-    matrix_string[MSB] = 'F';
-    matrix_string[LSB] = 'c';
+    set_floor_symbols(SYMBOL_F, SYMBOL_EMPTY);
+  } else {
+    is_fire_danger_symbol = false;
   }
 }
 
@@ -322,91 +327,188 @@ static uint8_t fire_sound_edge[2] = {
     0,
 };
 
+uint8_t fire_sound_on_cnt = 0;
+uint8_t fire_sound_off_cnt = 0;
+
 // Режим Пожар (звук)
 static void set_fire_danger_sound(uint8_t current_location) {
-  uint8_t fire_danger_sound_bit = current_location & FARE_DANGER_SOUND;
+  if ((current_location & FIRE_DANGER_SOUND) == FIRE_DANGER_SOUND) {
 
-  fire_sound_edge[0] =
-      (fire_danger_sound_bit == FARE_DANGER_SOUND) != 0 ? 1 : 0;
+    // Первый вход в режим Пожар (звук)
+    if (!is_fire_danger_sound) {
+      is_fire_danger_sound = true;
+      fire_sound_on_cnt = 0;
+      fire_sound_off_cnt = 0;
+      // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+    }
 
-  if (fire_sound_edge[0] && !fire_sound_edge[1]) {
-    play_gong(1, BUZZER_FREQ_FIRE_DANGER, VOLUME_3);
+    fire_sound_on_cnt++;
+    if (fire_sound_on_cnt > 4U) {
+      stop_buzzer_sound();
+
+      fire_sound_off_cnt++;
+      if (fire_sound_off_cnt > 8U) {
+        is_fire_danger_sound = false;
+      }
+    }
+  } else if (is_fire_danger_sound) {
+    stop_buzzer_sound();
+    fire_sound_on_cnt = 0;
+    fire_sound_off_cnt = 0;
   }
-  fire_sound_edge[1] = fire_sound_edge[0];
 }
 
-void cabin_indicator_special_regime(char *matrix_string,
-                                    uint16_t current_location,
+void cabin_indicator_special_regime(uint16_t current_location,
                                     control_bits_states_t control_bits) {
 
   // Гонг
   if (matrix_settings.volume != VOLUME_0) {
-    setting_gong(control_bits, current_location, matrix_settings.volume);
+    setting_gong_stop(current_location, matrix_settings.volume);
   }
 
-  // Погрузка
-  // set_loading_symbol(control_byte_first);
+  // Перегруз, символы КГ
+  set_cabin_overload_symbol_sound(current_location);
 
-  // Перегруз
-  // set_cabin_overload_symbol_sound(current_location);
-
-  // Авария
-  // set_accident_symbol(control_byte_second);
+  // Режим Эвакуация, символ E
+  set_evacuation_symbol(current_location);
 
   // Пожар, символ F
   set_fire_danger_symbol(current_location);
 
-  // Пожар, звук по фронту
-  if (matrix_settings.volume != VOLUME_0) {
-    // set_fire_danger_sound(control_byte_second);
+  // Пожар, по счетчику
+  if (matrix_settings.volume != VOLUME_0 && is_fire_danger_symbol) {
+    set_fire_danger_sound(current_location);
   }
 }
 
-static void floor_indicator_special_regime(uint8_t direction_code,
-                                           uint8_t control_byte_first,
-                                           uint8_t control_byte_second) {
+uint8_t shift_address = 0;
+
+static void floor_indicator_special_regime(uint16_t current_location,
+                                           control_bits_states_t control_bits) {
 
   // Гонг, прибытие на этаж с номером matrix_settings.addr_id
-  if (matrix_settings.addr_id == drawing_data.floor) {
-    if (matrix_settings.volume != VOLUME_0) {
-      setting_gong(direction_code, control_byte_first, matrix_settings.volume);
-    }
+  if (drawing_data.floor >= LOCATION_P2 &&
+      drawing_data.floor <= LOCATION_MINUS_1) {
+    shift_address = 4;
   }
 
-  // Авария
-  // set_accident_symbol(control_byte_second);
+  if (matrix_settings.volume != VOLUME_0 &&
+      (matrix_settings.addr_id == drawing_data.floor - shift_address)) {
+    setting_gong_stop(current_location, matrix_settings.volume);
+  }
+
+  // Режим Эвакуация, символ E
+  set_evacuation_symbol(current_location);
 
   // Пожар, символ F
-  // set_fire_danger_symbol(control_byte_first);
+  set_fire_danger_symbol(current_location);
+}
+
+//============================ ФИЛЬТРАЦИЯ ==================================
+
+/// Флаг для контроля фильтрации данных
+static bool is_data_filtered = false;
+
+/// Кол-во полученных данных
+static uint8_t number_received_data = 0;
+
+/// Текущий индекс элемента в filter_buff
+static uint8_t current_index_buff = 0;
+
+typedef struct {
+  uint16_t received_data; // 2 байта полученных данных (9 бит)
+  uint8_t counter;        // счетчик повторений
+} floor_counter_t;
+
+/// Буфер полученных данных с повторениями
+static floor_counter_t filter_buff[FILTER_BUFF_SIZE];
+
+/**
+ * @brief  Запонение структуры floor_counter_t
+ * @param  filter_struct: Указатель на структуру floor_counter_t
+ * @param  buffer:        Указатель на буфер с полученными данными
+ * @param  counter:       Кол-во повторений данных
+ */
+static void set_filter_structure(floor_counter_t *filter_struct,
+                                 uint16_t received_data, uint8_t counter) {
+  filter_struct->received_data = received_data;
+  filter_struct->counter = counter;
 }
 
 /**
- * @brief  Transform UEL values of direction to common directionType that
- *         defined in drawing.h
- * @param  direction: Value from enum direction_uel_t:
- *                    UEL_MOVE_UP/UEL_MOVE_DOWN/UEL_NO_MOVE
- * @retval None
+ * @brief  Сортировка filter_buff в порядке убывания с использованием метода
+ *         пузырьковой сортировки
+ * @note   filter_buff[0].counter имеет максимальное значение и будет
+ *         отображаться на индикаторе
+ * @param  filter_buff
+ * @param  buff_size
  */
-static void transform_direction_to_common(direction_uel_t direction) {
-  switch (direction) {
-  case UEL_MOVE_UP:
-    drawing_data.direction = DIRECTION_UP;
-    break;
-  case UEL_MOVE_DOWN:
-    drawing_data.direction = DIRECTION_DOWN;
-    break;
-  case UEL_NO_MOVE:
-    drawing_data.direction = NO_DIRECTION;
-    break;
-
-  default:
-    drawing_data.direction = NO_DIRECTION;
-    break;
+static void sort_bubble(floor_counter_t *filter_buff, uint8_t buff_size) {
+  for (uint8_t i = 0; i < buff_size - 1; i++) {
+    for (uint8_t k = 0; k < buff_size - i - 1; k++) {
+      if (filter_buff[k].counter < filter_buff[k + 1].counter) {
+        floor_counter_t temp = filter_buff[k];
+        filter_buff[k] = filter_buff[k + 1];
+        filter_buff[k + 1] = temp;
+      }
+    }
   }
 }
 
-/// Received control bits
+/**
+ * @brief Фильтрация полученных данных
+ *
+ */
+static void filter_data(uint16_t received_data) {
+  if (current_index_buff == 0) {
+    for (uint8_t i = 0; i < FILTER_BUFF_SIZE; i++) {
+      set_filter_structure(&filter_buff[i], 0, 0);
+    }
+    current_index_buff = 0;
+  }
+
+  bool is_data_found = false;
+  number_received_data++;
+
+  for (uint8_t i = 0; i < current_index_buff; i++) {
+    if (filter_buff[i].received_data == received_data) {
+      filter_buff[i].counter++;
+      is_data_found = true;
+      break;
+    }
+  }
+
+  if (!is_data_found && current_index_buff < FILTER_BUFF_SIZE - 1) {
+    set_filter_structure(&filter_buff[current_index_buff], received_data, 1);
+    current_index_buff++;
+  }
+
+  if (number_received_data == FILTER_BUFF_SIZE) {
+    sort_bubble(filter_buff, FILTER_BUFF_SIZE);
+
+    is_data_filtered = true;
+    number_received_data = 0;
+    current_index_buff = 0;
+  }
+}
+
+//============================ ОБРАБОТКА ==================================
+
+/// @brief 6..8 биты
 static control_bits_states_t control_bits;
+
+/// @brief  0..5 биты
+static uint16_t current_location;
+
+static uint8_t dash_error_cnt = 0;
+static uint8_t dash_error_disable = 0;
+static const uint8_t TIME_FLOOR_DURING_DASH = 8;
+static const uint8_t TIME_DASH_DURING_DASH = 10;
+static bool is_dash_error_displayed = false;
+
+uint8_t yy = 0;
+uint8_t nn = 0;
+uint8_t xx = 0;
 
 /**
  * @brief  Process data using UEL protocol
@@ -417,86 +519,186 @@ static control_bits_states_t control_bits;
  * @param  received_data: Pointer to the buffer with received data by CAN
  * @retval None
  */
-
-static uint8_t dash_error_cnt = 0;
-static uint8_t dash_error_disable = 0;
-static const uint8_t TIME_FLOOR_DURING_DASH = 8;
-static const uint8_t TIME_DASH_DURING_DASH = 10;
-static bool is_dash_error_displayed = false;
-
 void process_data_uel(uint16_t *received_data) {
   /// Flag to control is receiving data completed by UART
   extern bool is_rx_data_completed;
 
-  data = ~(*received_data) & NINE_BITS_MASK;
-  control_bits = data & CONTROL_BITS_MASK;
+  filter_data(*received_data);
 
-  transform_direction_to_common(control_bits);
-  drawing_data.floor = data & CODE_LOCATION_MASK;
+  if (is_data_filtered) {
+    is_data_filtered = false;
 
-  if (control_bits !=
-      SPECIAL_FORMAT) { // due to repeated values for SPECIAL_FORMAT and FLOORS
+    data = ~(filter_buff[0].received_data) & NINE_BITS_MASK;
 
-    if (drawing_data.floor == LOCATION_DASH) {
-      dash_error_cnt++;
-      if (dash_error_cnt == TIME_FLOOR_DURING_DASH) {
-        dash_error_cnt = 0;
-        is_dash_error_displayed = true;
+    control_bits = data & CONTROL_BITS_MASK;
+    current_location = data & CODE_LOCATION_MASK;
 
-        setting_symbols(
-            matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
-            special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-      }
-    } else {
-      if (is_dash_error_displayed) {
-        dash_error_disable++;
-        if (dash_error_disable == TIME_DASH_DURING_DASH) { // 690 ms, STOP
-          dash_error_disable = 0;
-          is_dash_error_displayed = false;
-          setting_symbols(
-              matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
-              special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-        }
-      } else {
-        setting_symbols(
-            matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
-            special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
-      }
+#if 0
+    xx++;
+    control_bits = UEL_MOVE_DOWN;
+    current_location = LOCATION_P;
+    if (xx > 15U) {
+      control_bits = SPECIAL_FORMAT;
+      current_location = GONG_ARRIVAL;
     }
-  }
+#endif
 
-  // Кабинный индикатор
-  if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-    setting_sound_uel(matrix_string, drawing_data.floor, control_bits);
-    // Спец. режимы для кабинного индикатора
-    // cabin_indicator_special_regime(matrix_string, drawing_data.floor,
-    //                                control_bits);
-  } else {
-    // Этажный индикатор
-    /* Установка drawing_data.floor для гонга */
-    // Этажи 0, с 1 по 9
-    // if (first_symbol_code == 0 || first_symbol_code == SYMBOL_EMPTY) {
-    //   drawing_data.floor = second_symbol_code;
-    // }
+    /* Разделение по контрольным битам */
+    switch (control_bits) {
+      /* Посылка 2 */
+    case NUMBER_CLICKED_BTN_ORDER:
 
-    // // Этажи с 10 по 99
-    // if (first_symbol_code >= 1 && first_symbol_code <= 9 &&
-    //     second_symbol_code >= 0 && second_symbol_code <= 9) {
-    //   drawing_data.floor = first_symbol_code * 10 + second_symbol_code;
-    // }
+      break;
 
-    // Спец. режимы для этажного индикатора
-    // floor_indicator_special_regime(matrix_string, drawing_data.floor,
-    //                                control_bits);
-  }
+      /* Посылка 4: Перегрузка, Пожар, Эвакуация, Гонг */
+    case SPECIAL_FORMAT:
+      // Спец. режимы
+      // Кабинный индикатор
+      if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+        cabin_indicator_special_regime(current_location, control_bits);
+      } else {
+        // Этажный индикатор
+        floor_indicator_special_regime(current_location, control_bits);
+      }
+      break;
 
-  // setting_sound_uel(matrix_string, drawing_data.floor, control_bits);
+    default: /* Посылки 1 и 3 (без 2 и 4) */
+      // Этаж для отображения
+      drawing_data.floor = current_location;
+
+      // Направление для гонга
+      transform_direction_to_common(control_bits);
+
+      // Настройка кода стрелки
+      set_direction_symbol(map_direction_to_common_symbol(control_bits));
+
+      // Этажи с 0 по 9
+      if (!is_fire_danger_symbol && !is_cabin_overload &&
+          !is_evacuation_symbol) {
+
+        // Этажи с 0 по 9
+        if (drawing_data.floor >= 0 && drawing_data.floor <= 9) {
+          set_floor_symbols(map_to_common_symbol(drawing_data.floor),
+                            map_to_common_symbol(SYMBOL_EMPTY));
+        } else if (drawing_data.floor <= MAX_POSITIVE_NUMBER_LOCATION) {
+          // Этажи с 10 по 39
+          set_floor_symbols(map_to_common_symbol(drawing_data.floor / 10),
+                            map_to_common_symbol(drawing_data.floor % 10));
+        } else { // Этажи после 39
+          /* Этажи --, П2, П1, П, -4, -3, -2, -1 */
+          /* Режимы МП1, МП2, Ревизия, Норм. Раб., Погр */
+          switch (drawing_data.floor) {
+          case LOCATION_DASH:
+            set_floor_symbols(SYMBOL_MINUS, SYMBOL_MINUS);
+            break;
+
+          case LOCATION_P2:
+            set_floor_symbols(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_2);
+            break;
+          case LOCATION_P1:
+            set_floor_symbols(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_1);
+            break;
+
+          case LOCATION_P:
+            set_floor_symbols(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_EMPTY);
+            break;
+
+          case LOCATION_MINUS_4:
+            set_floor_symbols(SYMBOL_MINUS, SYMBOL_4);
+            break;
+
+          case LOCATION_MINUS_3:
+            set_floor_symbols(SYMBOL_MINUS, SYMBOL_3);
+            break;
+
+          case LOCATION_MINUS_2:
+            set_floor_symbols(SYMBOL_MINUS, SYMBOL_2);
+            break;
+
+          case LOCATION_MINUS_1:
+            set_floor_symbols(SYMBOL_MINUS, SYMBOL_1);
+            break;
+
+          case LOCATION_C1:
+            set_floor_symbols(SYMBOL_C, SYMBOL_1);
+            break;
+
+          case LOCATION_C2:
+            set_floor_symbols(SYMBOL_C, SYMBOL_2);
+            break;
+
+          case LOCATION_REVISION:
+            set_floor_symbols(SYMBOL_P, SYMBOL_E);
+            break;
+
+            // case LOCATION_NORMAL_WORK:
+            //   break;
+
+          case LOCATION_LOADING:
+            if (matrix_settings.addr_id == MAIN_CABIN_ID) {
+              set_floor_symbols(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_G_RU);
+            }
+            break;
+
+          default:
+            break;
+          } //  switch (drawing_data.floor)
+        }   // Этажи после 39
+      }
+      break; // default
+    }        //  switch (control_bits)
+  }          // if (is_data_filtered)
 
   while (is_rx_data_completed == false && is_interface_connected == true) {
 #if DOT_PIN
     draw_string_on_matrix(matrix_string);
 #elif DOT_SPI
-    display_symbols_spi(matrix_string);
+    display_symbols_spi();
 #endif
   }
 }
+
+#if 0
+      if (drawing_data.floor == LOCATION_DASH) {
+        dash_error_cnt++;
+        if (dash_error_cnt == TIME_FLOOR_DURING_DASH) {
+          dash_error_cnt = 0;
+          is_dash_error_displayed = true;
+
+          setting_symbols(
+              matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
+              special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+        }
+      } else {
+        if (is_dash_error_displayed) {
+          dash_error_disable++;
+          if (dash_error_disable == TIME_DASH_DURING_DASH) { // 690 ms, STOP
+            dash_error_disable = 0;
+            is_dash_error_displayed = false;
+            setting_symbols(
+                matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
+                special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+          }
+        } else {
+          setting_symbols(
+              matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
+              special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+        }
+      }
+#endif
+
+#if 0
+  if ((current_location & GONG_ARRIVAL) == GONG_ARRIVAL) {
+    if (!is_gong_play) {
+      stop_buzzer_sound();
+
+      if (matrix_settings.volume != VOLUME_0) {
+        play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
+      }
+
+      is_gong_play = true;
+    }
+  } else {
+    is_gong_play = false;
+  }
+#endif

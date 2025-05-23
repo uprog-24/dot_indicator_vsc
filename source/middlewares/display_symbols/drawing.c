@@ -16,15 +16,78 @@
   11 ///< Maximum index of position of column for symbol
 
 /**
- * @brief  Convert integer number (0..9) to char ('0'..'9')
- * @param  number: Number that will be converted into char
- * @retval char:   Symbol 'number' if number is correct else symbol 'e'
+ * Индексы строки, которая будет отображаться на матрице.
+ * Направление имеет позицию 0;
+ * MSB (старший бит, первый символ) имеет позицию 1;
+ * LSB (младший бит, второй символ) имеет позицию 2.
  */
-char convert_int_to_char(uint8_t number) {
-  if (number <= 9) {
-    return number + '0';
+typedef enum { DIRECTION = 0, MSB = 1, LSB = 2, INDEX_NUMBER } symbol_index_t;
+
+/* Структура, содержащая коды символов для отрисовки */
+typedef struct {
+  symbol_code_e symbol_code_1;
+  symbol_code_e symbol_code_2;
+  symbol_code_e symbol_code_3;
+} displayed_symbols_t;
+
+static displayed_symbols_t symbols = {
+    .symbol_code_1 = SYMBOL_EMPTY,
+    .symbol_code_2 = SYMBOL_EMPTY,
+    .symbol_code_3 = SYMBOL_EMPTY,
+};
+
+/**
+ * @brief Установка символа в структуру по индексу
+ *
+ * @param index: Индекс символа
+ * @param symbol Код символа из перечисления symbol_code_e
+ */
+static void set_symbol_at(symbol_index_t index, symbol_code_e symbol) {
+  if (index >= INDEX_NUMBER)
+    return;
+
+  switch (index) {
+  case DIRECTION:
+    symbols.symbol_code_1 = symbol;
+    break;
+  case MSB:
+    symbols.symbol_code_2 = symbol;
+    break;
+  case LSB:
+    symbols.symbol_code_3 = symbol;
+    break;
   }
-  return 'e';
+}
+
+/**
+ * @brief  Установка символа направления движения
+ * @param  direction_code: Код направления (из перечисления symbol_code_e)
+ */
+void set_direction_symbol(symbol_code_e direction_code) {
+  set_symbol_at(DIRECTION, direction_code);
+}
+
+/**
+ * @brief  Установка символов для этажей
+ * @param  left_symbol_code:  Код символа 1
+ * @param  right_symbol_code: Код символа 2
+ */
+void set_floor_symbols(symbol_code_e left_symbol_code,
+                       symbol_code_e right_symbol_code) {
+  set_symbol_at(MSB, left_symbol_code);
+  set_symbol_at(LSB, right_symbol_code);
+}
+
+/**
+ * @brief  Установка символов (направление + этаж)
+ * @param  s1_code:  Код символа 1
+ * @param  s2_code:  Код символа 2
+ * @param  s3_code:  Код символа 3
+ */
+void set_symbols(symbol_code_e s1_code, symbol_code_e s2_code,
+                 symbol_code_e s3_code) {
+  set_direction_symbol(s1_code);
+  set_floor_symbols(s2_code, s3_code);
 }
 
 /**
@@ -39,88 +102,6 @@ void drawing_data_setter(drawing_data_t *drawing_data, uint8_t floor,
   drawing_data->floor = floor;
   drawing_data->direction = direction;
 }
-
-/**
- * @brief  Set direction symbol in matrix_string by index = DIRECTION
- * @param  matrix_string: Pointer to the matrix_string that will be displayed on
- *                        matrix
- * @param  direction:     Direction with directionType:
- *                        DIRECTION_UP/DIRECTION_DOWN/NO_DIRECTION
- * @retval None
- */
-void set_direction_symbol(char *matrix_string, directionType direction) {
-  switch (direction) {
-  case DIRECTION_UP:
-    matrix_string[DIRECTION] = '>';
-    break;
-  case DIRECTION_DOWN:
-    matrix_string[DIRECTION] = '<';
-    break;
-  case NO_DIRECTION:
-    matrix_string[DIRECTION] = 'c';
-    break;
-  }
-}
-
-/**
- * @brief  Set floor symbols in matrix_string by indexes MSB and LSB
- * @param  matrix_string:                Pointer to the matrix_string that will
- *                                       be displayed on matrix
- * @param  floor:                        Floor
- * @param  max_positive_number_location: Maximum used number of positive floor
- * @param  code_location_symbols:        Pointer to the buffer with code
- *                                       location and it's symbols
- * @param  spec_symbols_buff_size:       Number of special symbols
- * @retval None
- */
-void set_floor_symbols(char *matrix_string, uint16_t floor,
-                       uint8_t max_positive_number_location,
-                       const code_location_symbols_t *code_location_symbols,
-                       uint8_t spec_symbols_buff_size) {
-  if (floor <= 9) {
-    matrix_string[MSB] = convert_int_to_char(floor % 10);
-    matrix_string[LSB] = 'c';
-  } else if (floor <= max_positive_number_location) {
-    matrix_string[MSB] = convert_int_to_char(floor / 10);
-    matrix_string[LSB] = convert_int_to_char(floor % 10);
-  } else {
-    // special symbols
-    for (uint8_t ind = 0; ind < spec_symbols_buff_size; ind++) {
-      if (code_location_symbols[ind].code_location == floor) {
-        matrix_string[MSB] = code_location_symbols[ind].symbols[0];
-        matrix_string[LSB] = strlen(code_location_symbols[ind].symbols) == 1
-                                 ? 'c'
-                                 : code_location_symbols[ind].symbols[1];
-      }
-    }
-  }
-}
-
-/**
- * @brief  Setting string with symbols of floor and direction
- * @param  matrix_string:                 Pointer to the matrix_string that will
- *                                        be displayed on matrix
- * @param  drawing_data:                  Pointer to the structure with current
- *                                        floor and direction
- * @param  max_positive_number_location:  Max positive number of location of
- *                                        used protocol
- * @param  special_symbols_code_location: Pointer to the buffer with code
- *                                        location and it's symbols
- * @param  spec_symbols_buff_size:        Number of special symbols for
- *                                        code_location
- * @retval None
- */
-void setting_symbols(
-    char *matrix_string, const drawing_data_t *const drawing_data,
-    uint8_t max_positive_number_location,
-    const code_location_symbols_t *special_symbols_code_location,
-    uint8_t spec_symbols_buff_size) {
-  set_direction_symbol(matrix_string, drawing_data->direction);
-  set_floor_symbols(matrix_string, drawing_data->floor,
-                    max_positive_number_location, special_symbols_code_location,
-                    spec_symbols_buff_size);
-}
-
 #if DOT_SPI
 #include "LED_driver.h"
 
@@ -151,31 +132,175 @@ void STP16_SendData(uint16_t register1, uint16_t register2,
   // включаем светодиоды
   LED_driver_start_indication();
 }
+#if 1
+void display_symbols_spi() {
+  for (int row = 0; row < 6; row++) {
+    uint16_t register1 = 0, register2 = 0, register3 = 0;
 
-void display_symbols_spi(char *matrix_string) {
+    // === Символ 1 на register1 ===
+    for (int col = 0; col < 8; col++) {
+      if (bitmap[symbols.symbol_code_3][row] & (1 << (7 - col))) {
+        register1 |= (1 << (7 - col)); // Колонки 0–6
+      }
+    }
 
+    // === Символ 2 на register2 ===
+    for (int col = 0; col < 8; col++) {
+      if (bitmap[symbols.symbol_code_2][row] & (1 << (7 - col))) {
+        register2 |= (1 << (7 - col));
+      }
+    }
+
+    // === Символ 3 на register3 ===
+    for (int col = 0; col < 8; col++) {
+      if (bitmap[symbols.symbol_code_1][row] & (1 << (7 - col))) {
+        register3 |= (1 << (7 - col));
+      }
+    }
+
+    // === Формируем маску строки ===
+    uint16_t row_mask_r1 = 0, row_mask_r2 = 0, row_mask_r3 = 0;
+
+    // register1: строки 8–13
+    // if (row >= 0 && row <= 5) {
+    // row_mask_r1 = (1 << (10 + row));
+    // }
+
+    // register2: строки 8–12
+    // if (row >= 0 && row <= 4) {
+    // row_mask_r2 = (1 << (10 + row));
+    // }
+
+    // register3: строки 8–12
+    // if (row >= 0 && row <= 4) {
+    // row_mask_r3 = (1 << (10 + row));
+    // }
+
+    // === Центрирование, если символ 2 пустой ===
+    // if (symbols.symbol_code_2 == SYMBOL_EMPTY) {
+    //   if (row != 0) {
+    //     // Добавим строку чуть в другое место, визуальный центр
+    //     register2 |= (1 << (7 + row)); // Бит 8..12 — допустимо
+    //     if ((13 + row) < 16) {
+    //       register1 |= (1 << (13 + row));
+    //     }
+    //   }
+    // } else {
+    //   // Включаем строки на всех регистрах
+    //   register1 |= row_mask_r1;
+    //   register2 |= row_mask_r2;
+    // }
+
+    // register3 |= row_mask_r3;
+
+    // Включаем строку (OUT8 - OUT12 или OUT8 - OUT13)
+    uint16_t row_mask = (1 << (10 + row));
+
+    /** Центрирование символа для register1 и register2 */
+    if (symbols.symbol_code_3 == SYMBOL_EMPTY) {
+
+      if (row != 0)
+        register2 |= (1 << (7 + row)); // Включаем строку на 2-м чипе
+
+      if (13 + row < 16) {
+        if (row != 0)
+          register1 = register2 | (1 << (13 + row));
+      } else {
+        register1 = 0;
+      }
+
+    } else {
+      register1 |= row_mask; // Включаем строку на 1-м чипе
+      register2 |= row_mask; // Включаем строку на 2-м чипе
+    }
+
+    register3 |= row_mask; // Включаем строку на 3-м чипе
+
+    // === Отправка данных ===
+    STP16_SendData(register1, register2, register3);
+  }
+}
+#endif
+
+#if 0
+void display_symbols_spi() {
+
+  uint16_t row_flag;
+#if 1
   for (int row = 0; row < 6; row++) // Перебираем строки
   {
     uint16_t register1 = 0, register2 = 0, register3 = 0;
+    // row_flag = 1 << (2 + j);
 
     // Символ 1 на регистре 1
     for (int col = 0; col < 7; col++) {
-      if (get_symbol_code(matrix_string[LSB])[row] & (1 << (7 - col))) {
+      if (bitmap[symbols.symbol_code_1][row] & (1 << (7 - col))) {
         register1 |= (1 << (7 - col));
       }
     }
 
     // Символ 2 на регистре 2
     for (int col = 0; col < 7; col++) {
-      if (get_symbol_code(matrix_string[MSB])[row] & (1 << (7 - col))) {
+      if (bitmap[symbols.symbol_code_2][row] & (1 << (7 - col))) {
         register2 |= (1 << (7 - col));
       }
     }
 
     // Символ 3 на регистре 3
+    for (int col = 1; col < 8; col++) {
+      if (bitmap[symbols.symbol_code_3][row] & (1 << (8 - col))) {
+        register3 |= (1 << (8 - col));
+      }
+    }
+
+    // Включаем строку (OUT8 - OUT12 или OUT8 - OUT13)
+    uint16_t row_mask = (1 << (8 + row));
+
+    /** Центрирование символа для register1 и register2 */
+    if (symbols.symbol_code_2 == SYMBOL_EMPTY) {
+
+      if (row != 0)
+        register2 |= (1 << (7 + row)); // Включаем строку на 2-м чипе
+
+      if (13 + row < 16) {
+        if (row != 0)
+          register1 = register2 | (1 << (13 + row));
+      } else {
+        register1 = 0;
+      }
+
+    } else {
+      register1 |= row_mask; // Включаем строку на 1-м чипе
+      register2 |= row_mask; // Включаем строку на 2-м чипе
+    }
+
+    register3 |= row_mask; // Включаем строку на 3-м чипе
+
+    // Отправляем данные
+    STP16_SendData(register1, register2, register3);
+  }
+#endif
+
+#if 0
+  for (int row = 0; row < 6; row++) // по строкам в повернутом виде
+  {
+    uint16_t register1 = 0, register2 = 0, register3 = 0;
+
     for (int col = 0; col < 7; col++) {
-      if (get_symbol_code(matrix_string[DIRECTION])[row] & (1 << (7 - col))) {
-        register3 |= (1 << (7 - col));
+      // Поворачиваем символ — берем бит по [5 - row][col], формируем
+      // rotated_row[col] с битами row
+
+      // Символ 1
+      if (get_symbol_code(matrix_string[LSB])[5 - col] & (1 << row)) {
+        register1 |= (1 << col);
+      }
+      // Символ 2
+      if (get_symbol_code(matrix_string[MSB])[5 - col] & (1 << row)) {
+        register2 |= (1 << col);
+      }
+      // Символ 3
+      if (get_symbol_code(matrix_string[DIRECTION])[5 - col] & (1 << row)) {
+        register3 |= (1 << col);
       }
     }
 
@@ -202,8 +327,159 @@ void display_symbols_spi(char *matrix_string) {
 
     register3 |= row_mask; // Включаем строку на 3-м чипе
 
-    // Отправляем данные
+    // Отправляем в драйверы
     STP16_SendData(register1, register2, register3);
+  }
+#endif
+}
+
+#endif
+
+#if 0
+#define PANEL_NUMBER_OF_ROWS 6
+#define NUMBER_OF_DRIVERS 3
+
+void display_symbols_spi(char *matrix_string) {
+  uint16_t concated_bitmap[PANEL_NUMBER_OF_ROWS][NUMBER_OF_DRIVERS] = {0};
+  uint16_t row_flag;
+
+  // Формируем данные для каждого ряда и драйвера
+  for (int row = 0; row < PANEL_NUMBER_OF_ROWS; row++) {
+    row_flag = 1 << (2 + row);
+
+    uint16_t register1 = 0, register2 = 0, register3 = 0;
+
+    // Формируем register1 (символ LSB)
+    for (int col = 0; col < 7; col++) {
+      if (get_symbol_code(matrix_string[LSB])[row] & (1 << (6 - col))) {
+        register1 |= (1 << (6 - col));
+      } else {
+        register1 &= ~(1 << (6 - col)); // явный сброс бита
+      }
+    }
+
+    // Формируем register2 (символ MSB)
+    for (int col = 0; col < 7; col++) {
+      if (get_symbol_code(matrix_string[MSB])[row] & (1 << (6 - col))) {
+        register2 |= (1 << (6 - col));
+      } 
+      // else {
+      //   register2 &= ~(1 << (6 - col));
+      // }
+    }
+
+    // Формируем register3 (символ DIRECTION)
+    for (int col = 0; col < 7; col++) {
+      if (get_symbol_code(matrix_string[DIRECTION])[row] & (1 << (6 - col))) {
+        register3 |= (1 << (6 - col));
+      } 
+      // else {
+      //   register3 &= ~(1 << (6 - col));
+      // }
+    }
+
+    // Центрирование символов (по вашему коду)
+    if (matrix_string[LSB] == 'c') {
+      if (row != 0) {
+        register2 |= (1 << (7 + row));
+      }
+
+      if (13 + row < 16) {
+        if (row != 0) {
+          register1 = register2 | (1 << (13 + row));
+        }
+      } else {
+        register1 = 0;
+      }
+    } else {
+      register1 |= row_flag;
+      register2 |= row_flag;
+    }
+
+    register3 |= row_flag;
+
+    // Записываем в массив, сдвигая данные в старшие 8 бит
+    concated_bitmap[row][0] = row_flag | (register1 << 8);
+    concated_bitmap[row][1] = row_flag | (register2 << 8);
+    concated_bitmap[row][2] = row_flag | (register3 << 8);
+  }
+
+  // Отправляем сформированный массив построчно
+  for (int row = 0; row < PANEL_NUMBER_OF_ROWS; row++) {
+    STP16_SendData(concated_bitmap[row][0], concated_bitmap[row][1],
+                   concated_bitmap[row][2]);
+  }
+}
+#endif
+
+#define SYMBOL_TABLE_SIZE 128
+
+// Маппинг символов char в код symbol_code_e
+static const symbol_code_e char_to_symbol_table[SYMBOL_TABLE_SIZE] = {
+    ['0'] = SYMBOL_0,    ['1'] = SYMBOL_1,     ['2'] = SYMBOL_2,
+    ['3'] = SYMBOL_3,    ['4'] = SYMBOL_4,     ['5'] = SYMBOL_5,
+    ['6'] = SYMBOL_6,    ['7'] = SYMBOL_7,     ['8'] = SYMBOL_8,
+    ['9'] = SYMBOL_9,    ['S'] = SYMBOL_S,     ['I'] = SYMBOL_I,
+    ['D'] = SYMBOL_D,    ['-'] = SYMBOL_MINUS, [' '] = SYMBOL_EMPTY,
+    ['.'] = SYMBOL_DOT,  ['c'] = SYMBOL_EMPTY, ['V'] = SYMBOL_V,
+    ['L'] = SYMBOL_L,    ['C'] = SYMBOL_C,     ['E'] = SYMBOL_E,
+    ['+'] = SYMBOL_PLUS, ['p'] = SYMBOL_P,     ['g'] = SYMBOL_G,
+    ['K'] = SYMBOL_K,    ['U'] = SYMBOL_U_BIG,
+};
+
+/**
+ * @brief Преобразование символа char в код symbol_code_e
+ * @param ch
+ * @return symbol_code_e
+ */
+static inline symbol_code_e char_to_symbol(char ch) {
+  if (ch < SYMBOL_TABLE_SIZE) {
+    return char_to_symbol_table[(unsigned char)ch];
+  } else {
+    return SYMBOL_EMPTY;
+  }
+}
+
+/**
+ * @brief Отображение строки
+ * @param matrix_string: Указатель на строку, которая будет отображаться
+ */
+void draw_string(char *matrix_string) {
+  // Преобразуем символ char в код symbol_code_e
+  set_symbols(char_to_symbol(matrix_string[0]),
+              char_to_symbol(matrix_string[1]),
+              char_to_symbol(matrix_string[2]));
+  display_symbols_spi();
+}
+
+extern volatile bool is_time_ms_for_display_str_elapsed;
+/**
+ * @brief  Отображение строки на матрице в течение
+ *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
+ * @note   Для протоколов при запуске индикатора
+ * @param  matrix_string: Указатель на строку, которая будет отображаться
+ */
+void display_string_during_ms(char *matrix_string) {
+  is_time_ms_for_display_str_elapsed = false;
+
+  while (!is_time_ms_for_display_str_elapsed) {
+    draw_string(matrix_string);
+  }
+
+  // Очищаем поля структуры с символами
+  set_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
+}
+
+/**
+ * @brief  Отображение строки на матрице в течение
+ *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
+ * @note   Для DEMO_MODE
+ */
+void display_symbols_during_ms() {
+  is_time_ms_for_display_str_elapsed = false;
+
+  while (!is_time_ms_for_display_str_elapsed) {
+    display_symbols_spi();
   }
 }
 

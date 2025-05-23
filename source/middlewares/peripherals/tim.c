@@ -188,6 +188,9 @@ uint16_t overload_sound_ms = 0;
 /// Флаг для отсчета продолжительности для звука Перегрузка
 volatile bool is_time_ms_for_overload_elapsed = false;
 
+/// Флаг для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
+volatile bool is_time_ms_for_display_str_elapsed = false;
+
 /**
  * @brief  Handle Interrupt by TIM's period is elapsed,
  *         setting the state of the flags.
@@ -251,13 +254,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM4) {
     is_tim4_period_elapsed = true;
 
-    if (is_start_indicator) {
+    // if (is_start_indicator) {
+    //   tim4_ms_counter += 1;
+    //   if (tim4_ms_counter >= 3000) {
+    //     tim4_ms_counter = 0;
+    //     is_start_indicator = false;
+    //   }
+    // }
+
+    /* Счетчик для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
+     * для протоколов: название протокола и номер версии ПО при запуске
+     * индикатора; для DEMO_MODE: отображение строки */
+#if !TEST_MODE
+    if (!is_time_ms_for_display_str_elapsed) {
       tim4_ms_counter += 1;
-      if (tim4_ms_counter >= 3000) {
+      if (tim4_ms_counter >= TIME_DISPLAY_STRING_DURING_MS) {
         tim4_ms_counter = 0;
-        is_start_indicator = false;
+        is_time_ms_for_display_str_elapsed = true;
       }
     }
+#endif
 
     if (is_cabin_overload) {
       overload_sound_ms++;

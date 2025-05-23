@@ -60,6 +60,9 @@
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection
 
+  #define TIME_DISPLAY_STRING_DURING_MS                                          \
+  2000 ///< Время в мс, в течение которого отображается строка
+
 /* Protocol UIM_6100 (CAN) */
 #elif PROTOCOL_UIM_6100 && !PROTOCOL_UEL && !PROTOCOL_UKL &&                   \
     !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE

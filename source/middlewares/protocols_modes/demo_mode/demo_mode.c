@@ -100,10 +100,10 @@ void demo_mode_start(void) {
   demo_start_finish_floors_movement(14, 1, NULL, 0);
 #elif DOT_SPI
 
-  demo_start_finish_floors_movement(1, 14, buff_stop_floors,
-                                    STOP_FLOORS_BUFF_SIZE);
-  demo_start_finish_floors_movement(14, 1, NULL, 0);
+  // demo_start_finish_floors_movement(1, 14, buff_stop_floors,
+  //                                   STOP_FLOORS_BUFF_SIZE);
+  // demo_start_finish_floors_movement(14, 1, NULL, 0);
 
-  // display_symbols_spi("cbc");
+  display_symbols_spi("---");
 #endif
 }
