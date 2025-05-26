@@ -3,8 +3,10 @@
 #include "LED_driver.h"
 #include <SysTick_Delay.h>
 // #include "LED_panel_driver.h"
+#include "LED_panel_config.h"
 #include "main.h"
 #include "software_SPI.h"
+
 //#define config_MU_IT_05_10
 //#define config_MU_IT_05_10
 #define config_MU_IT_06_10

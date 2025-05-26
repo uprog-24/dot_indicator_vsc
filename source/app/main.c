@@ -149,6 +149,7 @@ int main(void) {
 
 #else
 #include "conf.h"
+#include "drawing.h"
 
 #if 1
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
@@ -159,6 +160,13 @@ int main(void) {
   read_settings(&matrix_settings);
   protocol_init();
 
+  // indication_set_floor(SYMBOL_K, SYMBOL_G_RU);
+  // indication_set_static_arrow(SYMBOL_ARROW_DOWN);
+  // while (1) {
+  //   update_LED_panel();
+  // }
+
+#if 1
   while (1) {
     switch (matrix_state) {
     case MATRIX_STATE_START:
@@ -192,6 +200,7 @@ int main(void) {
       break;
     }
   }
+#endif
 
 #endif
 

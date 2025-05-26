@@ -3,6 +3,7 @@
  */
 #include "drawing.h"
 
+#include "config.h"
 #include "dot.h"
 #include "font.h"
 
@@ -105,6 +106,384 @@ void drawing_data_setter(drawing_data_t *drawing_data, uint8_t floor,
 #if DOT_SPI
 #include "LED_driver.h"
 
+#if 1
+struct led_panel_element {
+  uint8_t *element_bitmap_ptr; // указатель на bitmap элемента, который
+                               // подлежит отображению в текущий момент времени
+  // struct animation_status
+  //     animation;        // структура, содержащая информацию об анимации
+  _Bool is_update; // необходимость обновления битмапа для панели
+  _Bool is_panel_mode; // использование нижних элементов в качестве одного
+  // uint8_t
+  //     bitmap_animation[PANEL_NUMBER_OF_ROWS];  // временный битмап для
+  //     анимации
+};
+
+/*
+ * 	Структура описывает led - панель:
+ * 		- 3 элемента панели в структуре panel_elements: верхняя, нижняя
+ * левая и нижняя правая
+ * 		- битмап в структуре panel_bitmap, который отправляется на
+ * драйвера
+ * 		- 4 дополнительных ячейки для битмапа
+ */
+struct vertical_led_panel {
+  struct led_panel_element
+      top_element; // управление в отдельности верхним элементом
+  struct led_panel_element
+      bottom_left_element; // управление в отдельности нижним левым элементом
+  struct led_panel_element
+      bottom_right_element; // управление в отдельности нижним правым элементом
+
+  uint8_t bitmap_tmp_L1[NUMBER_OF_ROWS]; // временный битмап для размещения
+                                         // символа, который используется в
+                                         // режиме panel_mode
+  uint8_t bitmap_tmp_L2[NUMBER_OF_ROWS]; // временный битмап для размещения
+                                         // символа, который используется в
+                                         // режиме panel_mode
+
+  uint8_t bitmap_tmp_R1[NUMBER_OF_ROWS]; // временный битмап для размещения
+                                         // символа, который используется в
+                                         // режиме panel_mode
+  uint8_t bitmap_tmp_R2[NUMBER_OF_ROWS]; // временный битмап для размещения
+                                         // символа, который используется в
+                                         // режиме panel_mode
+
+  uint16_t concated_bitmap[NUMBER_OF_ROWS]
+                          [NUMBER_OF_DRIVERS]; // буффер с сообщениями, которые
+                                               // отправляются на светодиоды
+};
+
+static struct vertical_led_panel led_panel = {
+    .top_element = {(uint8_t *)bitmap[SYMBOL_ARROW_UP], 0, 0},
+    .bottom_left_element = {(uint8_t *)bitmap[SYMBOL_EMPTY], 0, 0},
+    .bottom_right_element = {(uint8_t *)bitmap[SYMBOL_3], 0, 0},
+    .bitmap_tmp_L1 = {0},
+    .bitmap_tmp_L2 = {0},
+    .bitmap_tmp_R1 = {0},
+    .bitmap_tmp_R2 = {0},
+    .concated_bitmap = {0}};
+
+// #include "LED_panel_driver.h"
+
+// ############################################################ PUBLIC FUNCTIONS
+// ###############################################################
+
+_Bool concat_bitmap_3_elements(
+    uint16_t (*concated_bitmap_ptr)[NUMBER_OF_DRIVERS],
+    uint8_t top_bitmap_ptr[ELEMENTS_IN_BITMAP],
+    uint8_t bottom_right_bitmap_ptr[ELEMENTS_IN_BITMAP],
+    uint8_t bottom_left_bitmap_ptr[ELEMENTS_IN_BITMAP]) {
+  int j;
+  uint16_t row_flag; // переменная для размещения бита, отвечающего за включение
+                     // ряда на панели
+
+  if ((concated_bitmap_ptr == NULL) || (top_bitmap_ptr == NULL) ||
+      (bottom_right_bitmap_ptr == NULL) || (bottom_left_bitmap_ptr == NULL))
+    return 0;
+
+  // построчная развертка
+  for (j = 0; j < NUMBER_OF_ROWS; ++j) {
+    row_flag = 1 << (2 + j);
+    if (concated_bitmap_ptr[j] == NULL)
+      return 0;
+    // записываем bitmap для верхнего разряда
+    concated_bitmap_ptr[j][0] = row_flag + (top_bitmap_ptr[j] << 8);
+    // записываем bitmap для правого нижнего раряда
+    concated_bitmap_ptr[j][1] = row_flag + (bottom_right_bitmap_ptr[j] << 8);
+    // записываем bitmap для левого нижнего раряда
+    concated_bitmap_ptr[j][2] = row_flag + (bottom_left_bitmap_ptr[j] << 8);
+  }
+
+  return 1;
+}
+
+_Bool concat_bitmap_2_elements(
+    uint16_t (*concated_bitmap_ptr)[NUMBER_OF_DRIVERS],
+    uint8_t first_bitmap_ptr[ELEMENTS_IN_BITMAP], uint8_t first_elem_in_bitmap,
+    uint8_t second_bitmap_ptr[ELEMENTS_IN_BITMAP],
+    uint8_t second_elem_in_bitmap) {
+  int j;
+  uint16_t row_flag;
+
+  if ((concated_bitmap_ptr == NULL) || (first_bitmap_ptr == NULL) ||
+      (second_bitmap_ptr == NULL))
+    return 0;
+
+  if ((first_elem_in_bitmap > 2) || (second_elem_in_bitmap > 2))
+    return 0;
+
+  // построчная развертка
+  for (j = 0; j < NUMBER_OF_ROWS; ++j) {
+    if (concated_bitmap_ptr[j] == NULL)
+      return 0;
+    row_flag = 1 << (2 + j);
+    // правый нижний раряд
+    concated_bitmap_ptr[j][first_elem_in_bitmap] =
+        row_flag + (first_bitmap_ptr[j] << 8);
+    // левый нижний разряд
+    concated_bitmap_ptr[j][second_elem_in_bitmap] =
+        row_flag + (second_bitmap_ptr[j] << 8);
+  }
+
+  return 1;
+}
+
+_Bool concat_bitmap_1_element(
+    uint16_t (*concated_bitmap_ptr)[NUMBER_OF_DRIVERS],
+    uint8_t bitmap_ptr[ELEMENTS_IN_BITMAP], uint8_t elem_in_bitmap) {
+  int j;
+  uint16_t row_flag;
+
+  if ((concated_bitmap_ptr == NULL) || (elem_in_bitmap > 2))
+    return 0;
+
+  // построчная развертка
+  for (j = 0; j < NUMBER_OF_ROWS; ++j) {
+    if (concated_bitmap_ptr[j] == NULL)
+      return 0;
+    row_flag = 1 << (2 + j);
+    concated_bitmap_ptr[j][elem_in_bitmap] = row_flag + (bitmap_ptr[j] << 8);
+  }
+  return 1;
+}
+
+static void update_element(struct led_panel_element *element,
+                           uint8_t position) {
+
+  if (element->is_update)
+    concat_bitmap_1_element(led_panel.concated_bitmap,
+                            element->element_bitmap_ptr, position);
+
+  element->is_update = 0;
+}
+
+void update_LED_panel() {
+  update_element(&led_panel.top_element, (uint8_t)0);
+  update_element(&led_panel.bottom_left_element, (uint8_t)1);
+  update_element(&led_panel.bottom_right_element, (uint8_t)2);
+  send_bitmap_to_display();
+}
+
+void send_bitmap_to_display() {
+  int i;
+#ifdef config_SPLIT_SYMBOL
+  i = 0;
+#else
+  i = 1;
+#endif
+
+  for (i; i < NUMBER_OF_ROWS; ++i)
+    LED_driver_send_buffer(led_panel.concated_bitmap[i],
+                           (size_t)NUMBER_OF_DRIVERS);
+}
+
+//=====================================================INDICATION
+
+struct floor_indication {
+  symbol_code_e t_elem;
+  symbol_code_e l_elem;
+  symbol_code_e r_elem;
+  // enum arrow_panel_status		arrow_status;
+  // uint32_t		 			afterstop_arrow_stamp;
+  // // для организации задержки при смене стрелки со статической на ARROWS_NONE
+};
+// #####################################################################
+// VERIABLES
+// #####################################################################
+static struct floor_indication floor_displaying = {
+    .t_elem = SYMBOL_EMPTY, .l_elem = SYMBOL_EMPTY, .r_elem = SYMBOL_EMPTY,
+    // .arrow_status = AS_CLEAR_ARROW_PANEL,
+    // .afterstop_arrow_stamp = 0
+};
+
+static _Bool set_element(struct led_panel_element *element,
+                         symbol_code_e symbol) {
+  // если для элемента уже воспроизводится анимация, останавливаем ее
+  // if (element->animation.current_transition != TRANSITION_NON) {
+  //   if (element->animation.animation_type == ANIMATION_VERTICAL_CONTINOUS)
+  //     stop_animation(element);
+  //   else
+  //     return 0;
+  // }
+
+  // смена символа без анимации
+  // if (change_type == TRANSITION_NON) {
+  element->element_bitmap_ptr = (uint8_t *)bitmap[symbol];
+
+  // смена символа с анимацией
+  // } else {
+  //   if (!start_animation(element, symbol, change_type)) return 0;
+  // }
+
+  element->is_update = 1;
+  return 1;
+}
+
+_Bool set_bottom_left_element(symbol_code_e symbol) {
+  if ((symbol > SYMBOLS_NUMBER))
+    return 0;
+
+  // если на момент вызова функции используется нижняя панель
+  if (!set_element(&led_panel.bottom_left_element, symbol))
+    return 0;
+
+  return 1;
+}
+
+_Bool set_top_element(symbol_code_e symbol) {
+  if (symbol > SYMBOLS_NUMBER)
+    return 0;
+
+  if (!set_element(&led_panel.top_element, symbol))
+    return 0;
+
+  return 1;
+}
+
+static uint8_t *get_free_buff_left() {
+  uint8_t *tmp = NULL;
+  tmp = led_panel.bottom_left_element.element_bitmap_ptr;
+
+  return ((tmp == led_panel.bitmap_tmp_L1) ? (led_panel.bitmap_tmp_L2)
+                                           : (led_panel.bitmap_tmp_L1));
+}
+
+static uint8_t *get_free_buff_right() {
+  uint8_t *tmp = NULL;
+
+  tmp = led_panel.bottom_right_element.element_bitmap_ptr;
+
+  return ((tmp == led_panel.bitmap_tmp_R1) ? (led_panel.bitmap_tmp_R2)
+                                           : (led_panel.bitmap_tmp_R1));
+}
+
+static void bottom_block_split_symbol(symbol_code_e symbol) {
+  uint32_t i;
+  uint8_t *symbol_bitmap_ptr = (uint8_t *)bitmap[symbol];
+  uint8_t *left_element_bitmap;
+  uint8_t *right_element_bitmap;
+
+  // if (led_panel.bottom_left_element.animation.current_transition !=
+  //     led_panel.bottom_right_element.animation.current_transition)
+  //   led_panel.bottom_left_element.animation.current_transition =
+  //       led_panel.bottom_right_element.animation.current_transition =
+  //           TRANSITION_NON;
+
+  left_element_bitmap = get_free_buff_left();
+  right_element_bitmap = get_free_buff_right();
+
+  for (i = 1; i < 3; ++i) {
+    right_element_bitmap[i + 3] = symbol_bitmap_ptr[i];
+  }
+
+  for (i = 3; i < ELEMENTS_IN_BITMAP; ++i) {
+    left_element_bitmap[i - 3] = symbol_bitmap_ptr[i];
+  }
+
+  led_panel.bottom_left_element.element_bitmap_ptr = left_element_bitmap;
+  led_panel.bottom_right_element.element_bitmap_ptr = right_element_bitmap;
+}
+
+_Bool set_bottom_right_element(symbol_code_e symbol) {
+  if ((symbol > SYMBOLS_NUMBER))
+    return 0;
+
+  if (!set_element(&led_panel.bottom_right_element, symbol))
+    return 0;
+
+  // led_panel.panel_elements.lower_right_element.is_sharing_regime = 0;
+  // led_panel.bottom_left_element.is_sharing_regime  = 0;
+
+  return 1;
+}
+
+_Bool set_bottom_block(symbol_code_e symbol) {
+  if ((symbol > SYMBOLS_NUMBER))
+    return 0;
+
+  // обновляем нижний левый элемент
+  if (!set_element(&led_panel.bottom_left_element, symbol))
+    return 0;
+
+  // обновляем нижний правый элемент
+  if (!set_element(&led_panel.bottom_right_element, symbol))
+    return 0;
+
+  // разбиваем полученный символ
+  bottom_block_split_symbol(symbol);
+
+  return 1;
+}
+
+static _Bool update_floor(struct floor_indication *fdisplaying_p,
+                          symbol_code_e l_elem, symbol_code_e r_elem) {
+
+#if defined(config_SPLIT_SYMBOL)
+  if (l_elem == SYMBOL_EMPTY) {
+    return set_bottom_block(r_elem);
+  }
+#endif
+  if (fdisplaying_p->l_elem != l_elem)
+    if (set_bottom_left_element(l_elem) == 0)
+      return 0;
+  if (set_bottom_right_element(r_elem) == 0)
+    return 0;
+  return 1;
+}
+
+_Bool indication_set_static_arrow(symbol_code_e arrow_elem) {
+
+  /* некорректные входные значения */
+  if (arrow_elem > SYMBOLS_NUMBER)
+    return 0;
+
+  /* уже установлено */
+  if ((floor_displaying.t_elem == arrow_elem))
+    return 1;
+
+  // if (state_get_state() == STATE_DISPLAYING_FLOOR)
+  if (set_top_element(arrow_elem) == 0)
+    return 0;
+  return 1;
+}
+
+_Bool indication_clear_arrow() {
+  const symbol_code_e symbol_clean_btmp = SYMBOL_EMPTY;
+
+  // if (floor_displaying.t_elem == symbol_clean_btmp)
+  //   return 1;
+  if (set_top_element(symbol_clean_btmp) == 0)
+    return 0;
+  floor_displaying.t_elem = symbol_clean_btmp;
+  return 1;
+}
+
+_Bool indication_set_floor(symbol_code_e l_elem, symbol_code_e r_elem) {
+
+  /* некорректные входные значения */
+  if ((l_elem > SYMBOLS_NUMBER) || (r_elem > SYMBOLS_NUMBER))
+    return 0;
+  /* аналогичные значения уже установлены */
+  if ((l_elem == floor_displaying.l_elem) &&
+      (r_elem == floor_displaying.r_elem))
+    return 1;
+  // if(state_get_state() == STATE_DISPLAYING_FLOOR) {
+  if (update_floor(&floor_displaying, l_elem, r_elem) == 0)
+    return 0;
+  // }
+  floor_displaying.l_elem = l_elem;
+  floor_displaying.r_elem = r_elem;
+  return 1;
+}
+
+_Bool indication_set_full_panel(symbol_code_e top_elem, symbol_code_e left_elem,
+                                symbol_code_e right_elem) {
+  indication_set_static_arrow(top_elem);
+  indication_set_floor(left_elem, right_elem);
+}
+#endif
+
 void STP16_SendData(uint16_t register1, uint16_t register2,
                     uint16_t register3) {
   uint8_t spi_tx_buffer[6];
@@ -132,8 +511,55 @@ void STP16_SendData(uint16_t register1, uint16_t register2,
   // включаем светодиоды
   LED_driver_start_indication();
 }
+
 #if 1
+uint16_t buffer[3];
 void display_symbols_spi() {
+
+#if 0
+  for (int row = 0; row < 6; row++) {
+    uint16_t reg1 = 0, reg2 = 0, reg3 = 0;
+
+    // Формируем данные колонок (bitmap)
+    uint8_t col1 = bitmap[symbols.symbol_code_3][row];
+    uint8_t col2 = bitmap[symbols.symbol_code_2][row];
+    uint8_t col3 = bitmap[symbols.symbol_code_1][row];
+
+    reg1 = col1;
+    reg2 = col2;
+    reg3 = col3;
+
+    // Маска строки
+    uint16_t row_mask = (1 << (7 + row));
+
+    // if (symbols.symbol_code_3 == SYMBOL_EMPTY) {
+    //   if (row != 0)
+    //     reg2 |= (1 << (7 + row));
+    //   if (13 + row < 16 && row != 0)
+    //     reg1 = reg2 | (1 << (13 + row));
+    //   else
+    //     reg1 = 0;
+    // } else {
+    if (reg1 != 0)
+      reg1 |= row_mask;
+    if (reg2 != 0)
+      reg2 |= row_mask;
+    // }
+
+    if (reg3 != 0)
+      reg3 |= row_mask;
+
+    // Собираем в буфер
+    buffer[0] = reg3;
+    buffer[1] = reg2;
+    buffer[2] = reg1;
+
+    // Отправляем буфер
+    LED_driver_send_buffer(buffer, 3);
+  }
+#endif
+
+#if 1
   for (int row = 0; row < 6; row++) {
     uint16_t register1 = 0, register2 = 0, register3 = 0;
 
@@ -210,15 +636,19 @@ void display_symbols_spi() {
       }
 
     } else {
-      register1 |= row_mask; // Включаем строку на 1-м чипе
-      register2 |= row_mask; // Включаем строку на 2-м чипе
+      if (register1 != 0)
+        register1 |= row_mask; // Включаем строку на 1-м чипе
+      if (register2 != 0)
+        register2 |= row_mask; // Включаем строку на 2-м чипе
     }
 
-    register3 |= row_mask; // Включаем строку на 3-м чипе
+    if (register3 != 0)
+      register3 |= row_mask; // Включаем строку на 3-м чипе
 
     // === Отправка данных ===
     STP16_SendData(register1, register2, register3);
   }
+#endif
 }
 #endif
 

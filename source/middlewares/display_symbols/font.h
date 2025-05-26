@@ -107,6 +107,9 @@ typedef enum {
 
 #define NUMBER_OF_SYMBOLS SYMBOLS_NUMBER
 #define NUMBER_OF_ROWS 6
+#define NUMBER_OF_DRIVERS 3
+#define ELEMENTS_IN_BITMAP                                                     \
+  NUMBER_OF_ROWS // количество элементов в bitmap'e равно количеству рядов
 
 extern const uint8_t bitmap[NUMBER_OF_SYMBOLS][NUMBER_OF_ROWS];
 
