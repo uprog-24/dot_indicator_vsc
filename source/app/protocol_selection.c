@@ -51,10 +51,6 @@ void protocol_init() {
  * @retval None
  */
 void protocol_start() {
-#if !TEST_MODE && !DEMO_MODE
-  // TIM4_Stop();
-  // TIM4_Start(); // Timer for checking interface connection
-#endif
 
 #if PROTOCOL_UIM_6100
 
@@ -69,12 +65,6 @@ void protocol_start() {
 
 #elif PROTOCOL_UEL
   receive_data_uart();
-#elif PROTOCOL_UKL
-
-#elif PROTOCOL_ALPACA
-
-  start_can(&hcan, 0);
-
 #endif
 }
 
@@ -90,10 +80,6 @@ void protocol_process_data() {
     process_data_from_can();
 #elif PROTOCOL_UEL
     process_data_from_uart();
-#elif PROTOCOL_UKL
-    process_data_pin();
-#elif PROTOCOL_ALPACA
-    process_data_from_can();
 #endif
   } else {
 

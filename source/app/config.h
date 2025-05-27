@@ -25,6 +25,9 @@
         ///< SETTINGS mode of matrix
 
 #elif DOT_SPI
+
+#include "can.h"
+
 #define PERIOD_SEC_FOR_SETTINGS                                                \
   10000 ///< Period of TIM4 (seconds) for counting time between clicks of btns
         ///< in
@@ -54,13 +57,13 @@
 
 #define PROTOCOL_NAME "UEL"
 #define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 50
+#define ADDR_ID_LIMIT 46
 #define MAX_POSITIVE_NUMBER_LOCATION 39
 #define MAIN_CABIN_ID ADDR_ID_MIN
 #define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
   3000 ///< Time in ms to check interface connection
 
-  #define TIME_DISPLAY_STRING_DURING_MS                                          \
+#define TIME_DISPLAY_STRING_DURING_MS                                          \
   2000 ///< Время в мс, в течение которого отображается строка
 
 /* Protocol UIM_6100 (CAN) */
@@ -172,142 +175,8 @@
 #define __ARROW_DOUBLE
 #endif
 
-/* TEST_MODE */
-#elif TEST_MODE && !DEMO_MODE && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&        \
-    !PROTOCOL_UKL && !PROTOCOL_ALPACA
-
-#include "test_mode.h"
-
-#define MAX_POSITIVE_NUMBER_LOCATION 1 /// <
-#define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 14
-#define MAIN_CABIN_ID 1
-
-/* Protocol UKL (DATA_Pin) */
-#elif PROTOCOL_UKL && !PROTOCOL_UIM_6100 && !PROTOCOL_UEL &&                   \
-    !PROTOCOL_ALPACA && !DEMO_MODE && !TEST_MODE
-
-#include "protocol_selection.h"
-#include "ukl.h"
-
-#define PROTOCOL_NAME "UKL"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 63
-#define MAX_POSITIVE_NUMBER_LOCATION 55
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1 ///< Time in ms to check interface connection
-
-/* Protocol ALPACA (CAN) */
-#elif PROTOCOL_ALPACA && !PROTOCOL_UKL && !PROTOCOL_UIM_6100 &&                \
-    !PROTOCOL_UEL && !DEMO_MODE && !TEST_MODE
-
-#include "alpaca.h"
-#include "can.h"
-#include "protocol_selection.h"
-
-#define PROTOCOL_NAME "ALP"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 73
-#define MAX_POSITIVE_NUMBER_LOCATION 64
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1 ///< Time in ms to check interface connection
-
-#define MAX_P_FLOOR_ID 10
-#define MIN_MINUS_FLOOR_ID 11
-
 #else
 #error "Wrong configurations!"
-#endif
-
-#if 0
-/* Protocol UEL (UART) */
-#if defined(PROTOCOL_UEL)
-
-#include "protocol_selection.h"
-#include "uel.h"
-#include "usart.h"
-
-#define PROTOCOL_NAME "UEL"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 50
-#define MAX_POSITIVE_NUMBER_LOCATION 39
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3 ///< Time in ms to check interface connection
-
-/* Protocol UIM_6100 (CAN) */
-#elif defined(PROTOCOL_UIM_6100)
-
-#include "can.h"
-#include "protocol_selection.h"
-#include "uim6100.h"
-
-#define PROTOCOL_NAME "SHK"
-#define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 49
-#define MAX_POSITIVE_NUMBER_LOCATION 40
-#define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  3 ///< Time in ms to check interface connection
-
-/* DEMO_MODE */
-#elif defined(DEMO_MODE)
-
-#include "demo_mode.h"
-
-#define MAX_POSITIVE_NUMBER_LOCATION 14
-#define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 14
-#define MAIN_CABIN_ID 1
-
-/* TEST_MODE */
-#elif defined(TEST_MODE)
-
-#include "test_mode.h"
-
-#define MAX_POSITIVE_NUMBER_LOCATION 1 /// <
-#define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 14
-#define MAIN_CABIN_ID 1
-
-/* Protocol UKL (DATA_Pin) */
-#elif defined(PROTOCOL_UKL)
-
-#include "protocol_selection.h"
-#include "ukl.h"
-
-#define PROTOCOL_NAME "UKL"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 63
-#define MAX_POSITIVE_NUMBER_LOCATION 55
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1 ///< Time in ms to check interface connection
-
-/* Protocol ALPACA (CAN) */
-#elif defined(PROTOCOL_ALPACA)
-
-#include "alpaca.h"
-#include "can.h"
-#include "protocol_selection.h"
-
-#define PROTOCOL_NAME "ALP"
-#define ADDR_ID_MIN 0
-#define ADDR_ID_LIMIT 73
-#define MAX_POSITIVE_NUMBER_LOCATION 64
-#define MAIN_CABIN_ID 0
-#define TIME_SEC_FOR_INTERFACE_CONNECTION                                      \
-  1 ///< Time in ms to check interface connection
-
-#define MAX_P_FLOOR_ID 10
-#define MIN_MINUS_FLOOR_ID 11
-
-#else
-#error "Wrong configurations!"
-#endif
-
 #endif
 
 /* Variables defined globally in main.c */

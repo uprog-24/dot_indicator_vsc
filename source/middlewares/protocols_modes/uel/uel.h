@@ -9,8 +9,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define UEL_MAIN_CABIN_ID 1  ///< ID of the main cabin
-
 /**
  * @brief  Process data using UEL protocol
  *         1. Get 9 bits from 16 received bits;

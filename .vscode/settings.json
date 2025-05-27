@@ -28,6 +28,10 @@
     "buzzer.h": "c",
     "stdio.h": "c",
     "stdbool.h": "c",
-    "usart.h": "c"
+    "usart.h": "c",
+    "led_panel_driver.h": "c",
+    "bitmap_concatenation.h": "c",
+    "indication.h": "c",
+    "systick_delay.h": "c"
   }
 }

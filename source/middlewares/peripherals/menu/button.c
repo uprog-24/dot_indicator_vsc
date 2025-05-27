@@ -519,39 +519,42 @@ void press_button() {
 
       switch (id) {
       case MAIN_CABIN_ID:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_EMPTY);
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_K);
         break;
 
-      case 40:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_2);
+      case 40: // П2
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG,
+                                  SYMBOL_2);
         break;
-      case 41:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_1);
-        break;
-
-      case 42:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_EMPTY);
+      case 41: // П1
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG,
+                                  SYMBOL_1);
         break;
 
-      case 43:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_4);
+      case 42: // П
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_EMPTY,
+                                  SYMBOL_UNDERGROUND_FLOOR_BIG);
         break;
 
-      case 44:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_3);
+      case 43: // -4
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_4);
         break;
 
-      case 45:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_2);
+      case 44: // -3
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_3);
         break;
 
-      case 46:
-        set_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_1);
+      case 45: // -2
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_2);
+        break;
+
+      case 46: // -1
+        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_1);
         break;
 
       default:
-        set_symbols(SYMBOL_EMPTY, (id < 10) ? (id) % 10 : (id) / 10,
-                    (id < 10) ? SYMBOL_EMPTY : (id) % 10);
+        indication_set_full_panel(
+            SYMBOL_EMPTY, (id < 10) ? SYMBOL_EMPTY : (id) / 10, (id) % 10);
         break;
       }
 
@@ -559,7 +562,7 @@ void press_button() {
 
       while (is_time_sec_for_settings_elapsed != true &&
              is_button_1_pressed == false) {
-        display_symbols_spi();
+        update_LED_panel();
       }
 
       /* Выход из меню */

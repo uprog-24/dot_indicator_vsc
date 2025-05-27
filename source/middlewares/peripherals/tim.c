@@ -191,6 +191,11 @@ volatile bool is_time_ms_for_overload_elapsed = false;
 /// Флаг для отображения строки в течение TIME_DISPLAY_STRING_DURING_MS
 volatile bool is_time_ms_for_display_str_elapsed = false;
 
+#define OVERLOAD_ARROW_ANIMATION_INTERVAL_MS   250
+
+volatile uint16_t overload_arrow_ms_counter = 0;
+extern volatile bool is_time_to_update_arrow;
+
 /**
  * @brief  Handle Interrupt by TIM's period is elapsed,
  *         setting the state of the flags.

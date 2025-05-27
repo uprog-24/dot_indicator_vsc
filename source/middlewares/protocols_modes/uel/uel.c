@@ -8,7 +8,11 @@
 #include "drawing.h"
 #include "tim.h"
 
+#include "indication.h"
+
 #include "string.h"
+
+#define USE_ANIMATION 0
 
 #define NINE_BITS_MASK 0x1FF    ///< Mask for 9 bits with data by UEL protocol
 #define CODE_LOCATION_MASK 0x3F ///< Mask for code location bits
@@ -21,6 +25,8 @@
   BUZZER_FREQ_CABIN_OVERLOAD ///< Frequency of bip for FIRE_DANGER
 
 #define FILTER_BUFF_SIZE 5 ///< Ширина фильтра (5 сообщений)
+
+#define DIRECTION_ARROW_TIME_MS 10000
 
 /**
  * Stores values of control bits
@@ -162,6 +168,7 @@ map_direction_to_common_symbol(control_bits_states_t direction) {
   }
 }
 
+#if !USE_ANIMATION
 void update_arrow_by_direction(control_bits_states_t direction) {
   symbol_code_e symbol = map_direction_to_common_symbol(direction);
 
@@ -169,12 +176,188 @@ void update_arrow_by_direction(control_bits_states_t direction) {
     // Нет движения: очищаем стрелку
     indication_clear_arrow();
   } else {
-    indication_set_static_arrow(symbol);
+    indication_set_static_arrow(symbol, 0);
+  }
+}
+#endif
+
+enum arrow_dir { DIR_STOPPED = 0, DIR_UP = 1, DIR_DOWN = 2, DIR_BOTH = 3 };
+
+struct UEL_status {
+  uint8_t stop_floor;
+  enum arrow_dir afterstop_dir;
+  _Bool afterstop_blocked;
+  uint32_t timstamp; /* id слуюбы таймеров */
+};
+
+static volatile struct UEL_status ustatus = {.stop_floor = 0,
+                                             .afterstop_dir = DIR_STOPPED,
+                                             .afterstop_blocked = 0,
+                                             .timstamp = 0};
+
+#if USE_ANIMATION
+void update_arrow_by_direction(control_bits_states_t direction) {
+  symbol_code_e symbol = map_direction_to_common_symbol(direction);
+
+  // if (symbol == SYMBOL_EMPTY) {
+  //   // Нет движения: очищаем стрелку
+  //   indication_clear_arrow();
+  // } else {
+  // indication_set_static_arrow(symbol, 10000);
+  // ustatus.afterstop_blocked = 1;
+  indication_set_static_arrow(symbol, (uint16_t)DIRECTION_ARROW_TIME_MS);
+  // ustatus.afterstop_blocked = 0;
+  // }
+}
+
+static _Bool UEL_write_ufloor_symbols(uint8_t ufloor_code,
+                                      symbol_code_e *left_elem,
+                                      symbol_code_e *right_elem) {
+  switch (ufloor_code) {
+  case (LOCATION_P2):
+    *left_elem = SYMBOL_UNDERGROUND_FLOOR_BIG;
+    *right_elem = SYMBOL_2;
+    break;
+  case (LOCATION_P1):
+    *left_elem = SYMBOL_UNDERGROUND_FLOOR_BIG;
+    *right_elem = SYMBOL_1;
+    break;
+  case (LOCATION_P):
+    *left_elem = SYMBOL_EMPTY;
+    *right_elem = SYMBOL_UNDERGROUND_FLOOR_BIG;
+    break;
+  case (LOCATION_MINUS_4):
+    *left_elem = SYMBOL_MINUS;
+    *right_elem = SYMBOL_4;
+    break;
+  case (LOCATION_MINUS_3):
+    *left_elem = SYMBOL_MINUS;
+    *right_elem = SYMBOL_3;
+    break;
+  case (LOCATION_MINUS_2):
+    *left_elem = SYMBOL_MINUS;
+    *right_elem = SYMBOL_2;
+    break;
+  case (LOCATION_MINUS_1):
+    *left_elem = SYMBOL_MINUS;
+    *right_elem = SYMBOL_1;
+    break;
+  default:
+    return 0;
+  }
+  return 1;
+}
+
+_Bool get_floor_symbols(uint8_t floor_code, symbol_code_e *left_elem,
+                        symbol_code_e *right_elem) {
+  assert((left_elem != NULL) && (right_elem != NULL));
+  if ((floor_code > 0) && (floor_code <= 39)) {
+    *left_elem = floor_code / 10;
+    *right_elem = floor_code % 10;
+  } else if ((floor_code >= LOCATION_P2) && (floor_code <= LOCATION_MINUS_1)) {
+    UEL_write_ufloor_symbols(floor_code, left_elem, right_elem);
+  } else {
+    return 0;
+  }
+  if (*left_elem == 0)
+    *left_elem = SYMBOL_EMPTY;
+  return 1;
+}
+
+/*	После установки статической стрелки выставляется
+ *  флаг ustatus.afterstop_blocked, без сброса которого
+ *  запрещается обновлять индикацию стрелки.
+ *
+ *  Флаг сбрасывается в коллбеке для службы таймеров
+ *  afterstop_arrow_callback.
+ *
+ *  Если станция продолжает высылать стрелку направления
+ *  движения, она обновиться. Если не высылает -
+ *  стрелка очиститься.
+ *
+ *  Также в функции indication_set_static_arrow есть
+ *  автоматическая очистка статической стрелки.
+ *
+ * */
+static _Bool handle_stop_moving(uint8_t floor_code) {
+  // if (ustatus.afterstop_blocked == 1)
+  //   return 1;
+  // if ((floor_code == config.address) && (floor_code == ustatus.stop_floor)) {
+  symbol_code_e arrow_symbol;
+  // switch (ustatus.afterstop_dir) {
+  // case (DIR_UP):
+  //   arrow_symbol = SYMBOL_ARROW_UP;
+  //   break;
+  // case (DIR_DOWN):
+  //   arrow_symbol = SYMBOL_ARROW_DOWN;
+  //   break;
+  // case (DIR_BOTH):
+  //   arrow_symbol = SYMBOL_ARROW_BOTH;
+  //   break;
+  // default:
+  //   return 0;
+  // }
+  // handle_gongs((struct UEL_status *)&ustatus);
+  // timer_service_add_task(AFTERSTOP_ARROW_BLOCK, afterstop_arrow_callback);
+  // indication_set_static_arrow(arrow_symbol,
+  // (uint16_t)DIRECTION_ARROW_TIME_MS); ustatus.afterstop_blocked = 1;
+  // timer_service_add_task(AFTERSTOP_ARROW_BLOCK, afterstop_arrow_callback);
+  // } else
+  //   indication_clear_arrow();
+
+  return 1;
+}
+
+volatile bool is_time_to_update_arrow = false;
+volatile uint16_t arrow_ms_counter = 0;
+
+static void write_floor_to_panel(uint8_t floor_code,
+                                 enum arrow_dir movement_dir,
+                                 control_bits_states_t direction) {
+  symbol_code_e left_elem = SYMBOL_EMPTY, right_elem = SYMBOL_EMPTY;
+  /* записывем символы, соответсвующие
+   * полученому номеру этажа
+   */
+  if (!get_floor_symbols(floor_code, &left_elem, &right_elem))
+    return;
+  /* установка этажа */
+  indication_set_floor(left_elem, right_elem, (_Bool)1);
+  /* установка стрелки */
+  if (movement_dir == DIR_STOPPED) {
+    update_arrow_by_direction(direction);
+    // handle_stop_moving(floor_code);
+    //    if (symbol == SYMBOL_EMPTY) {
+    //   // Нет движения: очищаем стрелку
+    //   indication_clear_arrow();
+    // } else {
+    // indication_set_static_arrow(symbol, 0);
+    // }
+  } else {
+
+    arrow_ms_counter++;
+
+    // if (arrow_ms_counter >= 10U) {
+    arrow_ms_counter = 0;
+    if (movement_dir == DIR_UP) {
+      indication_set_dynamic_arrow(SYMBOL_ARROW_ANIMATION_UP_DYNAMIC, MDIR_UP,
+                                   1);
+    } else if (movement_dir == DIR_DOWN) {
+      indication_set_dynamic_arrow(SYMBOL_ARROW_ANIMATION_DOWN_DYNAMIC,
+                                   MDIR_DOWN, 1);
+    }
+    // }
   }
 }
 
+static enum arrow_dir read_movement_dir(uint16_t msg) {
+  const uint16_t arrow_mask = 0xC0;
+
+  return (msg & arrow_mask) >> 6;
+}
+#endif
+
 // Маппинг символов nku_symbols_t в код symbol_code_e
-static const symbol_code_e nku_symbol_to_common_table[UEL_SYMBOL_NUMBER] = {
+static const symbol_code_e uel_symbol_to_common_table[UEL_SYMBOL_NUMBER] = {
     [UEL_SYMBOL_0] = SYMBOL_0, [UEL_SYMBOL_1] = SYMBOL_1,
     [UEL_SYMBOL_2] = SYMBOL_2, [UEL_SYMBOL_3] = SYMBOL_3,
     [UEL_SYMBOL_4] = SYMBOL_4, [UEL_SYMBOL_5] = SYMBOL_5,
@@ -190,7 +373,7 @@ static const symbol_code_e nku_symbol_to_common_table[UEL_SYMBOL_NUMBER] = {
  */
 static inline symbol_code_e map_to_common_symbol(uint8_t symbol_code) {
   if (symbol_code < UEL_SYMBOL_NUMBER) {
-    return nku_symbol_to_common_table[symbol_code];
+    return uel_symbol_to_common_table[symbol_code];
   } else {
     return SYMBOL_EMPTY;
   }
@@ -256,7 +439,7 @@ bool is_evacuation_symbol = false;
 static void set_evacuation_symbol(uint8_t current_location) {
   if ((current_location & EVACUATION) == EVACUATION) {
     // set_floor_symbols(SYMBOL_E, SYMBOL_EMPTY);
-    indication_set_floor(SYMBOL_EMPTY, SYMBOL_E);
+    indication_set_floor(SYMBOL_EMPTY, SYMBOL_E, 0);
     is_evacuation_symbol = true;
   } else {
     is_evacuation_symbol = false;
@@ -283,7 +466,7 @@ static void set_cabin_overload_symbol_sound(uint16_t current_location) {
         is_cabin_overload = true;
         overload_sound_ms = 0;
         is_overload_sound_on = true;
-        // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+        start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
       }
 
       if (is_time_ms_for_overload_elapsed) {
@@ -293,13 +476,13 @@ static void set_cabin_overload_symbol_sound(uint16_t current_location) {
           stop_buzzer_sound();
           is_overload_sound_on = false;
         } else {
-          // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+          start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
           is_overload_sound_on = true;
         }
       }
     }
     // set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_G_RU);
-    indication_set_floor(SYMBOL_K, SYMBOL_G_RU);
+    indication_set_floor(SYMBOL_K, SYMBOL_G_RU, 0);
   } else if (is_cabin_overload) {
     stop_buzzer_sound();
     is_cabin_overload = false;
@@ -314,7 +497,7 @@ static bool is_fire_danger_symbol = false;
 static void set_fire_danger_symbol(uint8_t current_location) {
   if ((current_location & FIRE_DANGER_SYMBOL) == FIRE_DANGER_SYMBOL) {
     is_fire_danger_symbol = true;
-    indication_set_floor(SYMBOL_EMPTY, SYMBOL_F);
+    indication_set_floor(SYMBOL_EMPTY, SYMBOL_F, 0);
   } else {
     is_fire_danger_symbol = false;
   }
@@ -336,7 +519,7 @@ static void set_fire_danger_sound(uint8_t current_location) {
       is_fire_danger_sound = true;
       fire_sound_on_cnt = 0;
       fire_sound_off_cnt = 0;
-      // start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      start_buzzer_sound(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
     }
 
     fire_sound_on_cnt++;
@@ -393,7 +576,7 @@ static void floor_indicator_special_regime(uint16_t current_location,
 
   if (matrix_settings.volume != VOLUME_0 &&
       (matrix_settings.addr_id == drawing_data.floor - shift_address)) {
-    // setting_gong_stop(current_location, matrix_settings.volume);
+    setting_gong_stop(current_location, matrix_settings.volume);
   }
 
   // Режим Эвакуация, символ E
@@ -509,35 +692,6 @@ uint8_t yy = 0;
 uint8_t nn = 0;
 uint8_t xx = 0;
 
-#if 0
-_Bool get_floor_symbols(uint8_t floor_code, symbol_code_e *left_elem,
-                        symbol_code_e *right_elem) {
-  assert((left_elem != NULL) && (right_elem != NULL));
-  if ((floor_code > 0) && (floor_code <= 39)) {
-    *left_elem = floor_code / 10;
-    *right_elem = floor_code % 10;
-  } else if ((floor_code >= LOCATION_C2) && (floor_code <= LOCATION_MINUS_1)) {
-    UEL_write_ufloor_symbols(floor_code, left_elem, right_elem);
-  } else {
-    return 0;
-  }
-  if (*left_elem == 0)
-    *left_elem = SYMBOL_EMPTY;
-  return 1;
-}
-
-void write_floor_to_panel(uint8_t floor_code) {
-  symbol_code_e left_elem = SYMBOL_EMPTY, right_elem = SYMBOL_EMPTY;
-  /* записывем символы, соответсвующие
-   * полученому номеру этажа
-   */
-  if (!get_floor_symbols(floor_code, &left_elem, &right_elem))
-    return;
-  /* установка этажа */
-  indication_set_floor(left_elem, right_elem, (_Bool)1);
-}
-#endif
-
 /**
  * @brief  Process data using UEL protocol
  *         1. Get 9 bits from 16 received bits;
@@ -563,13 +717,13 @@ void process_data_uel(uint16_t *received_data) {
 
 #if 0
     xx++;
-    control_bits = UEL_MOVE_DOWN;
+    control_bits = UEL_NO_MOVE;
     current_location = 15;
     set_floor_symbols(SYMBOL_E, SYMBOL_E);
-    // if (xx > 15U) {
-    //   control_bits = SPECIAL_FORMAT;
-    //   current_location = GONG_ARRIVAL;
-    // }
+    if (xx > 10U) {
+      control_bits = MOVE_DOWN_AFTER_STOP;
+      current_location = 15;
+    }
 #endif
 
     /* Разделение по контрольным битам */
@@ -597,69 +751,77 @@ void process_data_uel(uint16_t *received_data) {
 
       // Направление для гонга
       transform_direction_to_common(control_bits);
-
+#if !USE_ANIMATION
       // Настройка кода стрелки
-      // indication_set_static_arrow(map_direction_to_common_symbol(control_bits));
-
       update_arrow_by_direction(control_bits);
+#endif
 
-      // Этажи с 0 по 9
+      // Этажи
       if (!is_fire_danger_symbol && !is_cabin_overload &&
           !is_evacuation_symbol) {
 
-        // Этажи с 0 по 9
-        if (drawing_data.floor >= 0 && drawing_data.floor <= 9) {
+#if USE_ANIMATION
+        uint8_t symbol_code = current_location;
+        enum arrow_dir movement_dir = DIR_BOTH;
+        movement_dir = read_movement_dir(data);
+        write_floor_to_panel(symbol_code, movement_dir, control_bits);
+#endif
+
+#if !USE_ANIMATION
+        // Этажи с 1 по 9
+        if (drawing_data.floor >= 1 && drawing_data.floor <= 9) {
           indication_set_floor(map_to_common_symbol(SYMBOL_EMPTY),
-                               map_to_common_symbol(drawing_data.floor));
+                               map_to_common_symbol(drawing_data.floor), 0);
         } else if (drawing_data.floor <= MAX_POSITIVE_NUMBER_LOCATION) {
           // Этажи с 10 по 39
           indication_set_floor(map_to_common_symbol(drawing_data.floor / 10),
-                               map_to_common_symbol(drawing_data.floor % 10));
+                               map_to_common_symbol(drawing_data.floor % 10),
+                               0);
         } else { // Этажи после 39
           /* Этажи --, П2, П1, П, -4, -3, -2, -1 */
           /* Режимы МП1, МП2, Ревизия, Норм. Раб., Погр */
           switch (drawing_data.floor) {
           case LOCATION_DASH:
-            indication_set_floor(SYMBOL_MINUS, SYMBOL_MINUS);
+            indication_set_floor(SYMBOL_MINUS, SYMBOL_MINUS, 0);
             break;
 
           case LOCATION_P2:
-            indication_set_floor(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_2);
+            indication_set_floor(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_2, 0);
             break;
           case LOCATION_P1:
-            indication_set_floor(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_1);
+            indication_set_floor(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_1, 0);
             break;
 
           case LOCATION_P:
-            indication_set_floor(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG);
+            indication_set_floor(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, 0);
             break;
 
           case LOCATION_MINUS_4:
-            indication_set_floor(SYMBOL_MINUS, SYMBOL_4);
+            indication_set_floor(SYMBOL_MINUS, SYMBOL_4, 0);
             break;
 
           case LOCATION_MINUS_3:
-            indication_set_floor(SYMBOL_MINUS, SYMBOL_3);
+            indication_set_floor(SYMBOL_MINUS, SYMBOL_3, 0);
             break;
 
           case LOCATION_MINUS_2:
-            indication_set_floor(SYMBOL_MINUS, SYMBOL_2);
+            indication_set_floor(SYMBOL_MINUS, SYMBOL_2, 0);
             break;
 
           case LOCATION_MINUS_1:
-            indication_set_floor(SYMBOL_MINUS, SYMBOL_1);
+            indication_set_floor(SYMBOL_MINUS, SYMBOL_1, 0);
             break;
 
           case LOCATION_C1:
-            indication_set_floor(SYMBOL_C, SYMBOL_1);
+            indication_set_floor(SYMBOL_C, SYMBOL_1, 0);
             break;
 
           case LOCATION_C2:
-            indication_set_floor(SYMBOL_C, SYMBOL_2);
+            indication_set_floor(SYMBOL_C, SYMBOL_2, 0);
             break;
 
           case LOCATION_REVISION:
-            indication_set_floor(SYMBOL_P, SYMBOL_E);
+            indication_set_floor(SYMBOL_P, SYMBOL_E, 0);
             break;
 
             // case LOCATION_NORMAL_WORK:
@@ -667,7 +829,8 @@ void process_data_uel(uint16_t *received_data) {
 
           case LOCATION_LOADING:
             if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-              indication_set_floor(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_G_RU);
+              indication_set_floor(SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_G_RU,
+                                   0);
             }
             break;
 
@@ -675,22 +838,17 @@ void process_data_uel(uint16_t *received_data) {
             break;
           } //  switch (drawing_data.floor)
         }   // Этажи после 39
+#endif
       }
       break; // default
     }        //  switch (control_bits)
   }          // if (is_data_filtered)
 
-  // indication_set_floor(SYMBOL_K, SYMBOL_G_RU);
-  // indication_set_static_arrow(SYMBOL_ARROW_DOWN);
-
   while (is_rx_data_completed == false && is_interface_connected == true) {
 #if DOT_PIN
     draw_string_on_matrix(matrix_string);
 #elif DOT_SPI
-    // display_symbols_spi();
     update_LED_panel();
-    // write_floor_to_panel(11);
-    // send_bitmap_to_display();
 #endif
   }
 }

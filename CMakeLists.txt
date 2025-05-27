@@ -155,10 +155,14 @@ elseif(USE_DOT_SPI)
     set(PROJECT_SOURCES
         ${PROJECT_DIR}/app/main.c
         ${PROJECT_DIR}/drivers/LED_driver.c
+        ${PROJECT_DIR}/drivers/LED_driver.c
         ${PROJECT_DIR}/middlewares/display_symbols/drawing.c
         ${PROJECT_DIR}/middlewares/display_symbols/font.c
 
-        ${PROJECT_DIR}/middlewares/display_symbols/bitmap.c
+        ${PROJECT_DIR}/middlewares/display_symbols/image_former_vertical.c
+        ${PROJECT_DIR}/middlewares/display_symbols/bitmap_concatenation.c
+        ${PROJECT_DIR}/middlewares/display_symbols/indication.c
+        ${PROJECT_DIR}/middlewares/display_symbols/vertical_animation.c
 
         ${PROJECT_DIR}/middlewares/peripherals/interfaces/usart.c
         ${PROJECT_DIR}/middlewares/peripherals/interfaces/can.c
@@ -167,9 +171,10 @@ elseif(USE_DOT_SPI)
         ${PROJECT_DIR}/middlewares/peripherals/tim.c
         ${PROJECT_DIR}/middlewares/peripherals/menu/button.c
 
-        ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
-        ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
-        ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/test_mode.c
+        # ${PROJECT_DIR}/middlewares/protocols_modes/uim6100/uim6100.c
+        # ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo_mode.c
+        ${PROJECT_DIR}/middlewares/protocols_modes/demo_mode/demo.c
+        # ${PROJECT_DIR}/middlewares/protocols_modes/test_mode/test_mode.c
         ${PROJECT_DIR}/middlewares/protocols_modes/uel/uel.c
         # ${PROJECT_DIR}/middlewares/peripherals/gpio.c
     )
