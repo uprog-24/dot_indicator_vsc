@@ -261,7 +261,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 static uint16_t _bip_freq = 0;
 
 /// Кол-во тонов гонга для HAL_TIM_OC_DelayElapsedCallback
-static uint8_t _bip_counter = 0;
+uint8_t _bip_counter = 0;
 
 /// Продолжительность тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint32_t _bip_duration_ms = 0;
@@ -278,7 +278,9 @@ static uint16_t _bip_volume = 0;
 void stop_buzzer_sound() {
   TIM1_Stop();
   TIM2_Stop_bip();
+  // if (_bip_counter == 3) {
   _bip_counter = 0;
+  // }
 }
 
 /**
@@ -292,7 +294,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 
     if (tim1_elapsed_ms == _bip_duration_ms) {
 
-      TIM2_Stop_bip(); // Останавливаем 1-ый тон
+      // TIM2_Stop_bip(); // Останавливаем 1-ый тон
       TIM2_Start_bip(900, _bip_volume); // Запускаем 2-ой тон
 
       if (_bip_counter == 1) {
@@ -302,7 +304,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 
     if (tim1_elapsed_ms == 2 * _bip_duration_ms) {
 
-      TIM2_Stop_bip(); // Останавливаем 2-ой тон
+      // TIM2_Stop_bip(); // Останавливаем 2-ой тон
       TIM2_Start_bip(800, _bip_volume); // Запускаем 3-ий тон
 
       if (_bip_counter == 2) {
@@ -311,7 +313,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
     if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
-      TIM2_Stop_bip(); // Останавливаем 3-ий тон
+      // TIM2_Stop_bip(); // Останавливаем 3-ий тон
 
       if (_bip_counter == 3) {
         stop_buzzer_sound();

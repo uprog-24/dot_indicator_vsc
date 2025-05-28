@@ -15,7 +15,7 @@
 #define ARRIVAL_MASK 0b100 ///< Маска для бита прибытия (2-й бит байта W3)
 #define ARRIVAL_VALUE 4 ///< Значение для бита прибытия в байте W3 (биты: 0100)
 #define CODE_MESSAGE_W_1_MASK                                                  \
-  0b00111111 ///< Маска для кода сообщения (дляя звуков)
+  0b00111111 ///< Маска для кода сообщения (для звуков)
 
 #define CODE_FLOOR_W_2_MASK 0x3F ///< Маска для номера этажа
 
@@ -129,6 +129,8 @@ static bool is_cabin_overload = false;
 /// Флаг для контроля воспроизведения оповещения при пожарной опасности
 static bool is_fire_danger = false;
 
+extern uint8_t _bip_counter;
+
 /** Содержит текущее и предыдущее состояние бита прибытия для управления гонгом
  * (фронт сигнала "Прибытие" (бит W[3].2) из 0 в 1).
  */
@@ -159,22 +161,135 @@ static void setting_gong(uint8_t direction_byte_w_3, uint8_t volume) {
 
     switch (direction) {
     case UIM_6100_MOVE_UP:
-      play_gong(1, GONG_BUZZER_FREQ, volume);
+      play_gong(1, GONG_BUZZER_FREQ, volume, BIP_DURATION_GONG);
       break;
     case UIM_6100_MOVE_DOWN:
-      play_gong(2, GONG_BUZZER_FREQ, volume);
+      play_gong(2, GONG_BUZZER_FREQ, volume, BIP_DURATION_GONG);
       break;
     case UIM_6100_NO_MOVE:
-      play_gong(3, GONG_BUZZER_FREQ, volume);
+      play_gong(3, GONG_BUZZER_FREQ, volume, BIP_DURATION_GONG);
       break;
     default:
       __NOP();
-      play_gong(3, GONG_BUZZER_FREQ, volume);
+      play_gong(3, GONG_BUZZER_FREQ, volume, BIP_DURATION_GONG);
       break;
     }
   }
   gong[1] = gong[0];
 }
+
+static uint8_t open_sound_edge[2] = {
+    0,
+};
+
+static uint8_t close_sound_edge[2] = {
+    0,
+};
+
+static uint8_t open_voice_edge[2] = {
+    0,
+};
+
+static uint8_t close_voice_edge[2] = {
+    0,
+};
+static void set_door_sound(uint8_t code_msg_byte_w_1) {
+  // uint8_t open = code_msg_byte_w_1 & VOICE_DOORS_OPENING;
+  //  & SOUND_DOORS_OPENING
+  // uint8_t open = code_msg_byte_w_1 & 0x3F;
+
+  // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
+  // sound open
+  open_sound_edge[0] =
+      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
+      ((code_msg_byte_w_1 & 0x3F) == SOUND_DOORS_OPENING) ? 1 : 0;
+
+  if (open_sound_edge[0] && !open_sound_edge[1]) {
+
+    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+  }
+  open_sound_edge[1] = open_sound_edge[0];
+
+  // sound close
+  close_sound_edge[0] =
+      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
+      ((code_msg_byte_w_1 & 0x3F) == SOUND_DOORS_CLOSING) ? 1 : 0;
+
+  if (close_sound_edge[0] && !close_sound_edge[1]) {
+
+    play_gong(2, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+  }
+  close_sound_edge[1] = close_sound_edge[0];
+
+  // voice open
+  open_voice_edge[0] =
+      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
+      ((code_msg_byte_w_1 & 0x3F) == VOICE_DOORS_OPENING) ? 1 : 0;
+
+  if (open_voice_edge[0] && !open_voice_edge[1]) {
+
+    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+  }
+  open_voice_edge[1] = open_voice_edge[0];
+
+  // voice close
+  close_voice_edge[0] =
+      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
+      ((code_msg_byte_w_1 & 0x3F) == VOICE_DOORS_CLOSING) ? 1 : 0;
+
+  if (close_voice_edge[0] && !close_voice_edge[1]) {
+
+    play_gong(2, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+  }
+  close_voice_edge[1] = close_voice_edge[0];
+}
+
+static uint8_t btn_call_sound_edge[2] = {
+    0,
+};
+static void set_btn_call_sound(uint8_t code_msg_byte_w_1) {
+  // uint8_t open = code_msg_byte_w_1 & VOICE_DOORS_OPENING;
+  //  & SOUND_DOORS_OPENING
+  // uint8_t open = code_msg_byte_w_1 & 0x3F;
+
+  // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
+  // sound open
+  btn_call_sound_edge[0] =
+      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
+      ((code_msg_byte_w_1 & 0x3F) == BUTTON_SOUND_SHORT) ? 1 : 0;
+
+  if (btn_call_sound_edge[0] && !btn_call_sound_edge[1]) {
+    // is_call_btn = true;
+    play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume,
+              BIP_DURATION_CALL_BTN);
+  }
+  btn_call_sound_edge[1] = btn_call_sound_edge[0];
+}
+#if 0
+static void set_btn_call_sound(uint8_t code_msg_byte_w_1) {
+  /* Нажатие кнопки вызова */
+  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == BUTTON_SOUND_SHORT) {
+    // if ((code_msg_byte_w_1 & BUTTON_SOUND_SHORT) == BUTTON_SOUND_SHORT) {
+
+    if (button_disable_cnt == 0) {
+      if (matrix_settings.volume != VOLUME_0) {
+        is_button_pressed = true;
+        play_gong(1, 1000, matrix_settings.volume, BIP_DURATION_CALL_BTN);
+      }
+    }
+
+    /** Не воспроизводить последующие нажатия, если кнопка уже нажата;
+     */
+    if (is_button_pressed) {
+      button_disable_cnt++;
+      if (button_disable_cnt == 3) {
+        button_disable_cnt = 0;
+        is_button_pressed = false;
+      }
+    }
+  }
+}
+#endif
 
 /**
  * @brief  Обработка code message (байт W1), включение/выключение бузера.
@@ -182,22 +297,33 @@ static void setting_gong(uint8_t direction_byte_w_3, uint8_t volume) {
  * @retval None
  */
 static void process_code_msg(uint8_t code_msg_byte_w_1) {
-  /* Перегруз кабины */
-  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
 
-    if (matrix_settings.volume != VOLUME_0) {
-      is_cabin_overload = true;
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
-    }
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'g';
-
+  /* Если гонг отработал и не перегруз/пожар, то воспроизводим нажатие кнопки
+   * вызова, иначе не воспроизводим нажатие
+   */
+  if (_bip_counter == 0 && !is_cabin_overload && !is_fire_danger) {
+    set_btn_call_sound(code_msg_byte_w_1);
   }
-  // Следующие полученные данные по CAN
-  else if (is_cabin_overload) {
-    TIM2_Stop_bip();
-    is_cabin_overload = false;
+
+  /* Перегруз кабины: если не Пожар, воспроизводим */
+  if (!is_fire_danger) {
+
+    if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
+
+      if (matrix_settings.volume != VOLUME_0) {
+        is_cabin_overload = true;
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+      matrix_string[DIRECTION] = 'c';
+      matrix_string[MSB] = 'K';
+      matrix_string[LSB] = 'g';
+
+    }
+    // Следующие полученные данные по CAN
+    else if (is_cabin_overload) {
+      TIM2_Stop_bip();
+      is_cabin_overload = false;
+    }
   }
 
   /* Пожарная опасность */
@@ -216,8 +342,8 @@ static void process_code_msg(uint8_t code_msg_byte_w_1) {
 }
 
 /**
- * @brief  Обработка звуковых сигналов: нажатие кнопки приказа, гонг, перегруз,
- *         пожарная опасность.
+ * @brief  Обработка звуковых сигналов: нажатие кнопки приказа, гонг,
+ * перегруз, пожарная опасность.
  * @param  code_msg_byte_w_1: Байт W1.
  * @retval None
  */
@@ -225,49 +351,38 @@ static void setting_sound_uim(msg_t *msg) {
 
   uint8_t code_msg_byte_w_1 = msg->w1;
 
-  /* Нажатие кнопки приказа */
-  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == BUTTON_SOUND_SHORT) {
-
-    if (button_disable_cnt == 0) {
-      if (matrix_settings.volume != VOLUME_0) {
-        is_button_pressed = true;
-        play_gong(1, 1000, matrix_settings.volume);
-      }
-    }
-
-    /** Не воспроизводить последующие нажатия, если кнопка уже нажата;
-     * продолжительность BIP_DURATION_MS 500
-     */
-    if (is_button_pressed) {
-      button_disable_cnt++;
-      if (button_disable_cnt == 3) {
-        button_disable_cnt = 0;
-        is_button_pressed = false;
-      }
-    }
+  /* Если гонг отработал и не перегруз/пожар, то воспроизводим нажатие кнопки
+   * вызова, иначе не воспроизводим нажатие
+   */
+  if (_bip_counter == 0 && !is_cabin_overload && !is_fire_danger) {
+    set_btn_call_sound(code_msg_byte_w_1);
   }
 
   /* Гонг прибытия */
-  if (matrix_settings.volume != VOLUME_0) {
-    setting_gong(msg->w3, matrix_settings.volume);
-  }
-
-  /* Перегруз кабины */
-  if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
-
+  if (!is_fire_danger) {
     if (matrix_settings.volume != VOLUME_0) {
-      is_cabin_overload = true;
-      TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      setting_gong(msg->w3, matrix_settings.volume);
     }
-
-    matrix_string[DIRECTION] = 'c';
-    matrix_string[MSB] = 'K';
-    matrix_string[LSB] = 'g';
   }
-  // Следующие полученные данные по CAN
-  else if (is_cabin_overload) {
-    TIM2_Stop_bip();
-    is_cabin_overload = false;
+
+  /* Перегруз кабины: если не Пожар, воспроизводим */
+  if (!is_fire_danger) {
+    if ((code_msg_byte_w_1 & CODE_MESSAGE_W_1_MASK) == VOICE_CABIN_OVERLOAD) {
+
+      if (matrix_settings.volume != VOLUME_0) {
+        is_cabin_overload = true;
+        TIM2_Start_bip(BUZZER_FREQ_CABIN_OVERLOAD, VOLUME_3);
+      }
+
+      matrix_string[DIRECTION] = 'c';
+      matrix_string[MSB] = 'K';
+      matrix_string[LSB] = 'g';
+    }
+    // Следующие полученные данные по CAN
+    else if (is_cabin_overload) {
+      TIM2_Stop_bip();
+      is_cabin_overload = false;
+    }
   }
 
   /* Пожарная опасность */
@@ -323,6 +438,8 @@ static void transform_direction_to_common(direction_uim_6100_t direction) {
  * @param  msg: Указатель на структуру полученных данных.
  * @retval None
  */
+
+bool is_call_btn = false;
 void process_data_uim(msg_t *msg) {
   /// Флаг для контроля полученных данных по CAN.
   extern volatile bool is_data_received;
@@ -337,22 +454,44 @@ void process_data_uim(msg_t *msg) {
 
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-#if 1
+#if 0
     /* Проверено на испытаниях */
     if (matrix_settings.volume != VOLUME_0) {
       setting_gong(msg->w3, matrix_settings.volume);
     }
     process_code_msg(code_msg);
-#elif
+#else
     /* Функция для обработки ВСЕХ звукрвых оповещений была составлена после
      * испытаний, не проверена */
     setting_sound_uim(msg);
 #endif
   } else {
     // Этажный индикатор
+
+    /* Если гонг отработал, то воспроизводим нажатие кнопки вызова, иначе не
+     * воспроизводим нажатие
+     */
+    if (_bip_counter == 0) {
+      // set_btn_call_sound(msg->w1 & CODE_MESSAGE_W_1_MASK);
+      if (matrix_settings.volume != VOLUME_0) {
+        set_btn_call_sound(msg->w1);
+      }
+    }
+
+    // if (_bip_counter == 0) {
+    //   set_open_door_sound(code_msg);
+    // }
+
+    // Гонг
     if (matrix_settings.addr_id == drawing_data.floor ||
         matrix_settings.addr_id == 47) {
       if (matrix_settings.volume != VOLUME_0) {
+
+        if (_bip_counter == 0) {
+          // set_open_door_sound(code_msg);
+          set_door_sound(msg->w1);
+        }
+
         setting_gong(msg->w3, matrix_settings.volume);
       }
     }

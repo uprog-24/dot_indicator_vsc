@@ -23,6 +23,12 @@ typedef enum {
   VOLUME_3 = 55 // Максимальный уровень громкости
 } volume_t;
 
+typedef enum {
+  BIP_DURATION_GONG,
+  BIP_DURATION_DOORS,
+  BIP_DURATION_CALL_BTN
+} bip_duration_e;
+
 /**
  * @brief Установка состояния активного бузера. Включение и выключение.
  * @param state: Состояние states_t: TURN_ON, TURN_OFF.
@@ -45,7 +51,8 @@ void set_passive_buzzer_melody(const uint16_t *freq_buff, uint8_t buff_size);
  * @param  volume:        Уровень громкости тона.
  * @retval None
  */
-void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume);
+void play_gong(uint8_t bip_counter, uint16_t bip_frequency, uint8_t volume,
+               bip_duration_e duration_type);
 
 /**
  * @brief  Старт воспроизведения гонга для MATRIX_STATE_MENU (режим выбора
