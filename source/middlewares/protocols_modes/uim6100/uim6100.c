@@ -193,6 +193,7 @@ static uint8_t open_voice_edge[2] = {
 static uint8_t close_voice_edge[2] = {
     0,
 };
+bool is_door_sound = false;
 static void set_door_sound(uint8_t code_msg_byte_w_1) {
   // uint8_t open = code_msg_byte_w_1 & VOICE_DOORS_OPENING;
   //  & SOUND_DOORS_OPENING
@@ -207,6 +208,7 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
   if (open_sound_edge[0] && !open_sound_edge[1]) {
 
     play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+    is_door_sound = true;
   }
   open_sound_edge[1] = open_sound_edge[0];
 
@@ -218,6 +220,7 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
   if (close_sound_edge[0] && !close_sound_edge[1]) {
 
     play_gong(2, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+    is_door_sound = true;
   }
   close_sound_edge[1] = close_sound_edge[0];
 
@@ -229,6 +232,7 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
   if (open_voice_edge[0] && !open_voice_edge[1]) {
 
     play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+    is_door_sound = true;
   }
   open_voice_edge[1] = open_voice_edge[0];
 
@@ -240,6 +244,7 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
   if (close_voice_edge[0] && !close_voice_edge[1]) {
 
     play_gong(2, GONG_BUZZER_FREQ, matrix_settings.volume, BIP_DURATION_DOORS);
+    is_door_sound = true;
   }
   close_voice_edge[1] = close_voice_edge[0];
 }
@@ -471,7 +476,7 @@ void process_data_uim(msg_t *msg) {
     /* Если гонг отработал, то воспроизводим нажатие кнопки вызова, иначе не
      * воспроизводим нажатие
      */
-    if (_bip_counter == 0) {
+    if (_bip_counter == 0 || is_door_sound) {
       // set_btn_call_sound(msg->w1 & CODE_MESSAGE_W_1_MASK);
       if (matrix_settings.volume != VOLUME_0) {
         set_btn_call_sound(msg->w1);

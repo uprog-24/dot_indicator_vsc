@@ -275,11 +275,13 @@ static uint16_t _bip_volume = 0;
  * @param  None
  * @retval None
  */
+extern bool is_door_sound;
 void stop_buzzer_sound() {
   TIM1_Stop();
   TIM2_Stop_bip();
   // if (_bip_counter == 3) {
   _bip_counter = 0;
+   is_door_sound = false;
   // }
 }
 
