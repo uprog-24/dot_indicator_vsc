@@ -902,25 +902,6 @@ void TIM2_Set_pwm_sound(uint16_t frequency, uint16_t bip_counter,
 }
 
 /**
- * @brief  Display symbols on matrix (DEMO_MODE)
- * @param  time_ms:     The time (ms) during which the symbols will be displayed
- * @param  str_symbols: Pointer to the string to be displayed
- * @retval None
- */
-void TIM4_Diaplay_symbols_on_matrix(uint16_t time_ms, char *str_symbols) {
-  is_tim4_period_elapsed = false;
-  is_start_indicator = true;
-
-  while (is_start_indicator) {
-#if DOT_PIN
-    draw_string_on_matrix(str_symbols);
-#elif DOT_SPI
-    display_symbols_spi(str_symbols);
-#endif
-  }
-}
-
-/**
  * @brief  Start TIM1 CH1 Output Compare mode to control bip duration in ms
  * @param  None
  * @retval None

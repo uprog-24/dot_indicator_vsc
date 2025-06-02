@@ -18,6 +18,6 @@
  * @param  received_data: Pointer to the buffer with received data by CAN
  * @retval None
  */
-void process_data_uel(uint16_t *rx_data);
+void process_data_uel(uint8_t *received_data);
 
 #endif /* __UEL_H__ */

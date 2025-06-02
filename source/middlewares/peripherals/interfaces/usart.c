@@ -27,11 +27,17 @@
 #include <stdbool.h>
 
 /// Store received data by UEL protocol (9 bits)
-static uint16_t received_data = 0xFFFF;
+// static uint16_t received_data = 0xFFFF;
 
 /// Flag to control is receiving data completed by UART
 volatile bool is_rx_data_completed = false;
 
+uint8_t received_data[2];
+uint16_t received_data_16;
+uint16_t received_data_16_copy;
+
+#define SIZE 10
+uint16_t rxBuffer[SIZE]; // Buffer for 9-bit data
 /**
  * @brief  Receive 9 bits for UEL protocol
  * @param  None
@@ -41,7 +47,12 @@ void receive_data_uart() {
 #if DOT_PIN
   HAL_UART_Receive_IT(&huart1, (uint8_t *)&(received_data), 1);
 #elif DOT_SPI
-  HAL_UART_Receive_IT(&huart2, (uint8_t *)&(received_data), 1);
+  // HAL_UART_Receive_IT(&huart2, (uint8_t *)received_data, 2);
+
+  HAL_UART_Receive_IT(&huart2, (uint8_t *)&(received_data_16), 1);
+
+  // HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, SIZE * 2);
+
 #endif
 }
 
@@ -69,14 +80,41 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 #if DOT_SPI
   if (huart->Instance == USART2) {
+
     alive_cnt[0] = (alive_cnt[0] < UINT32_MAX) ? alive_cnt[0] + 1 : 0;
 
     is_interface_connected = true;
     is_rx_data_completed = true;
 
+    received_data_16_copy = ~received_data_16 & 0x1FF;
+
     receive_data_uart();
   }
 #endif
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+  if (huart->Instance == USART2) {
+    uint32_t error = HAL_UART_GetError(huart);
+
+    if (error & HAL_UART_ERROR_PE) {
+      // Ошибка паритета
+      // Обработайте или залогируйте
+    }
+    if (error & HAL_UART_ERROR_FE) {
+      // Ошибка кадра
+    }
+    if (error & HAL_UART_ERROR_NE) {
+      // Ошибка шума
+    }
+    if (error & HAL_UART_ERROR_ORE) {
+      // Ошибка переполнения буфера
+      // HAL_UART_Receive_IT(huart, (uint8_t *)received_data, 2);
+    }
+
+    // Можно перезапустить приём, если нужно
+    // HAL_UART_Receive_IT(huart, (uint8_t *)&received_data_16, 1);
+  }
 }
 /* USER CODE END 0 */
 
@@ -252,7 +290,14 @@ void process_data_from_uart() {
   if (is_rx_data_completed) {
     is_rx_data_completed = false;
 
-    process_data_uel(&received_data);
+#if 1
+    received_data[0] =
+        (uint8_t)(received_data_16_copy & 0xFF); // Получаем младший байт
+    received_data[1] = (uint8_t)((received_data_16_copy >> 8) &
+                                 0xFF); // Получаем старший байт
+#endif
+
+    process_data_uel(received_data);
   }
 }
 /* USER CODE END 1 */

@@ -7,6 +7,11 @@
 #include "dot.h"
 #include "font.h"
 
+#if DOT_SPI
+#include "LED_driver.h"
+#include "software_SPI.h"
+#endif
+
 #include <stdbool.h>
 #include <string.h>
 
@@ -105,118 +110,6 @@ void drawing_data_setter(drawing_data_t *drawing_data, uint8_t floor,
 }
 #if DOT_SPI
 
-#if 0
-
-//=====================================================INDICATION
-
-struct floor_indication {
-  symbol_code_e t_elem;
-  symbol_code_e l_elem;
-  symbol_code_e r_elem;
-  // enum arrow_panel_status		arrow_status;
-  // uint32_t		 			afterstop_arrow_stamp;
-  // // для организации задержки при смене стрелки со статической на ARROWS_NONE
-};
-// #####################################################################
-// VERIABLES
-// #####################################################################
-static struct floor_indication floor_displaying = {
-    .t_elem = SYMBOL_EMPTY, .l_elem = SYMBOL_EMPTY, .r_elem = SYMBOL_EMPTY,
-    // .arrow_status = AS_CLEAR_ARROW_PANEL,
-    // .afterstop_arrow_stamp = 0
-};
-
-static _Bool set_element(struct led_panel_element *element,
-                         symbol_code_e symbol) {
-  // если для элемента уже воспроизводится анимация, останавливаем ее
-  // if (element->animation.current_transition != TRANSITION_NON) {
-  //   if (element->animation.animation_type == ANIMATION_VERTICAL_CONTINOUS)
-  //     stop_animation(element);
-  //   else
-  //     return 0;
-  // }
-
-  // смена символа без анимации
-  // if (change_type == TRANSITION_NON) {
-  element->element_bitmap_ptr = (uint8_t *)bitmap[symbol];
-
-  // смена символа с анимацией
-  // } else {
-  //   if (!start_animation(element, symbol, change_type)) return 0;
-  // }
-
-  element->is_update = 1;
-  return 1;
-}
-
-static _Bool update_floor(struct floor_indication *fdisplaying_p,
-                          symbol_code_e l_elem, symbol_code_e r_elem) {
-
-#if defined(config_SPLIT_SYMBOL)
-  if (l_elem == SYMBOL_EMPTY) {
-    return set_bottom_block(r_elem);
-  }
-#endif
-  if (fdisplaying_p->l_elem != l_elem)
-    if (set_bottom_left_element(l_elem) == 0)
-      return 0;
-  if (set_bottom_right_element(r_elem) == 0)
-    return 0;
-  return 1;
-}
-
-_Bool indication_set_static_arrow(symbol_code_e arrow_elem) {
-
-  /* некорректные входные значения */
-  if (arrow_elem > SYMBOLS_NUMBER)
-    return 0;
-
-  /* уже установлено */
-  if ((floor_displaying.t_elem == arrow_elem))
-    return 1;
-
-  // if (state_get_state() == STATE_DISPLAYING_FLOOR)
-  if (set_top_element(arrow_elem) == 0)
-    return 0;
-  return 1;
-}
-
-_Bool indication_clear_arrow() {
-  const symbol_code_e symbol_clean_btmp = SYMBOL_EMPTY;
-
-  // if (floor_displaying.t_elem == symbol_clean_btmp)
-  //   return 1;
-  if (set_top_element(symbol_clean_btmp) == 0)
-    return 0;
-  floor_displaying.t_elem = symbol_clean_btmp;
-  return 1;
-}
-
-_Bool indication_set_floor(symbol_code_e l_elem, symbol_code_e r_elem) {
-
-  /* некорректные входные значения */
-  if ((l_elem > SYMBOLS_NUMBER) || (r_elem > SYMBOLS_NUMBER))
-    return 0;
-  /* аналогичные значения уже установлены */
-  if ((l_elem == floor_displaying.l_elem) &&
-      (r_elem == floor_displaying.r_elem))
-    return 1;
-  // if(state_get_state() == STATE_DISPLAYING_FLOOR) {
-  if (update_floor(&floor_displaying, l_elem, r_elem) == 0)
-    return 0;
-  // }
-  floor_displaying.l_elem = l_elem;
-  floor_displaying.r_elem = r_elem;
-  return 1;
-}
-
-_Bool indication_set_full_panel(symbol_code_e top_elem, symbol_code_e left_elem,
-                                symbol_code_e right_elem) {
-  indication_set_static_arrow(top_elem);
-  indication_set_floor(left_elem, right_elem);
-}
-#endif
-
 #define SYMBOL_TABLE_SIZE 128
 
 // Маппинг символов char в код symbol_code_e
@@ -256,12 +149,20 @@ void draw_string(char *matrix_string) {
               char_to_symbol(matrix_string[1]),
               char_to_symbol(matrix_string[2]));
   display_symbols_spi();
-#endif
-  indication_set_static_arrow(char_to_symbol(matrix_string[0]), 0);
-  indication_set_floor(char_to_symbol(matrix_string[1]),
-                       char_to_symbol(matrix_string[2]), 0);
+#else
+  // indication_set_static_arrow(char_to_symbol(matrix_string[0]), 0);
+  // indication_set_floor(char_to_symbol(matrix_string[1]),
+  //                      char_to_symbol(matrix_string[2]), 0);
 
-  update_LED_panel();
+  // update_LED_panel();
+
+  prepare_symbols(char_to_symbol(matrix_string[0]),
+                  char_to_symbol(matrix_string[1]),
+                  char_to_symbol(matrix_string[2]));
+
+  render_prepared_symbols();
+
+#endif
 }
 
 extern volatile bool is_time_ms_for_display_str_elapsed;
@@ -280,7 +181,8 @@ void display_string_during_ms(char *matrix_string) {
 
   // Очищаем поля структуры с символами
   // set_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
-  indication_clear_all_panels();
+  // indication_clear_all_panels();
+  prepare_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
 }
 
 /**
@@ -292,7 +194,110 @@ void display_symbols_during_ms() {
   is_time_ms_for_display_str_elapsed = false;
 
   while (!is_time_ms_for_display_str_elapsed) {
-    display_symbols_spi();
+    // display_symbols_spi();
+  }
+}
+
+extern const uint8_t bitmap[46][6];
+
+typedef struct {
+  uint16_t data[6]; // 6 строк символа (бинарное представление)
+} SymbolData;
+
+SymbolData g_sym1;
+SymbolData g_sym2;
+SymbolData g_sym3;
+
+static void prepare_symbol_data(const uint8_t *symbol, SymbolData *out_data) {
+  for (int row = 0; row < 6; ++row) {
+    uint16_t row_flag = 1 << (2 + row);
+    out_data->data[row] = row_flag | ((uint16_t)symbol[row] << 8);
+  }
+}
+
+#if 1
+void prepare_floor_symbols(uint8_t index2, uint8_t index3) {
+
+  // Если левый символ пустой
+  if (index2 == SYMBOL_EMPTY) {
+
+    uint8_t *symbol_bitmap_ptr = (uint8_t *)bitmap[index3];
+
+    // левое знакоместо
+    for (int row = 0; row < 3; ++row) {
+      uint16_t row_flag = 1 << (2 + row);
+      g_sym2.data[row] = row_flag | ((uint16_t)symbol_bitmap_ptr[row + 3] << 8);
+    }
+
+    // правое знакоместо
+    for (int row = 3; row < 6; ++row) {
+      uint16_t row_flag = 1 << (2 + row);
+      g_sym3.data[row - 3] =
+          row_flag | ((uint16_t)symbol_bitmap_ptr[row - 3] << 8);
+    }
+
+    for (int row = 3; row < 6; ++row) {
+      g_sym3.data[row] = 0;
+    }
+    for (int row = 3; row < 6; ++row) {
+      g_sym2.data[row] = 0;
+    }
+
+  } else {
+    prepare_symbol_data(bitmap[index2], &g_sym2);
+    prepare_symbol_data(bitmap[index3], &g_sym3);
+  }
+}
+#endif
+
+void prepare_dir_symbol(uint8_t index1) {
+  prepare_symbol_data(bitmap[index1], &g_sym1);
+}
+
+void prepare_symbols(uint8_t index1, uint8_t index2, uint8_t index3) {
+  prepare_dir_symbol(index1);
+  prepare_floor_symbols(index2, index3);
+}
+
+static void LED_driver_send2(uint16_t data) {
+  uint8_t hi = (data >> 8) & 0xFF;
+  uint8_t lo = data & 0xFF;
+
+  software_SPI_sendByte(lo); // сначала старший
+  software_SPI_sendByte(hi); // потом младший
+}
+
+static void LED_driver_send_buffer_raw(uint16_t d1, uint16_t d2, uint16_t d3) {
+  // В порядке: последним первым (т.к. регистры сдвигаются)
+  LED_driver_send2(d1);
+  LED_driver_send2(d2);
+  LED_driver_send2(d3);
+
+  LED_driver_impulse_to_latch();
+  LED_driver_start_indication();
+}
+
+void render_prepared_symbols() {
+  for (int row = 0; row < 6; ++row) {
+    LED_driver_send_buffer_raw(g_sym1.data[row], g_sym2.data[row],
+                               g_sym3.data[row]);
+  }
+}
+
+void render_symbols_by_index(uint8_t index1, uint8_t index2, uint8_t index3) {
+  const uint8_t *symbol1 = bitmap[index1];
+  const uint8_t *symbol2 = bitmap[index2];
+  const uint8_t *symbol3 = bitmap[index3];
+
+  for (int row = 0; row < 6; ++row) {
+    uint16_t row_flag = 1 << (2 + row);
+
+    uint16_t data1 = row_flag | ((uint16_t)symbol1[row] << 8);
+    uint16_t data2 = row_flag | ((uint16_t)symbol2[row] << 8);
+    uint16_t data3 = row_flag | ((uint16_t)symbol3[row] << 8);
+
+    // Отрисовать строку всех 3 драйверов
+    LED_driver_send_buffer_raw(data1, data2, data3);
   }
 }
 

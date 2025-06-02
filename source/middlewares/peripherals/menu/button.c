@@ -519,42 +519,57 @@ void press_button() {
 
       switch (id) {
       case MAIN_CABIN_ID:
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_K);
+        // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_K);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_K);
         break;
 
       case 40: // П2
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG,
-                                  SYMBOL_2);
+        // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG,
+        //                           SYMBOL_2);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_2);
         break;
       case 41: // П1
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG,
-                                  SYMBOL_1);
+               // indication_set_full_panel(SYMBOL_EMPTY,
+               // SYMBOL_UNDERGROUND_FLOOR_BIG,
+               //                           SYMBOL_1);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_UNDERGROUND_FLOOR_BIG, SYMBOL_1);
         break;
 
       case 42: // П
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_EMPTY,
-                                  SYMBOL_UNDERGROUND_FLOOR_BIG);
+               // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_EMPTY,
+               //                           SYMBOL_UNDERGROUND_FLOOR_BIG);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY,
+                        SYMBOL_UNDERGROUND_FLOOR_BIG);
         break;
 
       case 43: // -4
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_4);
+        // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_4);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_4);
         break;
 
       case 44: // -3
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_3);
+               // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS,
+               // SYMBOL_3);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_3);
         break;
 
       case 45: // -2
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_2);
+               // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS,
+               // SYMBOL_2);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_2);
         break;
 
       case 46: // -1
-        indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_1);
+               // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS,
+               // SYMBOL_1);
+        prepare_symbols(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_1);
         break;
 
       default:
-        indication_set_full_panel(
-            SYMBOL_EMPTY, (id < 10) ? SYMBOL_EMPTY : (id) / 10, (id) % 10);
+        // indication_set_full_panel(
+        //     SYMBOL_EMPTY, (id < 10) ? SYMBOL_EMPTY : (id) / 10, (id) % 10);
+        prepare_symbols(SYMBOL_EMPTY, (id < 10) ? SYMBOL_EMPTY : (id) / 10,
+                        (id) % 10);
         break;
       }
 
@@ -562,7 +577,8 @@ void press_button() {
 
       while (is_time_sec_for_settings_elapsed != true &&
              is_button_1_pressed == false) {
-        update_LED_panel();
+        // update_LED_panel();
+        render_prepared_symbols();
       }
 
       /* Выход из меню */
@@ -582,7 +598,7 @@ void press_button() {
         id++;
       }
 #elif PROTOCOL_UEL
-      if (id == 46) {
+      if (id == ADDR_ID_LIMIT) {
         id = ADDR_ID_MIN;
       } else {
         id++;

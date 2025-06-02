@@ -258,8 +258,8 @@ void process_data_uim(msg_t *msg) {
 
   transform_direction_to_common(msg->w3 & ARROW_MASK);
 
-  setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
-                  special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
+  // setting_symbols(matrix_string, &drawing_data, MAX_POSITIVE_NUMBER_LOCATION,
+  //                 special_symbols_code_location, SPECIAL_SYMBOLS_BUFF_SIZE);
 
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
@@ -282,7 +282,7 @@ void process_data_uim(msg_t *msg) {
 #if DOT_PIN
     draw_string_on_matrix(matrix_string);
 #elif DOT_SPI
-    display_symbols_spi(matrix_string);
+    // display_symbols_spi(matrix_string);
 #endif
   }
 }

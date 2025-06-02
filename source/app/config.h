@@ -126,6 +126,8 @@
 
 #include "demo_mode.h"
 
+#define TIME_DISPLAY_STRING_DURING_MS 2000
+
 #if DOT_PIN
 #define MAX_POSITIVE_NUMBER_LOCATION 14
 #define ADDR_ID_MIN 1

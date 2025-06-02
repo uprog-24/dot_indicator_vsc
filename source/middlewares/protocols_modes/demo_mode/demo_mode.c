@@ -104,6 +104,6 @@ void demo_mode_start(void) {
   //                                   STOP_FLOORS_BUFF_SIZE);
   // demo_start_finish_floors_movement(14, 1, NULL, 0);
 
-  display_symbols_spi("---");
+  // display_symbols_spi("---");
 #endif
 }

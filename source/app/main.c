@@ -241,36 +241,25 @@ int main(void) {
 
 #include "drawing.h"
 
-  set_symbols(SYMBOL_3, SYMBOL_2, SYMBOL_1);
+  // set_symbols(SYMBOL_3, SYMBOL_2, SYMBOL_1);
   while (1) {
+    render_symbols_by_index(SYMBOL_0, SYMBOL_1, SYMBOL_2);
     // demo_mode_start();
-    display_symbols_spi();
+    // display_symbols_spi();
   }
 
 #else
 #include "conf.h"
 #include "drawing.h"
 
-#if 1
   TIM4_Start(PRESCALER_FOR_US, 1000); // 1 мс
   display_string_during_ms(PROTOCOL_NAME);
   display_string_during_ms(PROJECT_VER);
-#endif
 
   read_settings(&matrix_settings);
   protocol_init();
-#include "demo.h"
-
-  // indication_set_floor(SYMBOL_K, SYMBOL_G_RU);
-  // indication_set_static_arrow(SYMBOL_ARROW_DOWN);
-  // while (1) {
-  //   // update_LED_panel();
-  //   demo_loop();
-  // }
 
   while (1) {
-    // demo_loop();
-    // update_LED_panel();
 #if 1
     switch (matrix_state) {
     case MATRIX_STATE_START:
@@ -310,105 +299,6 @@ int main(void) {
 
   /* USER CODE END 3 */
 }
-
-// #if DOT_SPI
-// void MX_GPIO_Init_SPI(void) {
-//   GPIO_InitTypeDef GPIO_InitStruct = {0};
-//   /* USER CODE BEGIN MX_GPIO_Init_1 */
-//   /* USER CODE END MX_GPIO_Init_1 */
-
-//   /* GPIO Ports Clock Enable */
-//   __HAL_RCC_GPIOD_CLK_ENABLE();
-//   __HAL_RCC_GPIOA_CLK_ENABLE();
-//   __HAL_RCC_GPIOB_CLK_ENABLE();
-
-//   /*Configure GPIO pin Output Level */
-//   HAL_GPIO_WritePin(GPIOA,
-//                     MBI5026_SCK_PIN_Pin | MBI5026_NOE_PIN_Pin |
-//                         MBI5026_LE_PIN_Pin | BUZZ_Pin,
-//                     GPIO_PIN_RESET);
-
-//   /*Configure GPIO pin Output Level */
-//   HAL_GPIO_WritePin(MBI5026_MOSI_PIN_GPIO_Port, MBI5026_MOSI_PIN_Pin,
-//                     GPIO_PIN_SET);
-
-//   /*Configure GPIO pins : MBI5026_SCK_PIN_Pin MBI5026_MOSI_PIN_Pin
-//      MBI5026_NOE_PIN_Pin MBI5026_LE_PIN_Pin BUZ_3_Pin */
-//   GPIO_InitStruct.Pin = MBI5026_SCK_PIN_Pin | MBI5026_MOSI_PIN_Pin |
-//                         MBI5026_NOE_PIN_Pin | MBI5026_LE_PIN_Pin | BUZZ_Pin;
-//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-//   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-//   /*Configure GPIO pin : SW_IN_3_Pin */
-//   GPIO_InitStruct.Pin = SW_IN_3_Pin;
-//   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-//   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-//   HAL_GPIO_Init(SW_IN_3_GPIO_Port, &GPIO_InitStruct);
-
-//   GPIO_InitStruct.Pin = BUZZ_Pin;
-//   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-//   HAL_GPIO_Init(BUZZ_GPIO_Port, &GPIO_InitStruct);
-
-//   /* USER CODE BEGIN MX_GPIO_Init_2 */
-//   // HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
-//   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-//   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-//   /* USER CODE END MX_GPIO_Init_2 */
-// }
-
-// void MX_TIM1_Init_1(void) {
-
-//   /* USER CODE BEGIN TIM2_Init 0 */
-
-//   /* USER CODE END TIM2_Init 0 */
-
-//   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-//   TIM_MasterConfigTypeDef sMasterConfig = {0};
-//   TIM_OC_InitTypeDef sConfigOC = {0};
-
-//   /* USER CODE BEGIN TIM2_Init 1 */
-
-//   /* USER CODE END TIM2_Init 1 */
-//   htim1.Instance = TIM1;
-//   htim1.Init.Prescaler = 64 - 1; // freq tim = 1 000 000
-//   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-//   htim1.Init.Period = 65535;
-//   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-//   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-//   if (HAL_TIM_Base_Init(&htim1) != HAL_OK) {
-//     Error_Handler();
-//   }
-//   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-//   if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK) {
-//     Error_Handler();
-//   }
-//   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK) {
-//     Error_Handler();
-//   }
-//   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-//   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-//   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) !=
-//   HAL_OK) {
-//     Error_Handler();
-//   }
-//   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-//   sConfigOC.Pulse = 0;
-//   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-//   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-//   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-//   {
-//     Error_Handler();
-//   }
-//   /* USER CODE BEGIN TIM2_Init 2 */
-
-//   /* USER CODE END TIM2_Init 2 */
-//   HAL_TIM_MspPostInit(&htim1);
-// }
-// #endif
 
 /**
  * @brief System Clock Configuration

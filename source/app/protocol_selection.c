@@ -86,7 +86,12 @@ void protocol_process_data() {
 #if DOT_PIN
     draw_string_on_matrix("c--");
 #elif DOT_SPI
+    // draw_string("c--");
+    // render_symbols_by_index(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_MINUS);
     draw_string("c--");
+
+    // indication_set_full_panel(SYMBOL_EMPTY, SYMBOL_MINUS, SYMBOL_MINUS);
+    // update_LED_panel();
 #endif
   }
 }

@@ -88,6 +88,13 @@ void display_string_during_ms(char *matrix_string);
  */
 void display_symbols_during_ms();
 
+void prepare_floor_symbols(uint8_t index2, uint8_t index3);
+void prepare_dir_symbol(uint8_t index1);
+void prepare_symbols(uint8_t index1, uint8_t index2, uint8_t index3);
+
+void render_prepared_symbols();
+void render_symbols_by_index(uint8_t index1, uint8_t index2, uint8_t index3);
+
 #endif /*__ DRAWING_H__ */
 
 #if 0
