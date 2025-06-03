@@ -193,16 +193,20 @@ static uint8_t open_voice_edge[2] = {
 static uint8_t close_voice_edge[2] = {
     0,
 };
+
+/// @brief  Флаг контроля - воспроизводится ли звук открытия/закрытия дверей
+/// (для приоритета кнопки вызова)
 bool is_door_sound = false;
+/**
+ * @brief Звуки открытия/закрытия дверей
+ *
+ * @param code_msg_byte_w_1
+ */
 static void set_door_sound(uint8_t code_msg_byte_w_1) {
-  // uint8_t open = code_msg_byte_w_1 & VOICE_DOORS_OPENING;
-  //  & SOUND_DOORS_OPENING
-  // uint8_t open = code_msg_byte_w_1 & 0x3F;
 
   // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
   // sound open
   open_sound_edge[0] =
-      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
       ((code_msg_byte_w_1 & 0x3F) == SOUND_DOORS_OPENING) ? 1 : 0;
 
   if (open_sound_edge[0] && !open_sound_edge[1]) {
@@ -214,7 +218,6 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
 
   // sound close
   close_sound_edge[0] =
-      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
       ((code_msg_byte_w_1 & 0x3F) == SOUND_DOORS_CLOSING) ? 1 : 0;
 
   if (close_sound_edge[0] && !close_sound_edge[1]) {
@@ -226,7 +229,6 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
 
   // voice open
   open_voice_edge[0] =
-      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
       ((code_msg_byte_w_1 & 0x3F) == VOICE_DOORS_OPENING) ? 1 : 0;
 
   if (open_voice_edge[0] && !open_voice_edge[1]) {
@@ -238,7 +240,6 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
 
   // voice close
   close_voice_edge[0] =
-      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
       ((code_msg_byte_w_1 & 0x3F) == VOICE_DOORS_CLOSING) ? 1 : 0;
 
   if (close_voice_edge[0] && !close_voice_edge[1]) {
@@ -252,19 +253,27 @@ static void set_door_sound(uint8_t code_msg_byte_w_1) {
 static uint8_t btn_call_sound_edge[2] = {
     0,
 };
+/**
+ * @brief Звук нажатия кнопки вызова
+ *
+ * @param code_msg_byte_w_1
+ */
 static void set_btn_call_sound(uint8_t code_msg_byte_w_1) {
-  // uint8_t open = code_msg_byte_w_1 & VOICE_DOORS_OPENING;
-  //  & SOUND_DOORS_OPENING
-  // uint8_t open = code_msg_byte_w_1 & 0x3F;
 
   // Если сигнал из 0 меняется на 1, тогда детектируем прибытие на этаж
   // sound open
   btn_call_sound_edge[0] =
-      // (open & VOICE_DOORS_OPENING == VOICE_DOORS_OPENING) != 0 ? 1 : 0;
       ((code_msg_byte_w_1 & 0x3F) == BUTTON_SOUND_SHORT) ? 1 : 0;
 
   if (btn_call_sound_edge[0] && !btn_call_sound_edge[1]) {
     // is_call_btn = true;
+
+    /* Если до нажатия кнопки вызова был звук открытия/закрытия дверей, то
+     * останавливаем звук, воспроизводим нажатие кнопки вызова */
+    if (is_door_sound) {
+      stop_buzzer_sound();
+    }
+
     play_gong(1, GONG_BUZZER_FREQ, matrix_settings.volume,
               BIP_DURATION_CALL_BTN);
   }
@@ -466,8 +475,7 @@ void process_data_uim(msg_t *msg) {
     }
     process_code_msg(code_msg);
 #else
-    /* Функция для обработки ВСЕХ звукрвых оповещений была составлена после
-     * испытаний, не проверена */
+    /* Функция для обработки ВСЕХ звукрвых оповещений */
     setting_sound_uim(msg);
 #endif
   } else {
@@ -477,23 +485,17 @@ void process_data_uim(msg_t *msg) {
      * воспроизводим нажатие
      */
     if (_bip_counter == 0 || is_door_sound) {
-      // set_btn_call_sound(msg->w1 & CODE_MESSAGE_W_1_MASK);
       if (matrix_settings.volume != VOLUME_0) {
         set_btn_call_sound(msg->w1);
       }
     }
 
-    // if (_bip_counter == 0) {
-    //   set_open_door_sound(code_msg);
-    // }
-
-    // Гонг
+    // Гонг, открытие/закрытие дверей
     if (matrix_settings.addr_id == drawing_data.floor ||
         matrix_settings.addr_id == 47) {
       if (matrix_settings.volume != VOLUME_0) {
 
         if (_bip_counter == 0) {
-          // set_open_door_sound(code_msg);
           set_door_sound(msg->w1);
         }
 

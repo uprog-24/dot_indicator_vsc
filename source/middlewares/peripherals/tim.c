@@ -279,10 +279,8 @@ extern bool is_door_sound;
 void stop_buzzer_sound() {
   TIM1_Stop();
   TIM2_Stop_bip();
-  // if (_bip_counter == 3) {
   _bip_counter = 0;
    is_door_sound = false;
-  // }
 }
 
 /**
@@ -296,7 +294,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 
     if (tim1_elapsed_ms == _bip_duration_ms) {
 
-      // TIM2_Stop_bip(); // Останавливаем 1-ый тон
       TIM2_Start_bip(900, _bip_volume); // Запускаем 2-ой тон
 
       if (_bip_counter == 1) {
@@ -306,7 +303,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
 
     if (tim1_elapsed_ms == 2 * _bip_duration_ms) {
 
-      // TIM2_Stop_bip(); // Останавливаем 2-ой тон
       TIM2_Start_bip(800, _bip_volume); // Запускаем 3-ий тон
 
       if (_bip_counter == 2) {
@@ -315,7 +311,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
     if (tim1_elapsed_ms == 3 * _bip_duration_ms) { // stop bip 3
-      // TIM2_Stop_bip(); // Останавливаем 3-ий тон
 
       if (_bip_counter == 3) {
         stop_buzzer_sound();
