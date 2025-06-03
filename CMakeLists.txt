@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # Номер версии ПО, который отображается при первом запуске индикатора (при использовании протокола) 
-set(PROJECT_VERSION "0.1")
+set(PROJECT_VERSION "0.2")
 configure_file(config.h.in conf.h)
 
 # Указываем toolchain перед вызовом project()
