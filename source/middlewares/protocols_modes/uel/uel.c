@@ -885,7 +885,9 @@ void process_data_uel(uint8_t *received_data) {
               floor_arrow_edge[1] = 0;
 
               prepare_dir_symbol(SYMBOL_ARROW_UP);
-              play_gong(1, 1000, matrix_settings.volume);
+              if (matrix_settings.volume != VOLUME_0) {
+                play_gong(1, 1000, matrix_settings.volume);
+              }
             }
 
             break;
@@ -899,7 +901,9 @@ void process_data_uel(uint8_t *received_data) {
 
               // update_arrow_by_direction(next_direction);
               prepare_dir_symbol(SYMBOL_ARROW_DOWN);
-              play_gong(2, 1000, matrix_settings.volume);
+              if (matrix_settings.volume != VOLUME_0) {
+                play_gong(2, 1000, matrix_settings.volume);
+              }
             }
             break;
 
@@ -912,7 +916,9 @@ void process_data_uel(uint8_t *received_data) {
 
               // update_arrow_by_direction(next_direction);
               prepare_dir_symbol(SYMBOL_ARROW_BOTH);
-              play_gong(3, 1000, matrix_settings.volume);
+              if (matrix_settings.volume != VOLUME_0) {
+                play_gong(3, 1000, matrix_settings.volume);
+              }
             }
             break;
           }
@@ -965,7 +971,9 @@ void process_data_uel(uint8_t *received_data) {
         if (arrow_edge[0] && !arrow_edge[1]) {
           // Гонг по погасанию стрелки:
           if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-            // play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
+            if (matrix_settings.volume != VOLUME_0) {
+              // play_gong(3, GONG_BUZZER_FREQ, matrix_settings.volume);
+            }
           } else { // ЭТАЖНИК: (matrix_settings.addr_id > 0)
             // Стоп-этаж (смена состояния направления для посылки #3)
             floor_arrow_edge[0] = 1; // новое направление этаж = 1
