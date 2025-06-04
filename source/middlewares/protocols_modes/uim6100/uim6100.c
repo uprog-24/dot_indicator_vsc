@@ -468,7 +468,7 @@ void process_data_uim(msg_t *msg) {
 
   // Кабинный индикатор
   if (matrix_settings.addr_id == MAIN_CABIN_ID) {
-#if 0
+#if 1
     /* Проверено на испытаниях */
     if (matrix_settings.volume != VOLUME_0) {
       setting_gong(msg->w3, matrix_settings.volume);
@@ -481,8 +481,10 @@ void process_data_uim(msg_t *msg) {
   } else {
     // Этажный индикатор
 
-    /* Если гонг отработал, то воспроизводим нажатие кнопки вызова, иначе не
-     * воспроизводим нажатие
+    /* Если гонг отработал, то воспроизводим
+     * нажатие кнопки вызова, иначе не воспроизводим нажатие.
+     * Если звук открытия/закрытия дверей, то воспроизводим
+     * нажатие кнопки вызова
      */
     if (_bip_counter == 0 || is_door_sound) {
       if (matrix_settings.volume != VOLUME_0) {

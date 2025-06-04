@@ -269,18 +269,22 @@ static uint32_t _bip_duration_ms = 0;
 /// Уровень громкости тона гонга для HAL_TIM_OC_DelayElapsedCallback
 static uint16_t _bip_volume = 0;
 
+#if PROTOCOL_UIM_6100
+extern bool is_door_sound;
+#endif
 /**
  * @brief  Выключение бузера (ШИМ TIM2 и TIM1 для подсчета продолжительности
  *         тона бузера).
  * @param  None
  * @retval None
  */
-extern bool is_door_sound;
 void stop_buzzer_sound() {
   TIM1_Stop();
   TIM2_Stop_bip();
   _bip_counter = 0;
-   is_door_sound = false;
+#if PROTOCOL_UIM_6100
+  is_door_sound = false;
+#endif
 }
 
 /**
