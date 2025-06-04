@@ -312,12 +312,14 @@ static void set_btn_call_sound(uint8_t code_msg_byte_w_1) {
  */
 static void process_code_msg(uint8_t code_msg_byte_w_1) {
 
-  /* Если гонг отработал и не перегруз/пожар, то воспроизводим нажатие кнопки
-   * вызова, иначе не воспроизводим нажатие
-   */
+/* Если гонг отработал и не перегруз/пожар, то воспроизводим нажатие кнопки
+ * вызова, иначе не воспроизводим нажатие
+ */
+#if 0
   if (_bip_counter == 0 && !is_cabin_overload && !is_fire_danger) {
     set_btn_call_sound(code_msg_byte_w_1);
   }
+#endif
 
   /* Перегруз кабины: если не Пожар, воспроизводим */
   if (!is_fire_danger) {
