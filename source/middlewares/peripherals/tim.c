@@ -13,6 +13,7 @@
 #if PROTOCOL_NKU_SD7
 #include "nku_sd7.h"
 #endif
+#include <drawing.h>
 
 /**
  * @brief  Включение тона пассивного бузера (подключен к каналу таймера 2).
@@ -153,6 +154,8 @@ uint16_t overload_sound_ms = 0;
 /// Флаг для отсчета продолжительности для звука Перегрузка
 volatile bool is_time_ms_for_overload_elapsed = false;
 
+// extern volatile bool need_update_frame;
+volatile uint16_t animation_time_ms = 0;
 /**
  * @brief  Обработка прерываний по завершении периода таймеров.
  * @param  htim: Указатель на структуру таймера.
@@ -230,7 +233,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         is_time_ms_for_overload_elapsed = true;
       }
     }
+
+    // animation_time_ms++;
+    //   if (animation_time_ms >= 200) {
+    //     animation_time_ms = 0;
+    //     need_update_frame = true;
+    //   }
+
 #endif
+
+#if 0
+    animation_time_ms++;
+    if (animation_time_ms >= 400) {
+      animation_time_ms = 0;
+      need_update_frame = true;
+    }
+#endif
+
+    // extern symbols_display_t symbols;
+
+    animation_time_ms++;
+    // if (animation_time_ms >= 400) {
+    //   animation_time_ms = 0;
+    //   symbols.symbol_left.need_update = true;
+    //   symbols.symbol_center.need_update = true;
+    //   symbols.symbol_right.need_update = true;
+    // }
 
     /* Управление продолжительностью тонов гонга */
     if (_bip_counter != 0) {

@@ -20,9 +20,9 @@ static inline symbol_code_e
 map_direction_to_common_symbol(directionType direction) {
   switch (direction) {
   case DIRECTION_UP:
-    return SYMBOL_ARROW_UP;
+    return SYMBOL_ARROW_UP_ANIMATION;
   case DIRECTION_DOWN:
-    return SYMBOL_ARROW_DOWN;
+    return SYMBOL_ARROW_DOWN_ANIMATION;
 
   case NO_DIRECTION:
     return SYMBOL_EMPTY;

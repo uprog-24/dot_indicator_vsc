@@ -22,6 +22,9 @@ typedef enum {
   SYMBOL_ARROW_UP,
   SYMBOL_ARROW_DOWN,
 
+  SYMBOL_ARROW_UP_ANIMATION,
+  SYMBOL_ARROW_DOWN_ANIMATION,
+
   SYMBOL_A,       // Символ A
   SYMBOL_B,       // Символ B
   SYMBOL_b,       // Символ b

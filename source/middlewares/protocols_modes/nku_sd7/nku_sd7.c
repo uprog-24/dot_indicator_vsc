@@ -13,6 +13,7 @@
 
 #define DATA_BITS_MASK 0x7E
 #define ARROW_MASK 0x60 ///< Маска для направления движения
+#define MOVING_MASK 0x60 ///< Маска для направления движения
 
 // Маски для control_byte_first
 #define LOADING_MASK 0x02
@@ -51,6 +52,12 @@ typedef enum {
   NKU_SD7_MOVE_DOWN = 32,
   NKU_SD7_NO_MOVE = 0
 } direction_nku_sd7_t;
+
+typedef enum {
+  NKU_SD7_MOVING_UP = 64,
+  NKU_SD7_MOVING_DOWN = 32,
+  NKU_SD7_NO_MOVING = 0
+} moving_nku_sd7_t;
 
 typedef enum SYMBOLS {
   NKU_SYMBOL_0 = 0,
@@ -97,6 +104,7 @@ typedef enum SYMBOLS {
 /// Структура с данными для отображения (direction, floor).
 static drawing_data_t drawing_data = {0, 0};
 
+symbol_code_e dir_sym;
 /**
  * @brief Маппинг направления движения в код symbol_code_e
  *
@@ -104,18 +112,37 @@ static drawing_data_t drawing_data = {0, 0};
  * @return symbol_code_e
  */
 static inline symbol_code_e
-map_direction_to_common_symbol(direction_nku_sd7_t direction) {
+map_direction_to_common_symbol(moving_nku_sd7_t moving_code,
+                               direction_nku_sd7_t direction) {
+
+#if 1
+  if (moving_code == NKU_SD7_MOVING_UP
+      // && direction == NKU_SD7_MOVE_UP
+  ) {
+    dir_sym = SYMBOL_ARROW_UP_ANIMATION;
+  } else if (moving_code == NKU_SD7_MOVING_DOWN
+             // && direction == NKU_SD7_MOVE_DOWN
+  ) {
+    dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
+  } else {
+    dir_sym = SYMBOL_EMPTY;
+  }
+  return dir_sym;
+#else
   switch (direction) {
   case NKU_SD7_MOVE_UP:
-    return SYMBOL_ARROW_UP;
+    // return SYMBOL_ARROW_UP;
+    return SYMBOL_ARROW_UP_ANIMATION;
   case NKU_SD7_MOVE_DOWN:
-    return SYMBOL_ARROW_DOWN;
+    // return SYMBOL_ARROW_DOWN;
+    return SYMBOL_ARROW_DOWN_ANIMATION;
 
   case NKU_SD7_NO_MOVE:
     return SYMBOL_EMPTY;
   default:
     return SYMBOL_EMPTY;
   }
+#endif
 }
 
 // Маппинг символов nku_symbols_t в код symbol_code_e
@@ -523,6 +550,7 @@ static nku_sd7_msg_t nku_sd7_msg = {
 };
 
 static uint8_t direction_code;
+static uint8_t moving_code;
 
 /**
  * @brief  Обработка данных по протоколу НКУ-SD7
@@ -543,9 +571,11 @@ void process_data_nku_sd7() {
     nku_sd7_msg.control_byte_second = filter_buff[0].buffer[3];
 
     direction_code = nku_sd7_msg.control_byte_second & ARROW_MASK;
+    moving_code = nku_sd7_msg.control_byte_first & MOVING_MASK;
 
     // Настройка кода стрелки
-    set_direction_symbol(map_direction_to_common_symbol(direction_code));
+    set_direction_symbol(
+        map_direction_to_common_symbol(moving_code, direction_code));
 
     // Настройка кода этажа
     // Этаж 0

@@ -5,6 +5,7 @@
 #ifndef __DRAWING_H__
 #define __DRAWING_H__
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "font.h"
@@ -48,11 +49,11 @@ void set_direction_symbol(symbol_code_e direction_code);
 
 /**
  * @brief  Установка символов для этажей
- * @param  left_symbol_code:  Код символа 1
- * @param  right_symbol_code: Код символа 2
+ * @param  symbol_center_code: Код центрального символа
+ * @param  symbol_right_code:  Код правого символа
  */
-void set_floor_symbols(symbol_code_e left_symbol_code,
-                       symbol_code_e right_symbol_code);
+void set_floor_symbols(symbol_code_e symbol_center_code,
+                       symbol_code_e symbol_right_code);
 
 /**
  * @brief  Установка символов (направление + этаж)

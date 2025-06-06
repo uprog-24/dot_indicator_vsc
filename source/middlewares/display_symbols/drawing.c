@@ -21,39 +21,80 @@
  */
 typedef enum { DIRECTION = 0, MSB = 1, LSB = 2, INDEX_NUMBER } symbol_index_t;
 
-/* Структура, содержащая коды символов для отрисовки */
-typedef struct {
-  symbol_code_e symbol_code_1;
-  symbol_code_e symbol_code_2;
-  symbol_code_e symbol_code_3;
-} displayed_symbols_t;
+#define ROWS 8
+#define DISPLAY_WIDTH 16
+#define GAP_BETWEEN_SYMBOLS 1
 
-static displayed_symbols_t symbols = {
-    .symbol_code_1 = SYMBOL_EMPTY,
-    .symbol_code_2 = SYMBOL_EMPTY,
-    .symbol_code_3 = SYMBOL_EMPTY,
+#define SYMBOL_WIDTH_POSITION 1
+
+uint16_t combined_bitmap[ROWS][DISPLAY_WIDTH]; // общий буфер для трёх символов
+
+typedef enum { ANIMATION_NONE, ANIMATION_UP, ANIMATION_DOWN } animation_e;
+
+/* Структура, содержащая информацию о символах для отрисовки */
+typedef struct {
+  symbol_code_e symbol_code;
+  uint8_t current_bitmap[8]; // ROWS
+  uint8_t current_frame_index;
+  bool need_update;
+} animated_symbol_t;
+
+/* Структура для дисплея */
+typedef struct {
+  animated_symbol_t symbol_left;
+  animated_symbol_t symbol_center;
+  animated_symbol_t symbol_right;
+} symbols_display_t;
+
+symbols_display_t symbols = {
+    .symbol_left = {SYMBOL_EMPTY, {0}, 0, false},
+    .symbol_center = {SYMBOL_EMPTY, {0}, 0, false},
+    .symbol_right = {SYMBOL_EMPTY, {0}, 0, false},
 };
 
 /**
- * @brief Установка символа в структуру по индексу
- *
- * @param index: Индекс символа
- * @param symbol Код символа из перечисления symbol_code_e
+ * Структура для ширин символов
  */
-static void set_symbol_at(symbol_index_t index, symbol_code_e symbol) {
-  if (index >= INDEX_NUMBER)
-    return;
+typedef struct {
+  const uint8_t *bitmap;
+  uint8_t width;
+} symbol_descriptor_t;
 
-  switch (index) {
-  case DIRECTION:
-    symbols.symbol_code_1 = symbol;
-    break;
-  case MSB:
-    symbols.symbol_code_2 = symbol;
-    break;
-  case LSB:
-    symbols.symbol_code_3 = symbol;
-    break;
+static symbol_descriptor_t symbols_meta[NUMBER_OF_SYMBOLS];
+
+#define SYMBOL_TABLE_SIZE 128
+
+// Маппинг символов char в код symbol_code_e
+static const symbol_code_e char_to_symbol_table[SYMBOL_TABLE_SIZE] = {
+    ['0'] = SYMBOL_0,    ['1'] = SYMBOL_1,     ['2'] = SYMBOL_2,
+    ['3'] = SYMBOL_3,    ['4'] = SYMBOL_4,     ['5'] = SYMBOL_5,
+    ['6'] = SYMBOL_6,    ['7'] = SYMBOL_7,     ['8'] = SYMBOL_8,
+    ['9'] = SYMBOL_9,    ['S'] = SYMBOL_S,     ['I'] = SYMBOL_I,
+    ['D'] = SYMBOL_D,    ['-'] = SYMBOL_MINUS, [' '] = SYMBOL_EMPTY,
+    ['.'] = SYMBOL_DOT,  ['c'] = SYMBOL_EMPTY, ['V'] = SYMBOL_V,
+    ['L'] = SYMBOL_L,    ['C'] = SYMBOL_C,     ['E'] = SYMBOL_E,
+    ['+'] = SYMBOL_PLUS, ['p'] = SYMBOL_P,     ['g'] = SYMBOL_G,
+    ['K'] = SYMBOL_K,
+};
+
+//======================== PRIVATE FUNCTIONS PROTO =======================
+static uint8_t calculate_symbol_width(const uint8_t *symbol_bitmap_rows);
+static inline symbol_code_e char_to_symbol(char ch);
+static void set_symbol(animated_symbol_t *sym, symbol_code_e code);
+static void update_animation(animated_symbol_t *sym, animation_e anim_type);
+static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position);
+static void combine_symbols(symbols_display_t *symbols);
+static void draw_combined_bitmap();
+
+//======================== PUBLIC FUNCTIONS ================================
+/**
+ * @brief Заполнение структуры: битмап и ширина символа (вызывается в main.c
+ *        перед отрисовкой!!!)
+ */
+void init_symbols_width() {
+  for (int i = 0; i < NUMBER_OF_SYMBOLS; i++) {
+    symbols_meta[i].bitmap = bitmap[i];
+    symbols_meta[i].width = calculate_symbol_width(bitmap[i]);
   }
 }
 
@@ -62,18 +103,18 @@ static void set_symbol_at(symbol_index_t index, symbol_code_e symbol) {
  * @param  direction_code: Код направления (из перечисления symbol_code_e)
  */
 void set_direction_symbol(symbol_code_e direction_code) {
-  set_symbol_at(DIRECTION, direction_code);
+  set_symbol(&symbols.symbol_left, direction_code);
 }
 
 /**
  * @brief  Установка символов для этажей
- * @param  left_symbol_code:  Код символа 1
- * @param  right_symbol_code: Код символа 2
+ * @param  symbol_center_code: Код центрального символа
+ * @param  symbol_right_code:  Код правого символа
  */
-void set_floor_symbols(symbol_code_e left_symbol_code,
-                       symbol_code_e right_symbol_code) {
-  set_symbol_at(MSB, left_symbol_code);
-  set_symbol_at(LSB, right_symbol_code);
+void set_floor_symbols(symbol_code_e symbol_center_code,
+                       symbol_code_e symbol_right_code) {
+  set_symbol(&symbols.symbol_center, symbol_center_code);
+  set_symbol(&symbols.symbol_right, symbol_right_code);
 }
 
 /**
@@ -86,6 +127,352 @@ void set_symbols(symbol_code_e s1_code, symbol_code_e s2_code,
                  symbol_code_e s3_code) {
   set_direction_symbol(s1_code);
   set_floor_symbols(s2_code, s3_code);
+}
+
+extern volatile uint16_t animation_time_ms;
+/**
+ * @brief Отображение символов, заранее установленных в структуру symbols
+ */
+void draw_symbols() {
+
+  uint8_t start_pos = 0;
+
+#if 1
+  static uint32_t last_animation_time = 0;
+
+  // Обновление символов для анимации
+  if ((animation_time_ms - last_animation_time) >= 500) { // 8 * 250 = 1000
+    last_animation_time = animation_time_ms;
+
+    symbols.symbol_left.need_update = true;
+
+    switch (symbols.symbol_left.symbol_code) {
+    case SYMBOL_ARROW_UP_ANIMATION:
+      update_animation(&symbols.symbol_left, ANIMATION_UP);
+      break;
+
+    case SYMBOL_ARROW_DOWN_ANIMATION:
+      update_animation(&symbols.symbol_left, ANIMATION_DOWN);
+      break;
+
+    default:
+      update_animation(&symbols.symbol_left, ANIMATION_NONE);
+      break;
+    }
+
+    update_animation(&symbols.symbol_center, ANIMATION_NONE);
+    update_animation(&symbols.symbol_right, ANIMATION_NONE);
+  }
+#endif
+
+  // Отрисовка символов
+  combine_symbols(&symbols);
+  draw_combined_bitmap();
+}
+
+/**
+ * @brief Отображение строки
+ * @param matrix_string: Указатель на строку, которая будет отображаться
+ */
+void draw_string(char *matrix_string) {
+  // Преобразуем символ char в код symbol_code_e
+  set_symbols(char_to_symbol(matrix_string[0]),
+              char_to_symbol(matrix_string[1]),
+              char_to_symbol(matrix_string[2]));
+  draw_symbols();
+}
+
+extern volatile bool is_time_ms_for_display_str_elapsed;
+/**
+ * @brief  Отображение строки на матрице в течение
+ *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
+ * @note   Для протоколов при запуске индикатора
+ * @param  matrix_string: Указатель на строку, которая будет отображаться
+ */
+void display_string_during_ms(char *matrix_string) {
+  is_time_ms_for_display_str_elapsed = false;
+
+  while (!is_time_ms_for_display_str_elapsed) {
+    draw_string(matrix_string);
+  }
+
+  // Очищаем поля структуры с символами
+  set_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
+}
+
+/**
+ * @brief  Отображение строки на матрице в течение
+ *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
+ * @note   Для DEMO_MODE
+ */
+void display_symbols_during_ms() {
+  is_time_ms_for_display_str_elapsed = false;
+
+  while (!is_time_ms_for_display_str_elapsed) {
+    draw_symbols();
+  }
+}
+
+//======================== PRIVATE FUNCTIONS ================================
+/**
+ * @brief Расчет ширины символа (заполнение структуры)
+ * @param symbol_bitmap_rows: Двоичное представление символа
+ * @return uint8_t
+ */
+static uint8_t calculate_symbol_width(const uint8_t *symbol_bitmap_rows) {
+  uint8_t min_col = 8;
+  uint8_t max_col = 0;
+  bool has_pixels = false;
+
+  for (int row = 0; row < NUMBER_OF_ROWS; row++) {
+    uint8_t row_data = symbol_bitmap_rows[row];
+
+    if (row_data != 0) {
+      has_pixels = true;
+
+      // Найдём первую установленную единицу слева (индексы от 7 до 0)
+      for (int bit_index = 0; bit_index <= 7; ++bit_index) {
+        if (row_data & (1 << (7 - bit_index))) {
+          if (bit_index < min_col)
+            min_col = bit_index;
+          break;
+        }
+      }
+
+      // Найдём последнюю установленную единицу справа
+      for (int bit_index = 7; bit_index >= 0; --bit_index) {
+        if (row_data & (1 << (7 - bit_index))) {
+          if (bit_index > max_col)
+            max_col = bit_index;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!has_pixels)
+    return 0; // символ без 1 (Пусто)
+
+  return (max_col - min_col + 1);
+}
+
+/**
+ * @brief Преобразование символа char в код symbol_code_e
+ * @param ch
+ * @return symbol_code_e
+ */
+static inline symbol_code_e char_to_symbol(char ch) {
+  if (ch < SYMBOL_TABLE_SIZE) {
+    return char_to_symbol_table[(unsigned char)ch];
+  } else {
+    return SYMBOL_EMPTY;
+  }
+}
+
+static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
+  sym->symbol_code = code;
+  memcpy(sym->current_bitmap, bitmap[code], ROWS);
+  sym->current_frame_index = 0;
+  sym->need_update = false;
+}
+
+static void update_animation(animated_symbol_t *sym, animation_e anim_type) {
+  if (!sym->need_update || anim_type == ANIMATION_NONE)
+    return;
+
+  sym->need_update = false;
+  sym->current_frame_index++;
+
+  if (sym->current_frame_index >= 8) {
+    sym->current_frame_index = 0;
+  }
+
+  switch (anim_type) {
+  case ANIMATION_UP: {
+    uint8_t first = sym->current_bitmap[0];
+    for (uint8_t i = 0; i < ROWS - 1; i++) {
+      sym->current_bitmap[i] = sym->current_bitmap[i + 1];
+    }
+    sym->current_bitmap[ROWS - 1] = first;
+    break;
+  }
+  case ANIMATION_DOWN: {
+    uint8_t last = sym->current_bitmap[ROWS - 1];
+    for (int i = ROWS - 1; i > 0; i--) {
+      sym->current_bitmap[i] = sym->current_bitmap[i - 1];
+    }
+    sym->current_bitmap[0] = last;
+    break;
+  }
+  }
+}
+
+static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position) {
+
+  uint8_t symbol_width = symbols_meta[sym->symbol_code].width;
+  uint8_t *symbol_bitmap = sym->current_bitmap;
+
+  if (sym->symbol_code == SYMBOL_ALL_ON) {
+    for (int row = 0; row < ROWS; row++) {
+      for (int bit = 0; bit < 8; bit++) {
+        // Проверяем бит в символе
+        if (symbol_bitmap[row] & (1 << bit)) {
+          combined_bitmap[row][position + bit] = 1;
+        }
+      }
+    }
+  } else {
+    for (int row = 0; row < ROWS; row++) {
+      for (int bit = 0; bit < 6; bit++) {
+        // Проверяем бит в символе
+        if (symbol_bitmap[row] & (1 << (6 - bit))) {
+          combined_bitmap[row][position + bit] = 1;
+        }
+      }
+    }
+  }
+}
+
+static uint8_t start_pos;
+// Объединение символов в общий буфер
+static void combine_symbols(symbols_display_t *symbols) {
+  // Очистка буфера
+  for (int row = 0; row < ROWS; row++) {
+    for (int col = 0; col < DISPLAY_WIDTH; col++) {
+      combined_bitmap[row][col] = 0;
+    }
+  }
+
+  start_pos = 0;
+  // c1c..c9c, cFc и др.
+  if (symbols->symbol_left.symbol_code == SYMBOL_EMPTY &&
+      symbols->symbol_right.symbol_code == SYMBOL_EMPTY) {
+    start_pos += 5 + 1; // Сдвиг в связи с символом Пусто
+    add_symbol_bitmap(&symbols->symbol_center, 6);
+
+  } else if (symbols->symbol_left.symbol_code == SYMBOL_EMPTY &&
+             symbols->symbol_right.symbol_code != SYMBOL_EMPTY) {
+    // c10..c99, cКГ и др.
+    start_pos += 3 + 1; // Сдвиг в связи с символом Пусто
+    add_symbol_bitmap(&symbols->symbol_center, 4);
+
+    // #if SYMBOL_WIDTH_POSITION
+    start_pos += symbols_meta[symbols->symbol_center.symbol_code].width + 1;
+    add_symbol_bitmap(&symbols->symbol_right, start_pos);
+
+    // #else
+    //     add_symbol_bitmap(&symbols->symbol_right, 10);
+    // #endif
+  } else {
+    // Если символ 1 и символ 3 не SYMBOL_EMPTY
+
+    if (&symbols->symbol_left.symbol_code == SYMBOL_ALL_ON) {
+      add_symbol_bitmap(&symbols->symbol_left, 0);
+      add_symbol_bitmap(&symbols->symbol_left, 8);
+    } else {
+
+      add_symbol_bitmap(&symbols->symbol_left, start_pos);
+
+#if SYMBOL_WIDTH_POSITION
+      start_pos += symbols_meta[symbols->symbol_left.symbol_code].width +
+                   GAP_BETWEEN_SYMBOLS;
+      add_symbol_bitmap(&symbols->symbol_center, start_pos);
+#else
+      add_symbol_bitmap(&symbols->symbol_center, 7);
+#endif
+
+#if SYMBOL_WIDTH_POSITION
+      start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
+                   GAP_BETWEEN_SYMBOLS;
+      add_symbol_bitmap(&symbols->symbol_right, start_pos);
+#else
+      add_symbol_bitmap(&symbols->symbol_right, 12);
+#endif
+    }
+  }
+}
+
+// Для хранения текущей строки матрицы
+static uint8_t current_row = 0;
+extern volatile bool is_tim4_period_elapsed;
+static void draw_combined_bitmap() {
+
+  // Включаем текущую строку
+  set_row_state(current_row, TURN_ON);
+
+  for (uint8_t col = 0; col < DISPLAY_WIDTH; col++) {
+    // Если бит в строке буфера = 1, то включаем колонку
+    if (combined_bitmap[current_row][col]) {
+      set_col_state(col, TURN_ON);
+    }
+  }
+
+  /**
+   * Держим состояние строки с колонками, пока таймер не завершит
+   * отсчет (1000 мкс)
+   */
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
+
+    // Переходим к следующей строке
+    current_row++;
+
+    // Выключаем предыдущую строку
+    if (current_row) {
+      set_row_state(current_row - 1, TURN_OFF);
+    }
+    // Выключаем все колонки
+    set_all_cols_state(TURN_OFF);
+
+    // Завершаем проход по строкам
+    if (current_row >= ROWS) {
+      current_row = 0;
+    }
+  }
+}
+
+//================================= OLD CODE =======================
+#if 0
+static void draw_symbol_on_matrix2(animated_symbol_t *sym, uint8_t start_pos,
+                                   animation_e animation_type) {
+
+  static uint8_t current_row = 0;
+
+  // Включаем текущую строку
+  set_row_state(current_row, TURN_ON);
+
+  // Получаем значения для колонок текущей строки (строка кода символа)
+  uint8_t binary_symbol_code_row = sym->current_bitmap[current_row];
+
+  for (uint8_t i = 0; i <= START_INDEX_SYMBOL_ROW; i++) {
+    // Если бит в строке символа = 1, то включаем колонку
+    if ((binary_symbol_code_row >> (START_INDEX_SYMBOL_ROW - i)) & 1) {
+      set_col_state(start_pos + i, TURN_ON);
+    }
+  }
+
+  /**
+   * Держим состояние строки с колонками, пока таймер не завершит
+   * отсчет (1000 мкс)
+   */
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
+
+    // Переходим к следующей строке
+    current_row++;
+
+    // Выключаем предыдущую строку
+    if (current_row) {
+      set_row_state(current_row - 1, TURN_OFF);
+    }
+    // Выключаем все колонки
+    set_all_cols_state(TURN_OFF);
+
+    // Завершаем проход по строкам
+    if (current_row >= ROWS) {
+      current_row = 0;
+    }
+  }
 }
 
 /* Флаг для удержания состояния строки в течение 1 мс (максимальная яркость,
@@ -140,169 +527,4 @@ static void draw_symbol_on_matrix(symbol_code_e symbol_code,
   }
 }
 
-/**
- * @brief Расчет ширины символа (заполнение структуры)
- * @param symbol_bitmap_rows: Двоичное представление символа
- * @return uint8_t
- */
-static uint8_t calculate_symbol_width(const uint8_t *symbol_bitmap_rows) {
-  uint8_t min_col = 8;
-  uint8_t max_col = 0;
-  bool has_pixels = false;
-
-  for (int row = 0; row < NUMBER_OF_ROWS; row++) {
-    uint8_t row_data = symbol_bitmap_rows[row];
-
-    if (row_data != 0) {
-      has_pixels = true;
-
-      // Найдём первую установленную единицу слева (индексы от 7 до 0)
-      for (int bit_index = 0; bit_index <= 7; ++bit_index) {
-        if (row_data & (1 << (7 - bit_index))) {
-          if (bit_index < min_col)
-            min_col = bit_index;
-          break;
-        }
-      }
-
-      // Найдём последнюю установленную единицу справа
-      for (int bit_index = 7; bit_index >= 0; --bit_index) {
-        if (row_data & (1 << (7 - bit_index))) {
-          if (bit_index > max_col)
-            max_col = bit_index;
-          break;
-        }
-      }
-    }
-  }
-
-  if (!has_pixels)
-    return 0; // символ без 1 (Пусто)
-
-  return (max_col - min_col + 1);
-}
-
-/**
- * Структура для ширин символов
- */
-typedef struct {
-  const uint8_t *bitmap;
-  uint8_t width;
-} symbol_descriptor_t;
-
-static symbol_descriptor_t symbols_meta[NUMBER_OF_SYMBOLS];
-
-/**
- * @brief Заполнение структуры: битмап и ширина символа (вызывается в main.c
- *        перед отрисовкой!!!)
- */
-void init_symbols_width() {
-  for (int i = 0; i < NUMBER_OF_SYMBOLS; i++) {
-    symbols_meta[i].bitmap = bitmap[i];
-    symbols_meta[i].width = calculate_symbol_width(bitmap[i]);
-  }
-}
-
-/**
- * @brief Отображение символов, заранее установленных в структуру symbols
- */
-void draw_symbols() {
-
-  uint8_t start_pos = 0;
-
-  // c1c..c9c, cFc и др.
-  if (symbols.symbol_code_1 == SYMBOL_EMPTY &&
-      symbols.symbol_code_3 == SYMBOL_EMPTY) {
-    start_pos += 5 + 1; // Сдвиг в связи с символом Пусто
-    draw_symbol_on_matrix(symbols.symbol_code_2, start_pos);
-
-  } else if (symbols.symbol_code_1 == SYMBOL_EMPTY &&
-             symbols.symbol_code_3 != SYMBOL_EMPTY) {
-    // c10..c99, cКГ и др.
-    start_pos += 3 + 1; // Сдвиг в связи с символом Пусто
-    draw_symbol_on_matrix(symbols.symbol_code_2, start_pos);
-
-    start_pos += symbols_meta[symbols.symbol_code_2].width + 1;
-    draw_symbol_on_matrix(symbols.symbol_code_3, start_pos);
-  } else {
-    // Если символ 1 и символ 3 не SYMBOL_EMPTY
-    draw_symbol_on_matrix(symbols.symbol_code_1, start_pos);
-
-    start_pos += symbols_meta[symbols.symbol_code_1].width + 1;
-    draw_symbol_on_matrix(symbols.symbol_code_2, start_pos);
-
-    start_pos += symbols_meta[symbols.symbol_code_2].width + 1;
-    draw_symbol_on_matrix(symbols.symbol_code_3, start_pos);
-  }
-}
-
-#define SYMBOL_TABLE_SIZE 128
-
-// Маппинг символов char в код symbol_code_e
-static const symbol_code_e char_to_symbol_table[SYMBOL_TABLE_SIZE] = {
-    ['0'] = SYMBOL_0,    ['1'] = SYMBOL_1,     ['2'] = SYMBOL_2,
-    ['3'] = SYMBOL_3,    ['4'] = SYMBOL_4,     ['5'] = SYMBOL_5,
-    ['6'] = SYMBOL_6,    ['7'] = SYMBOL_7,     ['8'] = SYMBOL_8,
-    ['9'] = SYMBOL_9,    ['S'] = SYMBOL_S,     ['I'] = SYMBOL_I,
-    ['D'] = SYMBOL_D,    ['-'] = SYMBOL_MINUS, [' '] = SYMBOL_EMPTY,
-    ['.'] = SYMBOL_DOT,  ['c'] = SYMBOL_EMPTY, ['V'] = SYMBOL_V,
-    ['L'] = SYMBOL_L,    ['C'] = SYMBOL_C,     ['E'] = SYMBOL_E,
-    ['+'] = SYMBOL_PLUS, ['p'] = SYMBOL_P,     ['g'] = SYMBOL_G,
-    ['K'] = SYMBOL_K,
-};
-
-/**
- * @brief Преобразование символа char в код symbol_code_e
- * @param ch
- * @return symbol_code_e
- */
-static inline symbol_code_e char_to_symbol(char ch) {
-  if (ch < SYMBOL_TABLE_SIZE) {
-    return char_to_symbol_table[(unsigned char)ch];
-  } else {
-    return SYMBOL_EMPTY;
-  }
-}
-
-/**
- * @brief Отображение строки
- * @param matrix_string: Указатель на строку, которая будет отображаться
- */
-void draw_string(char *matrix_string) {
-  // Преобразуем символ char в код symbol_code_e
-  set_symbols(char_to_symbol(matrix_string[0]),
-              char_to_symbol(matrix_string[1]),
-              char_to_symbol(matrix_string[2]));
-  draw_symbols();
-}
-
-extern volatile bool is_time_ms_for_display_str_elapsed;
-/**
- * @brief  Отображение строки на матрице в течение
- *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
- * @note   Для протоколов при запуске индикатора
- * @param  matrix_string: Указатель на строку, которая будет отображаться
- */
-void display_string_during_ms(char *matrix_string) {
-  is_time_ms_for_display_str_elapsed = false;
-
-  while (!is_time_ms_for_display_str_elapsed) {
-    draw_string(matrix_string);
-  }
-
-  // Очищаем поля структуры с символами
-  set_symbols(SYMBOL_EMPTY, SYMBOL_EMPTY, SYMBOL_EMPTY);
-}
-
-/**
- * @brief  Отображение строки на матрице в течение
- *         TIME_DISPLAY_STRING_DURING_MS (определено в tim.c)
- * @note   Для DEMO_MODE
- */
-void display_symbols_during_ms() {
-  is_time_ms_for_display_str_elapsed = false;
-
-  while (!is_time_ms_for_display_str_elapsed) {
-    draw_symbols();
-  }
-}
+#endif
