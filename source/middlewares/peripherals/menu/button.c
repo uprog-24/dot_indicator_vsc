@@ -342,6 +342,8 @@ void press_button() {
             id = ADDR_ID_MIN;
           } else if (id == MAX_POSITIVE_NUMBER_FLOOR) {
             id = MAIN_CABIN_ID;
+          } else if (id == 47) {
+            id = ADDR_ID_LIMIT;
           } else {
             id++;
           }

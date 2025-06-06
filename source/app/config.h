@@ -22,7 +22,7 @@
 
 #define PROTOCOL_NAME "SHK"
 #define ADDR_ID_MIN 1
-#define ADDR_ID_LIMIT 47
+#define ADDR_ID_LIMIT 49
 #define MAX_POSITIVE_NUMBER_FLOOR 40
 #define MAIN_CABIN_ID UIM6100_MAIN_CABIN_CAN_ID
 #define TIME_MS_FOR_INTERFACE_CONNECTION                                       \

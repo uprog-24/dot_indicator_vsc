@@ -85,6 +85,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 #if PROTOCOL_UIM_6100
 
     if ((matrix_settings.addr_id == rx_header.StdId) &&
+    // Для КАБИНЫ и 47 адреса
         (rx_header.StdId >= 46) && (rx_header.StdId != 49)) {
       if (rx_header.DLC == 2) {
         if ((rx_data_can[0] == 0x00) && (rx_data_can[1] == 0x00)) {

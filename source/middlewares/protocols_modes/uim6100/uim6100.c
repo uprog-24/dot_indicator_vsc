@@ -496,7 +496,7 @@ void process_data_uim(msg_t *msg) {
 
     // Гонг, открытие/закрытие дверей
     if (matrix_settings.addr_id == drawing_data.floor ||
-        matrix_settings.addr_id == 47) {
+        matrix_settings.addr_id == 47 || matrix_settings.addr_id == 49) {
       if (matrix_settings.volume != VOLUME_0) {
 
         if (_bip_counter == 0) {
