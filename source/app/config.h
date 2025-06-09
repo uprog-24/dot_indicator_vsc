@@ -37,9 +37,15 @@
 
 #define BUFFER_SIZE_BYTES 6
 
+#define ARROW_DOUBLE
+// #define ARROW_ORDINAR
+
 #elif DEMO_MODE && !PROTOCOL_NKU_SD7 && !TEST_MODE
 
 #include "demo_mode.h"
+
+#define ARROW_DOUBLE
+// #define ARROW_ORDINAR
 
 #define TIME_DISPLAY_STRING_DURING_MS                                          \
   2000 ///< Время в мс, в течение которого отображается строка

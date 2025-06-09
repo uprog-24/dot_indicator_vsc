@@ -135,13 +135,13 @@ int main(void) {
   // extern symbols_display_t symbols;
 
   // set_symbols(SYMBOL_EMPTY, SYMBOL_K, SYMBOL_G_RU);
-  set_symbols(SYMBOL_ARROW_UP_ANIMATION, SYMBOL_3, SYMBOL_5);
+  // set_symbols(SYMBOL_ARROW_UP_ANIMATION, SYMBOL_3, SYMBOL_5);
 
   // set_symbols(SYMBOL_ALL_ON, SYMBOL_ALL_ON, SYMBOL_ALL_ON);
 
   while (1) {
-    // demo_mode_start();
-    draw_symbols();
+    demo_mode_start();
+    // draw_symbols();
   }
 
 #else

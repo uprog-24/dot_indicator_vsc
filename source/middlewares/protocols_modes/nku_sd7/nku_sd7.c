@@ -116,17 +116,28 @@ map_direction_to_common_symbol(moving_nku_sd7_t moving_code,
                                direction_nku_sd7_t direction) {
 
 #if 1
-  if (moving_code == NKU_SD7_MOVING_UP
-      // && direction == NKU_SD7_MOVE_UP
-  ) {
+  switch (moving_code) {
+  case NKU_SD7_MOVING_UP:
+    // dir_sym = SYMBOL_ARROW_UP_ANIMATION;
+     dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
+    break;
+
+  case NKU_SD7_MOVING_DOWN:
+    // dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
     dir_sym = SYMBOL_ARROW_UP_ANIMATION;
-  } else if (moving_code == NKU_SD7_MOVING_DOWN
-             // && direction == NKU_SD7_MOVE_DOWN
-  ) {
-    dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
-  } else {
-    dir_sym = SYMBOL_EMPTY;
+    break;
+
+  case NKU_SD7_NO_MOVING:
+    if (direction == DIRECTION_UP) {
+      dir_sym = SYMBOL_ARROW_UP;
+    } else if (direction == DIRECTION_DOWN) {
+      dir_sym = SYMBOL_ARROW_DOWN;
+    } else {
+      dir_sym = SYMBOL_EMPTY;
+    }
+    break;
   }
+
   return dir_sym;
 #else
   switch (direction) {
