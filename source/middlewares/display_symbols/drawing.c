@@ -124,6 +124,9 @@ void set_direction_symbol(symbol_code_e direction_code) {
   symbols.symbol_prev_left = symbols.symbol_left;
 
   // Устанавливаем новый символ
+  // if (symbols.symbol_left.is_anim_running) {
+  //   return;
+  // }
   set_symbol(&symbols.symbol_left, direction_code);
 }
 
@@ -154,7 +157,6 @@ extern volatile uint16_t animation_time_ms;
 /**
  * @brief Отображение символов, заранее установленных в структуру symbols
  */
-#if 1
 void draw_symbols() {
 
   uint8_t start_pos = 0;
@@ -167,33 +169,7 @@ void draw_symbols() {
 
     symbols.symbol_left.need_update = true;
 
-    // if (symbols.symbol_left.symbol_code == SYMBOL_EMPTY) {
-    //   if (symbols.symbol_left.prev_symbol_code == SYMBOL_ARROW_UP_ANIMATION)
-    //   {
-
-    //   } else if () {
-    //   }
-    // }
-
     update_animation_arrow2(&symbols.symbol_left, &symbols.symbol_prev_left);
-#if 0
-    switch (symbols.symbol_left.symbol_code) {
-    case SYMBOL_ARROW_UP_ANIMATION:
-      symbols.symbol_left.is_anim_running = true;
-      update_animation_arrow(&symbols.symbol_left);
-      break;
-
-    case SYMBOL_ARROW_DOWN_ANIMATION:
-      symbols.symbol_left.is_anim_running = true;
-      update_animation_arrow(&symbols.symbol_left);
-      break;
-
-    default:
-      symbols.symbol_left.is_anim_running = false;
-      update_animation_arrow(&symbols.symbol_left);
-      break;
-    }
-#endif
 
     // update_animation(&symbols.symbol_center, ANIMATION_NONE);
     // update_animation(&symbols.symbol_right, ANIMATION_NONE);
@@ -203,46 +179,6 @@ void draw_symbols() {
   combine_symbols(&symbols);
   draw_combined_bitmap();
 }
-#else
-void draw_symbols() {
-
-  uint8_t start_pos = 0;
-
-  static uint32_t last_animation_time = 0;
-
-  // Обновление символов для анимации
-
-  // if (symbols.symbol_left.) {
-
-  // }
-  if ((animation_time_ms - last_animation_time) >= 250) { // 8 * 250 = 1000
-    last_animation_time = animation_time_ms;
-
-    symbols.symbol_left.need_update = true;
-
-    switch (symbols.symbol_left.symbol_code) {
-    case SYMBOL_ARROW_UP_ANIMATION:
-      update_animation(&symbols.symbol_left);
-      break;
-
-    case SYMBOL_ARROW_DOWN_ANIMATION:
-      update_animation(&symbols.symbol_left);
-      break;
-
-    default:
-      update_animation(&symbols.symbol_left);
-      break;
-    }
-
-    update_animation(&symbols.symbol_center);
-    update_animation(&symbols.symbol_right);
-  }
-
-  // Отрисовка символов
-  combine_symbols(&symbols);
-  draw_combined_bitmap();
-}
-#endif
 
 /**
  * @brief Отображение строки
@@ -345,6 +281,22 @@ static inline symbol_code_e char_to_symbol(char ch) {
 
 #if 1
 static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
+
+  // Символ не меняется — не сбрасываем состояние (для анимации)
+  if (sym->symbol_code == code) {
+    return;
+  }
+
+  sym->symbol_code = code;
+  memcpy(sym->current_bitmap, bitmap[code], ROWS);
+  sym->current_frame_index = 0;
+  sym->need_update = false;
+}
+
+#endif
+
+#if 0
+static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
   // Символ не меняется — не сбрасываем состояние
   if (sym->symbol_code == code) {
     return;
@@ -366,7 +318,9 @@ static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
   // sym->need_update = false;
 }
 
-#else
+#endif
+
+#if 0
 static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
   if (sym->symbol_code == code) {
     return;
@@ -472,6 +426,9 @@ static void update_animation_arrow2(animated_symbol_t *sym,
     sym->current_frame_index = 0;
   }
 
+
+
+#if 1
   if (sym->symbol_code == SYMBOL_ARROW_UP_ANIMATION) {
     sym->is_anim_running = true;
     shift_bitmap_up(sym);
@@ -492,6 +449,7 @@ static void update_animation_arrow2(animated_symbol_t *sym,
       prev_sym->is_anim_running = false;
     }
   }
+#endif
 }
 
 #if 1
