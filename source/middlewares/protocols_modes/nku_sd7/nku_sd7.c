@@ -118,19 +118,17 @@ map_direction_to_common_symbol(moving_nku_sd7_t moving_code,
 #if 1
   switch (moving_code) {
   case NKU_SD7_MOVING_UP:
-    // dir_sym = SYMBOL_ARROW_UP_ANIMATION;
-     dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
-    break;
-
-  case NKU_SD7_MOVING_DOWN:
-    // dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
     dir_sym = SYMBOL_ARROW_UP_ANIMATION;
     break;
 
+  case NKU_SD7_MOVING_DOWN:
+    dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
+    break;
+
   case NKU_SD7_NO_MOVING:
-    if (direction == DIRECTION_UP) {
+    if (direction == NKU_SD7_MOVE_UP) {
       dir_sym = SYMBOL_ARROW_UP;
-    } else if (direction == DIRECTION_DOWN) {
+    } else if (direction == NKU_SD7_MOVE_DOWN) {
       dir_sym = SYMBOL_ARROW_DOWN;
     } else {
       dir_sym = SYMBOL_EMPTY;

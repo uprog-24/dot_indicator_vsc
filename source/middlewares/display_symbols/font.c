@@ -1,7 +1,9 @@
 /**
  * @file font.c
  */
+#include "config.h"
 #include "font.h"
+
 
 #include <stdio.h>
 

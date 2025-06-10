@@ -37,6 +37,8 @@
 
 #define BUFFER_SIZE_BYTES 6
 
+#define CYCLE_ANIMATION_MS 150
+
 #define ARROW_DOUBLE
 // #define ARROW_ORDINAR
 

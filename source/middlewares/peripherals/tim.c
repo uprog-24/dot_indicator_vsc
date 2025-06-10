@@ -154,6 +154,8 @@ uint16_t overload_sound_ms = 0;
 /// Флаг для отсчета продолжительности для звука Перегрузка
 volatile bool is_time_ms_for_overload_elapsed = false;
 
+volatile bool is_time_ms_for_animation_update = false;
+
 // extern volatile bool need_update_frame;
 volatile uint16_t animation_time_ms = 0;
 /**
@@ -234,31 +236,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       }
     }
 
-    // animation_time_ms++;
-    //   if (animation_time_ms >= 200) {
-    //     animation_time_ms = 0;
-    //     need_update_frame = true;
-    //   }
-
 #endif
 
-#if 0
+
     animation_time_ms++;
-    if (animation_time_ms >= 400) {
+    if (animation_time_ms >= CYCLE_ANIMATION_MS) {
       animation_time_ms = 0;
-      need_update_frame = true;
+      is_time_ms_for_animation_update = true;
     }
-#endif
-
-    // extern symbols_display_t symbols;
-
-    animation_time_ms++;
-    // if (animation_time_ms >= 400) {
-    //   animation_time_ms = 0;
-    //   symbols.symbol_left.need_update = true;
-    //   symbols.symbol_center.need_update = true;
-    //   symbols.symbol_right.need_update = true;
-    // }
 
     /* Управление продолжительностью тонов гонга */
     if (_bip_counter != 0) {
@@ -273,7 +258,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         /* Выключаем гонг, если кол-во бипов равно 1 */
         if (_bip_counter == 1) {
           stop_buzzer_sound();
-        }
+        } 
       }
 
       if (sound_duration_ms == 2 * _bip_duration_ms) {
