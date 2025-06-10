@@ -482,30 +482,31 @@ void process_data_uim(msg_t *msg) {
 #endif
   } else {
     // Этажный индикатор
-
-    /* Если гонг отработал, то воспроизводим
-     * нажатие кнопки вызова, иначе не воспроизводим нажатие.
-     * Если звук открытия/закрытия дверей, то воспроизводим
-     * нажатие кнопки вызова
-     */
-    if (_bip_counter == 0 || is_door_sound) {
-      if (matrix_settings.volume != VOLUME_0) {
-        set_btn_call_sound(msg->w1);
-      }
-    }
-
-    // Гонг, открытие/закрытие дверей
-    if (matrix_settings.addr_id == drawing_data.floor ||
-        matrix_settings.addr_id == 47 || matrix_settings.addr_id == 49) {
-      if (matrix_settings.volume != VOLUME_0) {
-
-        if (_bip_counter == 0) {
-          set_door_sound(msg->w1);
+    if (matrix_settings.addr_id != 49) { // Обработка звуков
+      /* Если гонг отработал, то воспроизводим
+       * нажатие кнопки вызова, иначе не воспроизводим нажатие.
+       * Если звук открытия/закрытия дверей, то воспроизводим
+       * нажатие кнопки вызова
+       */
+      if (_bip_counter == 0 || is_door_sound) {
+        if (matrix_settings.volume != VOLUME_0) {
+          set_btn_call_sound(msg->w1);
         }
-
-        setting_gong(msg->w3, matrix_settings.volume);
       }
-    }
+
+      // Гонг, открытие/закрытие дверей
+      if (matrix_settings.addr_id == drawing_data.floor ||
+          matrix_settings.addr_id == 47) {
+        if (matrix_settings.volume != VOLUME_0) {
+
+          if (_bip_counter == 0) {
+            set_door_sound(msg->w1);
+          }
+
+          setting_gong(msg->w3, matrix_settings.volume);
+        }
+      }
+    } // if (matrix_settings.addr_id != 49)
   }
 
   /*
