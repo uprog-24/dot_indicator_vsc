@@ -22,11 +22,13 @@
 typedef enum { DIRECTION = 0, MSB = 1, LSB = 2, INDEX_NUMBER } symbol_index_t;
 
 #define ROWS 8
-#define DISPLAY_WIDTH 16
+#define COLS 8
+#define DISPLAY_WIDTH 2 * COLS
 #define GAP_BETWEEN_SYMBOLS 1
 
 #define SYMBOL_WIDTH_POSITION 1
 
+#define NUMBER_CYCLES_ANIMATION ROWS // Количество циклов анимации стрелки
 #define PAUSE_AFTER_ANIMATION_MS 10
 
 uint16_t combined_bitmap[ROWS][DISPLAY_WIDTH]; // общий буфер для трёх символов
@@ -36,7 +38,7 @@ typedef enum { ANIMATION_NONE, ANIMATION_UP, ANIMATION_DOWN } animation_e;
 /* Структура, содержащая информацию о символах для отрисовки */
 typedef struct {
   symbol_code_e symbol_code;
-  uint8_t current_bitmap[8]; // ROWS
+  uint8_t current_bitmap[ROWS];
   uint8_t current_frame_index;
   bool need_update;
   bool is_anim_running;
@@ -89,15 +91,14 @@ static const symbol_code_e char_to_symbol_table[SYMBOL_TABLE_SIZE] = {
 static uint8_t calculate_symbol_width(const uint8_t *symbol_bitmap_rows);
 static inline symbol_code_e char_to_symbol(char ch);
 static void set_symbol(animated_symbol_t *sym, symbol_code_e code);
-static void set_symbol2(animated_symbol_t *sym, symbol_code_e code);
-static void update_animation(animated_symbol_t *sym, animation_e anim_type);
-static void update_animation_arrow(animated_symbol_t *sym);
-// static void update_animation(animated_symbol_t *sym);
-static void update_animation_arrow2(animated_symbol_t *sym,
-                                    animated_symbol_t *prev_sym);
 
-static void shift_bitmap_down(animated_symbol_t *sym);
 static void shift_bitmap_up(animated_symbol_t *sym);
+static void shift_bitmap_down(animated_symbol_t *sym);
+static void run_animation_step(animated_symbol_t *sym,
+                               void (*shift_func)(animated_symbol_t *));
+static void update_animation_arrow(animated_symbol_t *sym,
+                                   animated_symbol_t *prev_sym);
+
 static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position);
 static void combine_symbols(symbols_display_t *symbols);
 static void draw_combined_bitmap();
@@ -119,8 +120,7 @@ void init_symbols_width() {
  * @param  direction_code: Код направления (из перечисления symbol_code_e)
  */
 void set_direction_symbol(symbol_code_e direction_code) {
-  // set_symbol(&symbols.symbol_left, direction_code);
-  set_symbol2(&symbols.symbol_left, direction_code);
+  set_symbol(&symbols.symbol_left, direction_code);
 }
 
 /**
@@ -130,8 +130,8 @@ void set_direction_symbol(symbol_code_e direction_code) {
  */
 void set_floor_symbols(symbol_code_e symbol_center_code,
                        symbol_code_e symbol_right_code) {
-  set_symbol2(&symbols.symbol_center, symbol_center_code);
-  set_symbol2(&symbols.symbol_right, symbol_right_code);
+  set_symbol(&symbols.symbol_center, symbol_center_code);
+  set_symbol(&symbols.symbol_right, symbol_right_code);
 }
 
 /**
@@ -160,7 +160,7 @@ void draw_symbols() {
 
     symbols.symbol_left.need_update = true;
 
-    update_animation_arrow2(&symbols.symbol_left, &symbols.symbol_prev_left);
+    update_animation_arrow(&symbols.symbol_left, &symbols.symbol_prev_left);
 
     // update_animation(&symbols.symbol_center, ANIMATION_NONE);
     // update_animation(&symbols.symbol_right, ANIMATION_NONE);
@@ -270,25 +270,13 @@ static inline symbol_code_e char_to_symbol(char ch) {
   }
 }
 
-#if 0
+/**
+ * @brief Инициализация структуры символа
+ *
+ * @param sym
+ * @param code
+ */
 static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
-
-  // Символ не меняется — не сбрасываем состояние (для анимации)
-  if (sym->symbol_code == code) {
-    return;
-  }
-
-  sym->symbol_code = code;
-  memcpy(sym->current_bitmap, bitmap[code], ROWS);
-  sym->current_frame_index = 0;
-  sym->need_update = false;
-  sym->is_anim_running = false;
-}
-
-#endif
-
-#if 1
-static void set_symbol2(animated_symbol_t *sym, symbol_code_e code) {
 
   // Символ не меняется — не сбрасываем состояние (для анимации)
   if (sym->symbol_code == code) {
@@ -304,8 +292,11 @@ static void set_symbol2(animated_symbol_t *sym, symbol_code_e code) {
   sym->is_anim_running = false;
 }
 
-#endif
-
+/**
+ * @brief Сдвиг битмапа символа вверх
+ *
+ * @param sym
+ */
 static void shift_bitmap_up(animated_symbol_t *sym) {
   uint8_t first = sym->current_bitmap[0];
   for (uint8_t i = 0; i < ROWS - 1; i++) {
@@ -314,6 +305,11 @@ static void shift_bitmap_up(animated_symbol_t *sym) {
   sym->current_bitmap[ROWS - 1] = first;
 }
 
+/**
+ * @brief Сдвиг битмапа символа вниз
+ *
+ * @param sym
+ */
 static void shift_bitmap_down(animated_symbol_t *sym) {
   uint8_t last = sym->current_bitmap[ROWS - 1];
   for (int i = ROWS - 1; i > 0; i--) {
@@ -322,8 +318,27 @@ static void shift_bitmap_down(animated_symbol_t *sym) {
   sym->current_bitmap[0] = last;
 }
 
-static void update_animation_arrow2(animated_symbol_t *sym,
-                                    animated_symbol_t *prev_sym) {
+/**
+ * @brief Запуск цикла/шага анимации
+ *
+ * @param sym
+ * @param shift_func
+ */
+static void run_animation_step(animated_symbol_t *sym,
+                               void (*shift_func)(animated_symbol_t *)) {
+  sym->is_anim_running = true;
+  shift_func(sym);
+  sym->current_frame_index++;
+}
+
+/**
+ * @brief Обновление анимации стрелки
+ * @param sym:      Указатель на текущий символ (новый)
+ * @param prev_sym: Указатель на предыдущий символ (для которого активна
+ *                  анимация)
+ */
+static void update_animation_arrow(animated_symbol_t *sym,
+                                   animated_symbol_t *prev_sym) {
 
   if (!sym->need_update) {
     return;
@@ -331,7 +346,7 @@ static void update_animation_arrow2(animated_symbol_t *sym,
 
   sym->need_update = false;
 
-  // в паузе
+  // Обработка паузы
   if (sym->pause_after_animation) {
     if (sym->pause_ms_counter > 0) {
       sym->pause_ms_counter--;
@@ -342,14 +357,41 @@ static void update_animation_arrow2(animated_symbol_t *sym,
     }
   }
 
-  if (sym->current_frame_index >= 8) {
+  // Завершение анимации
+  if (sym->current_frame_index >= NUMBER_CYCLES_ANIMATION) {
     sym->current_frame_index = 0;
     sym->pause_after_animation = true;
     sym->pause_ms_counter = PAUSE_AFTER_ANIMATION_MS;
     return; // Пауза началась
   }
 
-#if 1
+  // Проверка кода текущего символа -> анимация/плавное завершение
+  switch (sym->symbol_code) {
+  case SYMBOL_ARROW_UP_ANIMATION:
+    run_animation_step(sym, shift_bitmap_up);
+    break;
+
+  case SYMBOL_ARROW_DOWN_ANIMATION:
+    run_animation_step(sym, shift_bitmap_down);
+    break;
+
+  case SYMBOL_EMPTY:
+  case SYMBOL_ARROW_UP:
+  case SYMBOL_ARROW_DOWN:
+    // Если текущий символ — неанимируемый, но предыдущий ещё анимируется
+    if (prev_sym->current_frame_index < NUMBER_CYCLES_ANIMATION) {
+      if (prev_sym->symbol_code == SYMBOL_ARROW_UP_ANIMATION) {
+        run_animation_step(prev_sym, shift_bitmap_up);
+      } else if (prev_sym->symbol_code == SYMBOL_ARROW_DOWN_ANIMATION) {
+        run_animation_step(prev_sym, shift_bitmap_down);
+      }
+    } else {
+      prev_sym->is_anim_running = false;
+    }
+    break;
+  }
+
+#if 0
   if (sym->symbol_code == SYMBOL_ARROW_UP_ANIMATION) {
     sym->is_anim_running = true;
     shift_bitmap_up(sym);
@@ -362,7 +404,7 @@ static void update_animation_arrow2(animated_symbol_t *sym,
              sym->symbol_code == SYMBOL_ARROW_UP ||
              sym->symbol_code == SYMBOL_ARROW_DOWN) {
     // Если пришёл пустой символ, но анимация ещё не завершена
-    if (prev_sym->current_frame_index != 8) {
+    if (prev_sym->current_frame_index != NUMBER_CYCLES_ANIMATION) {
       // Продолжаем анимацию с использованием prev_symbol_code
       if (prev_sym->symbol_code == SYMBOL_ARROW_UP_ANIMATION) {
         prev_sym->is_anim_running = true;
@@ -376,10 +418,15 @@ static void update_animation_arrow2(animated_symbol_t *sym,
       prev_sym->is_anim_running = false;
     }
   }
-
 #endif
 }
 
+/**
+ * @brief Добавление символа в общий буфер
+ *
+ * @param sym
+ * @param position
+ */
 static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position) {
 
   uint8_t symbol_width = symbols_meta[sym->symbol_code].width;
@@ -407,7 +454,12 @@ static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position) {
 }
 
 static uint8_t start_pos;
-// Объединение символов в общий буфер
+
+/**
+ * @brief Объединение символов в общий буфер для отображения
+ *
+ * @param symbols
+ */
 static void combine_symbols(symbols_display_t *symbols) {
   // Очистка буфера
   for (int row = 0; row < ROWS; row++) {
@@ -436,8 +488,8 @@ static void combine_symbols(symbols_display_t *symbols) {
      * SYMBOL_EMPTY */
     if (symbols->symbol_prev_left.is_anim_running) {
       add_symbol_bitmap(&symbols->symbol_prev_left, 0);
-      add_symbol_bitmap(&symbols->symbol_center, 6);
       start_pos += 6;
+      add_symbol_bitmap(&symbols->symbol_center, start_pos);
     } else {
       // c10..c99, cКГ и др.
       // Сдвиг в связи с символом Пусто
@@ -483,6 +535,10 @@ static void combine_symbols(symbols_display_t *symbols) {
 // Для хранения текущей строки матрицы
 static uint8_t current_row = 0;
 extern volatile bool is_tim4_period_elapsed;
+/**
+ * @brief Отображение символов на матрице
+ *
+ */
 static void draw_combined_bitmap() {
 
   // Включаем текущую строку
