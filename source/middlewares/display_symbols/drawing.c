@@ -3,6 +3,7 @@
  */
 #include "drawing.h"
 
+#include "config.h"
 #include "dot.h"
 #include "font.h"
 
@@ -28,7 +29,14 @@ typedef enum { DIRECTION = 0, MSB = 1, LSB = 2, INDEX_NUMBER } symbol_index_t;
 
 #define SYMBOL_WIDTH_POSITION 1
 
+#if DINAMIC_ARROW
 #define NUMBER_CYCLES_ANIMATION ROWS // Количество циклов анимации стрелки
+
+#else
+#define NUMBER_CYCLES_ANIMATION ROWS + 1 // Количество циклов анимации стрелки
+
+#endif
+
 #define PAUSE_AFTER_ANIMATION_MS 10
 
 uint16_t combined_bitmap[ROWS][DISPLAY_WIDTH]; // общий буфер для трёх символов
@@ -38,7 +46,7 @@ typedef enum { ANIMATION_NONE, ANIMATION_UP, ANIMATION_DOWN } animation_e;
 /* Структура, содержащая информацию о символах для отрисовки */
 typedef struct {
   symbol_code_e symbol_code;
-  uint8_t current_bitmap[ROWS];
+  uint8_t current_bitmap[NUMBER_CYCLES_ANIMATION];
   uint8_t current_frame_index;
   bool need_update;
   bool is_anim_running;
@@ -51,15 +59,23 @@ typedef struct {
 typedef struct {
   animated_symbol_t symbol_left;
   animated_symbol_t symbol_prev_left;
+
   animated_symbol_t symbol_center;
+  animated_symbol_t symbol_prev_center;
+
   animated_symbol_t symbol_right;
+  animated_symbol_t symbol_prev_right;
 } symbols_display_t;
 
 symbols_display_t symbols = {
     .symbol_left = {SYMBOL_EMPTY, {0}, 0, false, false},
     .symbol_prev_left = {SYMBOL_EMPTY, {0}, 0, false, false},
+
     .symbol_center = {SYMBOL_EMPTY, {0}, 0, false, false},
+    .symbol_prev_center = {SYMBOL_EMPTY, {0}, 0, false, false},
+
     .symbol_right = {SYMBOL_EMPTY, {0}, 0, false, false},
+    .symbol_prev_right = {SYMBOL_EMPTY, {0}, 0, false, false},
 };
 
 /**
@@ -98,6 +114,7 @@ static void run_animation_step(animated_symbol_t *sym,
                                void (*shift_func)(animated_symbol_t *));
 static void update_animation_arrow(animated_symbol_t *sym,
                                    animated_symbol_t *prev_sym);
+static void update_symbols();
 
 static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position);
 static void combine_symbols(symbols_display_t *symbols);
@@ -115,24 +132,93 @@ void init_symbols_width() {
   }
 }
 
+static void prepare_symbol_floor_for_animation(animated_symbol_t *prev_sym,
+                                               animated_symbol_t *curr_sym,
+                                               symbol_code_e new_symbol_code) {
+
+  // предыдущий символ
+  *prev_sym = *curr_sym;
+  // prev_sym->is_anim_running = true;
+
+  // новый символ
+  set_symbol(curr_sym, new_symbol_code);
+  // curr_sym->is_anim_running = true;
+  curr_sym->need_update = true;
+
+  //  symbols.symbol_prev_center = symbols.symbol_center;
+  // symbols.symbol_prev_center.is_anim_running = true;
+
+  // новый символ
+  // set_symbol(&symbols.symbol_center, symbol_center_code);
+  // symbols.symbol_center.is_anim_running = true;
+  // symbols.symbol_center.need_update = true;
+}
+
 /**
  * @brief  Установка символа направления движения
  * @param  direction_code: Код направления (из перечисления symbol_code_e)
  */
+#if DINAMIC_ARROW
 void set_direction_symbol(symbol_code_e direction_code) {
   set_symbol(&symbols.symbol_left, direction_code);
 }
+#else
+void set_direction_symbol(symbol_code_e direction_code) {
+  set_symbol(&symbols.symbol_left, direction_code);
+}
+#endif
 
 /**
  * @brief  Установка символов для этажей
  * @param  symbol_center_code: Код центрального символа
  * @param  symbol_right_code:  Код правого символа
  */
+#if DINAMIC_ARROW
 void set_floor_symbols(symbol_code_e symbol_center_code,
                        symbol_code_e symbol_right_code) {
   set_symbol(&symbols.symbol_center, symbol_center_code);
   set_symbol(&symbols.symbol_right, symbol_right_code);
 }
+#else
+void set_floor_symbols(symbol_code_e symbol_center_code,
+                       symbol_code_e symbol_right_code) {
+
+  bool is_left_symbol_arrow =
+      symbols.symbol_left.symbol_code == SYMBOL_ARROW_UP ||
+      symbols.symbol_left.symbol_code == SYMBOL_ARROW_DOWN;
+
+  // центральный символ
+  if (symbols.symbol_center.symbol_code != symbol_center_code) {
+
+    if (!is_left_symbol_arrow) {
+      set_symbol(&symbols.symbol_center, symbol_center_code);
+    } else {
+
+      prepare_symbol_floor_for_animation(&symbols.symbol_prev_center,
+                                         &symbols.symbol_center,
+                                         symbol_center_code);
+
+      // для стрелки
+      symbols.symbol_left.need_update = true;
+    }
+  }
+
+  // правый символ
+  if (symbols.symbol_right.symbol_code != symbol_right_code) {
+
+    if (!is_left_symbol_arrow) {
+      set_symbol(&symbols.symbol_right, symbol_right_code);
+    } else {
+
+      prepare_symbol_floor_for_animation(
+          &symbols.symbol_prev_right, &symbols.symbol_right, symbol_right_code);
+
+      // для стрелки
+      symbols.symbol_left.need_update = true;
+    }
+  }
+}
+#endif
 
 /**
  * @brief  Установка символов (направление + этаж)
@@ -150,6 +236,7 @@ extern volatile bool is_time_ms_for_animation_update;
 /**
  * @brief Отображение символов, заранее установленных в структуру symbols
  */
+#if DINAMIC_ARROW
 void draw_symbols() {
 
   uint8_t start_pos = 0;
@@ -170,6 +257,24 @@ void draw_symbols() {
   combine_symbols(&symbols);
   draw_combined_bitmap();
 }
+#else
+void draw_symbols() {
+
+  uint8_t start_pos = 0;
+
+  // Анимация
+  if (is_time_ms_for_animation_update ||
+      symbols.symbol_left.current_frame_index == 0) {
+    is_time_ms_for_animation_update = false;
+
+    update_symbols();
+  }
+
+  // Отрисовка символов
+  combine_symbols(&symbols);
+  draw_combined_bitmap();
+}
+#endif
 
 /**
  * @brief Отображение строки
@@ -276,6 +381,7 @@ static inline symbol_code_e char_to_symbol(char ch) {
  * @param sym
  * @param code
  */
+#if DINAMIC_ARROW
 static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
 
   // Символ не меняется — не сбрасываем состояние (для анимации)
@@ -291,6 +397,20 @@ static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
   sym->need_update = false;
   sym->is_anim_running = false;
 }
+#else
+static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
+
+  symbols.symbol_prev_left = symbols.symbol_left;
+
+  sym->symbol_code = code;
+  memcpy(sym->current_bitmap, bitmap[code], ROWS);
+  sym->current_bitmap[NUMBER_CYCLES_ANIMATION - 1] =
+      0; // для пробела при анимации
+  sym->current_frame_index = 0;
+  sym->need_update = false;
+  sym->is_anim_running = false;
+}
+#endif
 
 /**
  * @brief Сдвиг битмапа символа вверх
@@ -299,10 +419,20 @@ static void set_symbol(animated_symbol_t *sym, symbol_code_e code) {
  */
 static void shift_bitmap_up(animated_symbol_t *sym) {
   uint8_t first = sym->current_bitmap[0];
-  for (uint8_t i = 0; i < ROWS - 1; i++) {
+  for (uint8_t i = 0; i < NUMBER_CYCLES_ANIMATION - 1; i++) {
     sym->current_bitmap[i] = sym->current_bitmap[i + 1];
   }
-  sym->current_bitmap[ROWS - 1] = first;
+  sym->current_bitmap[NUMBER_CYCLES_ANIMATION - 1] = first;
+}
+
+static void shift_bitmap_up_prev_new(animated_symbol_t *prev_sym,
+                                     animated_symbol_t *new_sym) {
+  uint8_t first = new_sym->current_bitmap[0];
+  for (uint8_t i = 0; i < NUMBER_CYCLES_ANIMATION - 1; i++) {
+    prev_sym->current_bitmap[i] = prev_sym->current_bitmap[i + 1];
+  }
+  prev_sym->current_bitmap[NUMBER_CYCLES_ANIMATION - 1] =
+      new_sym->current_bitmap[new_sym->current_frame_index];
 }
 
 /**
@@ -311,11 +441,31 @@ static void shift_bitmap_up(animated_symbol_t *sym) {
  * @param sym
  */
 static void shift_bitmap_down(animated_symbol_t *sym) {
-  uint8_t last = sym->current_bitmap[ROWS - 1];
-  for (int i = ROWS - 1; i > 0; i--) {
+  uint8_t last = sym->current_bitmap[NUMBER_CYCLES_ANIMATION - 1];
+  for (int i = NUMBER_CYCLES_ANIMATION - 1; i > 0; i--) {
     sym->current_bitmap[i] = sym->current_bitmap[i - 1];
   }
   sym->current_bitmap[0] = last;
+}
+
+static void shift_bitmap_down_prev_new(animated_symbol_t *prev_sym,
+                                       animated_symbol_t *new_sym) {
+  uint8_t last = new_sym->current_bitmap[NUMBER_CYCLES_ANIMATION -
+                                         new_sym->current_frame_index - 1];
+  for (int i = NUMBER_CYCLES_ANIMATION - 1; i > 0; i--) {
+    prev_sym->current_bitmap[i] = prev_sym->current_bitmap[i - 1];
+  }
+  prev_sym->current_bitmap[0] = last;
+}
+
+static void run_animation_step_prev_new(
+    animated_symbol_t *prev_sym, animated_symbol_t *new_sym,
+    void (*shift_func)(animated_symbol_t *, animated_symbol_t *)) {
+  prev_sym->is_anim_running = true;
+  new_sym->is_anim_running = true;
+  shift_func(prev_sym, new_sym);
+  prev_sym->current_frame_index++;
+  new_sym->current_frame_index++;
 }
 
 /**
@@ -331,12 +481,15 @@ static void run_animation_step(animated_symbol_t *sym,
   sym->current_frame_index++;
 }
 
+static void stop_animation() {}
+
 /**
  * @brief Обновление анимации стрелки
  * @param sym:      Указатель на текущий символ (новый)
  * @param prev_sym: Указатель на предыдущий символ (для которого активна
  *                  анимация)
  */
+#if DINAMIC_ARROW
 static void update_animation_arrow(animated_symbol_t *sym,
                                    animated_symbol_t *prev_sym) {
 
@@ -420,6 +573,71 @@ static void update_animation_arrow(animated_symbol_t *sym,
   }
 #endif
 }
+#else
+static void update_symbols() {
+
+  if (!symbols.symbol_left.need_update) {
+    return;
+  }
+
+  // Завершение анимации
+  if (symbols.symbol_left.current_frame_index >= NUMBER_CYCLES_ANIMATION) {
+    symbols.symbol_left.current_frame_index = 0;
+    symbols.symbol_left.need_update = false;
+
+    symbols.symbol_prev_center.need_update = false;
+    symbols.symbol_prev_center.current_frame_index = 0;
+    symbols.symbol_prev_center.is_anim_running = false;
+
+    symbols.symbol_center.need_update = false;
+    symbols.symbol_center.current_frame_index = 0;
+    symbols.symbol_center.is_anim_running = false;
+
+    // symbols.symbol_right.current_frame_index = 0;
+    // symbols.symbol_right.need_update = false;
+    symbols.symbol_prev_right.need_update = false;
+    symbols.symbol_prev_right.current_frame_index = 0;
+    symbols.symbol_prev_right.is_anim_running = false;
+
+    symbols.symbol_right.need_update = false;
+    symbols.symbol_right.current_frame_index = 0;
+    symbols.symbol_right.is_anim_running = false;
+    return; // Пауза началась
+  }
+
+  if (symbols.symbol_left.symbol_code == SYMBOL_ARROW_UP) {
+    run_animation_step(&symbols.symbol_left, shift_bitmap_up);
+
+    if (symbols.symbol_center.need_update) {
+      run_animation_step_prev_new(&symbols.symbol_prev_center,
+                                  &symbols.symbol_center,
+                                  shift_bitmap_down_prev_new);
+    }
+
+    if (symbols.symbol_right.need_update) {
+      run_animation_step_prev_new(&symbols.symbol_prev_right,
+                                  &symbols.symbol_right,
+                                  shift_bitmap_down_prev_new);
+    }
+  }
+
+  if (symbols.symbol_left.symbol_code == SYMBOL_ARROW_DOWN) {
+    run_animation_step(&symbols.symbol_left, shift_bitmap_down);
+
+    if (symbols.symbol_center.need_update) {
+      run_animation_step_prev_new(&symbols.symbol_prev_center,
+                                  &symbols.symbol_center,
+                                  shift_bitmap_up_prev_new);
+    }
+
+    if (symbols.symbol_right.need_update) {
+      run_animation_step_prev_new(&symbols.symbol_prev_right,
+                                  &symbols.symbol_right,
+                                  shift_bitmap_up_prev_new);
+    }
+  }
+}
+#endif
 
 /**
  * @brief Добавление символа в общий буфер
@@ -429,7 +647,6 @@ static void update_animation_arrow(animated_symbol_t *sym,
  */
 static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position) {
 
-  uint8_t symbol_width = symbols_meta[sym->symbol_code].width;
   uint8_t *symbol_bitmap = sym->current_bitmap;
 
   if (sym->symbol_code == SYMBOL_ALL_ON) {
@@ -497,13 +714,9 @@ static void combine_symbols(symbols_display_t *symbols) {
       add_symbol_bitmap(&symbols->symbol_center, start_pos);
     }
 
-    // #if SYMBOL_WIDTH_POSITION
     start_pos += symbols_meta[symbols->symbol_center.symbol_code].width + 1;
     add_symbol_bitmap(&symbols->symbol_right, start_pos);
 
-    // #else
-    //     add_symbol_bitmap(&symbols->symbol_right, 10);
-    // #endif
   } else {
     // Если символ 1 и символ 3 не SYMBOL_EMPTY
     if (symbols->symbol_left.symbol_code == SYMBOL_ALL_ON) {
@@ -511,23 +724,37 @@ static void combine_symbols(symbols_display_t *symbols) {
       add_symbol_bitmap(&symbols->symbol_left, 8);
     } else {
 
+      // левый символ
       add_symbol_bitmap(&symbols->symbol_left, 0);
 
-#if SYMBOL_WIDTH_POSITION
       start_pos += symbols_meta[symbols->symbol_left.symbol_code].width +
                    GAP_BETWEEN_SYMBOLS;
-      add_symbol_bitmap(&symbols->symbol_center, start_pos);
-#else
-      add_symbol_bitmap(&symbols->symbol_center, 7);
-#endif
 
-#if SYMBOL_WIDTH_POSITION
-      start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
-                   GAP_BETWEEN_SYMBOLS;
-      add_symbol_bitmap(&symbols->symbol_right, start_pos);
-#else
-      add_symbol_bitmap(&symbols->symbol_right, 12);
-#endif
+      // центральный символ
+      if (symbols->symbol_prev_center.is_anim_running) {
+        add_symbol_bitmap(&symbols->symbol_prev_center, start_pos);
+        start_pos +=
+            symbols_meta[symbols->symbol_prev_center.symbol_code].width +
+            GAP_BETWEEN_SYMBOLS;
+      } else {
+        add_symbol_bitmap(&symbols->symbol_center, start_pos);
+        start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
+                     GAP_BETWEEN_SYMBOLS;
+      }
+
+      // правый символ
+      if (symbols->symbol_prev_right.is_anim_running) {
+        add_symbol_bitmap(&symbols->symbol_prev_right, start_pos);
+        start_pos +=
+            symbols_meta[symbols->symbol_prev_right.symbol_code].width +
+            GAP_BETWEEN_SYMBOLS;
+      } else {
+        add_symbol_bitmap(&symbols->symbol_right, start_pos);
+        start_pos += symbols_meta[symbols->symbol_right.symbol_code].width +
+                     GAP_BETWEEN_SYMBOLS;
+      }
+
+      // add_symbol_bitmap(&symbols->symbol_right, start_pos);
     }
   }
 }

@@ -21,6 +21,8 @@
     "buzzer.h": "c",
     "font.h": "c",
     "nku_sd7.h": "c",
-    "drawing.h": "c"
+    "drawing.h": "c",
+    "stdbool.h": "c",
+    "dot.h": "c"
   }
 }

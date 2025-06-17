@@ -45,6 +45,78 @@ static void set_matrix_by_rows() {
   }
 }
 
+#if 0
+static void set_wave_by_rows() {
+  current_row = 0;
+  current_col = 0;
+  while (current_row < ROWS) {
+    set_all_cols_state(TURN_OFF);
+
+    set_row_state(current_row, TURN_ON);
+    while (current_col < COLUMNS) {
+      set_col_state(current_col, TURN_ON);
+      TIM3_Delay_ms(100);
+      current_col++;
+    }
+
+    set_row_state(current_row, TURN_OFF);
+
+    current_row++;
+    current_col = 0;
+  }
+}
+
+static void set_wave_by_cols() {
+  current_col = 0;
+  current_row = 0;
+  while (current_col < COLUMNS) {
+    set_all_rows_state(TURN_OFF);
+
+    set_col_state(current_col, TURN_ON);
+    while (current_row < ROWS) {
+      set_row_state(current_row, TURN_ON);
+      TIM3_Delay_ms(100);
+      current_row++;
+    }
+
+    set_col_state(current_col, TURN_OFF);
+
+    current_col++;
+    current_row = 0;
+  }
+}
+#else
+static void set_wave_by_rows() {
+  current_row = 0;
+  current_col = 0;
+  set_all_cols_state(TURN_ON);
+  while (current_row < ROWS) {
+
+    set_row_state(current_row, TURN_ON);
+    TIM3_Delay_ms(100);
+    set_row_state(current_row, TURN_OFF);
+
+    current_row++;
+    current_col = 0;
+  }
+}
+
+static void set_wave_by_cols() {
+  current_col = 0;
+  current_row = 0;
+  set_all_rows_state(TURN_ON);
+  while (current_col < COLUMNS) {
+
+    set_col_state(current_col, TURN_ON);
+    TIM3_Delay_ms(100);
+    set_col_state(current_col, TURN_OFF);
+
+    current_col++;
+    current_row = 0;
+  }
+}
+#endif
+
 /// Флаг для проверки, получены ли данные по CAN
 extern volatile bool is_data_received;
 
@@ -54,6 +126,7 @@ extern volatile bool is_data_received;
  */
 void test_mode_start() {
 
+#if 0
   /* Построчное заполнение матрицы (включение светодиодов) */
   set_matrix_by_rows();
   TIM3_Delay_ms(500);
@@ -83,4 +156,16 @@ void test_mode_start() {
       draw_symbols();
     }
   }
+#else
+
+  // current_col = 0;
+  // current_row = 0;
+
+  set_full_matrix_state(TURN_OFF);
+  TIM3_Delay_ms(100);
+  set_wave_by_cols();
+  set_full_matrix_state(TURN_OFF);
+  set_wave_by_rows();
+  set_full_matrix_state(TURN_OFF);
+#endif
 }

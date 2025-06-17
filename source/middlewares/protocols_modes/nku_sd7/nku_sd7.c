@@ -1,10 +1,10 @@
 /**
  * @file uim6100.c
  */
-#include "nku_sd7.h"
-
 #include "buzzer.h"
 #include "config.h"
+#include "nku_sd7.h"
+
 #include "drawing.h"
 #include "font.h"
 #include "tim.h"
@@ -118,11 +118,20 @@ map_direction_to_common_symbol(moving_nku_sd7_t moving_code,
 #if 1
   switch (moving_code) {
   case NKU_SD7_MOVING_UP:
+#if DINAMIC_ARROW
     dir_sym = SYMBOL_ARROW_UP_ANIMATION;
+#else
+    dir_sym = SYMBOL_ARROW_DOWN;
+#endif
+
     break;
 
   case NKU_SD7_MOVING_DOWN:
+#if DINAMIC_ARROW
     dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
+#else
+    dir_sym = SYMBOL_ARROW_UP;
+#endif
     break;
 
   case NKU_SD7_NO_MOVING:
@@ -567,6 +576,7 @@ static uint8_t moving_code;
  */
 void process_data_nku_sd7() {
 
+#if 1
   filter_data();
 
   if (is_data_filtered) {
@@ -638,6 +648,10 @@ void process_data_nku_sd7() {
                                      nku_sd7_msg.control_byte_second);
     }
   }
+#endif
+
+  // set_direction_symbol(SYMBOL_ARROW_DOWN);
+  // set_floor_symbols(SYMBOL_F, SYMBOL_E);
 
   // Отображение полученных данных на индикаторе
   while (is_read_data_completed == false && is_interface_connected == true) {
