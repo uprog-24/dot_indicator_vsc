@@ -19,7 +19,7 @@
 #include "nku_sd7.h"
 #include "protocol_selection.h"
 
-#define DINAMIC_ARROW 0 // >> => и << <=
+#define DINAMIC_ARROW 0 // 1: >> => и << <=; 0: => <=
 
 #define PROTOCOL_NAME "SD7"
 #define ADDR_ID_MIN 0
@@ -39,7 +39,13 @@
 
 #define BUFFER_SIZE_BYTES 6
 
-#define CYCLE_ANIMATION_MS 100 // 150
+#if DINAMIC_ARROW
+#define CYCLE_ANIMATION_MS 150
+
+#else
+#define CYCLE_ANIMATION_MS 60 // 50 // 60 // 150
+
+#endif
 
 #define ARROW_DOUBLE
 // #define ARROW_ORDINAR

@@ -89,4 +89,10 @@ void display_string_during_ms(char *matrix_string);
  */
 void display_symbols_during_ms();
 
+/**
+ * @brief Сброс состояния символов дисплея для завершения анимации
+ *
+ */
+void stop_animation();
+
 #endif /*__ DRAWING_H__ */

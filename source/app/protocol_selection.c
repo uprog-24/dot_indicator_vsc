@@ -97,5 +97,10 @@ void protocol_stop() {
 
 #elif PROTOCOL_NKU_SD7
   stop_sd7_before_menu_mode();
+
+#if !DINAMIC_ARROW
+  stop_animation();
+#endif
+
 #endif
 }

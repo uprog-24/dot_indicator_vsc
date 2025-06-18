@@ -36,9 +36,14 @@
   BUZZER_FREQ_CABIN_OVERLOAD ///< Частота для тона бузера при пожарной опасности
                              ///< VOICE_FIRE_DANGER
 
-#define MESSAGE_BYTES 4    ///< Длина сообщения в байтах
+#define MESSAGE_BYTES 4 ///< Длина сообщения в байтах
+#if DINAMIC_ARROW
 #define FILTER_BUFF_SIZE 5 ///< Ширина фильтра (5 сообщений)
 
+#else
+#define FILTER_BUFF_SIZE 7 ///< Ширина фильтра (10 сообщений)
+
+#endif
 static uint8_t byte_buf[MESSAGE_BYTES] = {0, 0, 0,
                                           0}; ///< Буфер для полученных данных
 static uint8_t byte_buf_copy[MESSAGE_BYTES] = {
@@ -121,7 +126,7 @@ map_direction_to_common_symbol(moving_nku_sd7_t moving_code,
 #if DINAMIC_ARROW
     dir_sym = SYMBOL_ARROW_UP_ANIMATION;
 #else
-    dir_sym = SYMBOL_ARROW_DOWN;
+    dir_sym = SYMBOL_ARROW_UP;
 #endif
 
     break;
@@ -130,7 +135,7 @@ map_direction_to_common_symbol(moving_nku_sd7_t moving_code,
 #if DINAMIC_ARROW
     dir_sym = SYMBOL_ARROW_DOWN_ANIMATION;
 #else
-    dir_sym = SYMBOL_ARROW_UP;
+    dir_sym = SYMBOL_ARROW_DOWN;
 #endif
     break;
 
@@ -222,6 +227,8 @@ static inline symbol_code_e map_to_common_symbol(uint8_t symbol_code) {
   }
 }
 
+bool is_loading_symbol = false;
+bool is_special_regime_symbol = false;
 /**
  * @brief Режим Погрузка (символы)
  *
@@ -229,9 +236,14 @@ static inline symbol_code_e map_to_common_symbol(uint8_t symbol_code) {
  */
 static void set_loading_symbol(uint8_t control_byte_first) {
   if ((control_byte_first & LOADING_MASK) == LOADING_MASK) {
+    // is_loading_symbol = true;
+    is_special_regime_symbol = true;
     set_symbols(map_to_common_symbol(NKU_SYMBOL_EMPTY),
                 map_to_common_symbol(NKU_SYMBOL_UNDERGROUND_FLOOR_BIG),
                 map_to_common_symbol(NKU_SYMBOL_G_RU));
+  } else {
+    // is_loading_symbol = false;
+    is_special_regime_symbol = false;
   }
 }
 
@@ -276,16 +288,20 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
       }
     }
 
+    is_special_regime_symbol = true;
     set_symbols(map_to_common_symbol(NKU_SYMBOL_EMPTY),
                 map_to_common_symbol(NKU_SYMBOL_K),
                 map_to_common_symbol(NKU_SYMBOL_G_RU));
   } else if (is_cabin_overload) {
+    is_special_regime_symbol = false;
     stop_buzzer_sound();
     is_cabin_overload = false;
     is_overload_sound_on = false;
     overload_sound_ms = 0;
   }
 }
+
+bool is_accident_symbol = false;
 
 /**
  * @brief Режим Авария (символы)
@@ -294,12 +310,17 @@ static void set_cabin_overload_symbol_sound(uint8_t control_byte_first) {
  */
 static void set_accident_symbol(uint8_t control_byte_second) {
   if ((control_byte_second & ACCIDENT_MASK) == ACCIDENT_MASK) {
+    // is_accident_symbol = true;
+    is_special_regime_symbol = true;
     set_floor_symbols(map_to_common_symbol(NKU_SYMBOL_A),
                       map_to_common_symbol(NKU_SYMBOL_EMPTY));
+  } else {
+    // is_accident_symbol = false;
+    is_special_regime_symbol = false;
   }
 }
 
-static bool is_fire_danger_symbol = false;
+bool is_fire_danger_symbol = false;
 
 /**
  * @brief Режим Пожар (символы)
@@ -308,9 +329,13 @@ static bool is_fire_danger_symbol = false;
  */
 static void set_fire_danger_symbol(uint8_t control_byte_first) {
   if ((control_byte_first & FIRE_DANGER_MASK) == FIRE_DANGER_MASK) {
-    is_fire_danger_symbol = true;
+    // is_fire_danger_symbol = true;
+    is_special_regime_symbol = true;
     set_floor_symbols(map_to_common_symbol(NKU_SYMBOL_F),
                       map_to_common_symbol(NKU_SYMBOL_EMPTY));
+  } else {
+    // is_fire_danger_symbol = false;
+    is_special_regime_symbol = false;
   }
 }
 
@@ -514,7 +539,7 @@ static void sort_bubble(floor_counter_t *filter_buff, uint8_t buff_size) {
   }
 }
 
-uint8_t zero_buffer[4] = {0};
+uint8_t zero_buffer[MESSAGE_BYTES] = {0};
 
 /**
  * @brief Фильтрация полученных данных
@@ -576,7 +601,6 @@ static uint8_t moving_code;
  */
 void process_data_nku_sd7() {
 
-#if 1
   filter_data();
 
   if (is_data_filtered) {
@@ -597,25 +621,31 @@ void process_data_nku_sd7() {
         map_direction_to_common_symbol(moving_code, direction_code));
 
     // Настройка кода этажа
-    // Этаж 0
-    bool is_zero_floor = (nku_sd7_msg.first_symbol_code == 0 &&
-                          nku_sd7_msg.second_symbol_code == 0);
-    // Этаж 1..9
-    bool is_first_symbol_empty =
-        (nku_sd7_msg.first_symbol_code == NKU_SYMBOL_EMPTY);
-    // Этаж cП
-    bool is_floor_underground_p =
-        (is_first_symbol_empty &&
-         nku_sd7_msg.second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG);
+#if !DINAMIC_ARROW
+    if (!is_special_regime_symbol) {
+#endif
+      // Этаж 0
+      bool is_zero_floor = (nku_sd7_msg.first_symbol_code == 0 &&
+                            nku_sd7_msg.second_symbol_code == 0);
+      // Этаж 1..9
+      bool is_first_symbol_empty =
+          (nku_sd7_msg.first_symbol_code == NKU_SYMBOL_EMPTY);
+      // Этаж cП
+      bool is_floor_underground_p =
+          (is_first_symbol_empty &&
+           nku_sd7_msg.second_symbol_code == SYMBOL_UNDERGROUND_FLOOR_BIG);
 
-    if (is_zero_floor || is_first_symbol_empty || is_floor_underground_p) {
-      set_floor_symbols(map_to_common_symbol(nku_sd7_msg.second_symbol_code),
-                        map_to_common_symbol(NKU_SYMBOL_EMPTY));
-    } else {
-      // Этажи с 10, спец. символы
-      set_floor_symbols(map_to_common_symbol(nku_sd7_msg.first_symbol_code),
-                        map_to_common_symbol(nku_sd7_msg.second_symbol_code));
+      if (is_zero_floor || is_first_symbol_empty || is_floor_underground_p) {
+        set_floor_symbols(map_to_common_symbol(nku_sd7_msg.second_symbol_code),
+                          map_to_common_symbol(NKU_SYMBOL_EMPTY));
+      } else {
+        // Этажи с 10, спец. символы
+        set_floor_symbols(map_to_common_symbol(nku_sd7_msg.first_symbol_code),
+                          map_to_common_symbol(nku_sd7_msg.second_symbol_code));
+      }
+#if !DINAMIC_ARROW
     }
+#endif
 
     // Спец. режимы и звуковые оповещения
     // Кабинный индикатор
@@ -648,10 +678,6 @@ void process_data_nku_sd7() {
                                      nku_sd7_msg.control_byte_second);
     }
   }
-#endif
-
-  // set_direction_symbol(SYMBOL_ARROW_DOWN);
-  // set_floor_symbols(SYMBOL_F, SYMBOL_E);
 
   // Отображение полученных данных на индикаторе
   while (is_read_data_completed == false && is_interface_connected == true) {
