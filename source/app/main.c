@@ -181,6 +181,8 @@ int main(void) {
 
       break;
     }
+
+    // draw_symbols();
   }
 
 #endif

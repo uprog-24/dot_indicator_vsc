@@ -41,7 +41,9 @@ typedef enum { DIRECTION = 0, MSB = 1, LSB = 2, INDEX_NUMBER } symbol_index_t;
 
 static uint16_t combined_bitmap[ROWS]
                                [DISPLAY_WIDTH]; // общий буфер для трёх символов
-static uint16_t combined_bitmap_copy[ROWS][DISPLAY_WIDTH];
+
+/// Для хранения текущей строки матрицы
+static uint8_t current_row = 0;
 
 typedef enum { ANIMATION_NONE, ANIMATION_UP, ANIMATION_DOWN } animation_e;
 
@@ -118,12 +120,16 @@ static void update_animation_arrow(animated_symbol_t *sym,
                                    animated_symbol_t *prev_sym);
 static void update_symbols();
 
-static void draw_symbol_on_matrix2(animated_symbol_t *sym, uint8_t start_pos);
-static void display_symbols(symbols_display_t *symbols);
-
 static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position);
+static void add_symbol_to_row_buff(uint16_t *row_data, animated_symbol_t *sym,
+                                   uint8_t row, uint8_t position);
+
 static void combine_symbols(symbols_display_t *symbols);
+static void prepare_row_for_display(symbols_display_t *symbols, uint8_t row,
+                                    uint16_t *row_data);
+
 static void draw_combined_bitmap();
+static void driver_draw_row_buff(uint16_t *row_data);
 
 //======================== PUBLIC FUNCTIONS ================================
 /**
@@ -270,32 +276,20 @@ void draw_symbols() {
   draw_combined_bitmap();
 }
 #else
+
 void draw_symbols() {
-
-  uint8_t start_pos = 0;
-
-  /* Анимация
-   symbols.symbol_left.current_frame_index == 0 для первого
-   прохода, чтобы убрать установку флага is_anim_running в
-   prepare_symbol_floor_for_animation(), иначе возникает дергание до того, как
-   is_time_ms_for_animation_update == true
-   */
 
   bool need_update_animation = is_time_ms_for_animation_update ||
                                (symbols.symbol_left.current_frame_index == 0);
 
   if (need_update_animation) {
     is_time_ms_for_animation_update = false;
-
     update_symbols();
   }
 
-  // Отрисовка символов
-  combine_symbols(&symbols); // bitmap_copy
-
-  // memcpy(combined_bitmap, combined_bitmap_copy, sizeof(combined_bitmap));
-
-  // draw_combined_bitmap(); // bitmap
+  uint16_t row_data[DISPLAY_WIDTH] = {0}; // Буфер для строки дисплея
+  prepare_row_for_display(&symbols, current_row, row_data); // Заполняем буфер
+  driver_draw_row_buff(row_data); // Отображаем строку
 }
 #endif
 
@@ -707,6 +701,7 @@ static void update_symbols() {
  * @param sym
  * @param position
  */
+#if DINAMIC_ARROW
 static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position) {
 
   uint8_t *symbol_bitmap = sym->current_bitmap;
@@ -715,12 +710,23 @@ static void add_symbol_bitmap(animated_symbol_t *sym, uint8_t position) {
     for (int bit = 0; bit < START_INDEX_SYMBOL_ROW; bit++) {
       // Проверяем бит в символе
       if (symbol_bitmap[row] & (1 << (START_INDEX_SYMBOL_ROW - bit))) {
-        // combined_bitmap[row][position + bit] = 1;
-        combined_bitmap_copy[row][position + bit] = 1;
+        combined_bitmap[row][position + bit] = 1;
       }
     }
   }
 }
+#else
+static void add_symbol_to_row_buff(uint16_t *row_data, animated_symbol_t *sym,
+                                   uint8_t row, uint8_t position) {
+  uint8_t row_bits = sym->current_bitmap[row]; // Строка bitmap символа
+
+  for (uint8_t bit = 0; bit < START_INDEX_SYMBOL_ROW; bit++) {
+    if (row_bits & (1 << (START_INDEX_SYMBOL_ROW - bit))) {
+      row_data[position + bit] = 1;
+    }
+  }
+}
+#endif
 
 #if !DINAMIC_ARROW
 /**
@@ -809,9 +815,9 @@ static void combine_symbols(symbols_display_t *symbols) {
   }
 }
 #else
-
-#if 1
-static void combine_symbols(symbols_display_t *symbols) {
+static void prepare_row_for_display(symbols_display_t *symbols, uint8_t row,
+                                    uint16_t *row_data) {
+  uint8_t start_pos = 0;
 
   bool is_symbol_left_empty =
       (symbols->symbol_left.symbol_code == SYMBOL_EMPTY);
@@ -821,182 +827,54 @@ static void combine_symbols(symbols_display_t *symbols) {
       (symbols->symbol_left.symbol_code == SYMBOL_ARROW_UP ||
        symbols->symbol_left.symbol_code == SYMBOL_ARROW_DOWN);
 
-  uint8_t start_pos = 0;
-  // Левый и правый символы пустые
-  // c1c..c9c, cFc и др.
   if (is_symbol_left_empty && is_symbol_right_empty) {
-
-    /* Завершение анимации (отрисовка стрелки) при symbol_left.symbol_code ==
-     * SYMBOL_EMPTY */
-    // if (symbols->symbol_prev_left.is_anim_running) {
-    //   add_symbol_bitmap(&symbols->symbol_prev_left, 0);
-    // }
-
-    // Центральный символ
-    draw_symbol_on_matrix2(&symbols->symbol_center, 6);
+    add_symbol_to_row_buff(row_data, &symbols->symbol_center, row, 6);
 
   } else if (is_symbol_left_empty && !is_symbol_right_empty) {
+    start_pos = 3 + GAP_BETWEEN_SYMBOLS;
+    add_symbol_to_row_buff(row_data, &symbols->symbol_center, row, start_pos);
 
-    /* Завершение анимации (отрисовка стрелки) при symbol_left.symbol_code ==
-     * SYMBOL_EMPTY */
-    // if (symbols->symbol_prev_left.is_anim_running) {
-    //   add_symbol_bitmap(&symbols->symbol_prev_left, 0);
-    //   start_pos += 6;
-    //   add_symbol_bitmap(&symbols->symbol_center, start_pos);
-    // } else {
-
-    // c10..c99, cКГ и др.
-
-    // Центральный символ
-    start_pos += 3 + GAP_BETWEEN_SYMBOLS;
-    draw_symbol_on_matrix2(&symbols->symbol_center, start_pos);
-    // }
-
-    // Правый символ
     start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
                  GAP_BETWEEN_SYMBOLS;
-    draw_symbol_on_matrix2(&symbols->symbol_right, start_pos);
+    add_symbol_to_row_buff(row_data, &symbols->symbol_right, row, start_pos);
 
-  } else { // Если 1-ый символ не SYMBOL_EMPTY
+  } else if (is_symbol_left_arrow) {
+    add_symbol_to_row_buff(row_data, &symbols->symbol_left, row, 0);
 
-    if (is_symbol_left_arrow) {
+    add_symbol_to_row_buff(row_data,
+                           symbols->symbol_prev_center.is_anim_running
+                               ? &symbols->symbol_prev_center
+                               : &symbols->symbol_center,
+                           row, 7);
 
-      // Левый символ
-      draw_symbol_on_matrix2(&symbols->symbol_left, 0);
+    add_symbol_to_row_buff(row_data,
+                           symbols->symbol_prev_right.is_anim_running
+                               ? &symbols->symbol_prev_right
+                               : &symbols->symbol_right,
+                           row, 12);
 
-      // Центральный символ
-      draw_symbol_on_matrix2(symbols->symbol_prev_center.is_anim_running
-                                 ? &symbols->symbol_prev_center
-                                 : &symbols->symbol_center,
-                             7);
+  } else {
+    start_pos = calculate_centered_start_position();
 
-      // Правый символ
-      draw_symbol_on_matrix2(symbols->symbol_prev_right.is_anim_running
-                                 ? &symbols->symbol_prev_right
-                                 : &symbols->symbol_right,
-                             12);
-    } else { // Все три символа обычные
+    add_symbol_to_row_buff(row_data, &symbols->symbol_left, row, start_pos);
+    start_pos += symbols_meta[symbols->symbol_left.symbol_code].width +
+                 GAP_BETWEEN_SYMBOLS;
 
-      start_pos = calculate_centered_start_position();
-
-      // Левый символ
-      // add_symbol_bitmap(&symbols->symbol_left, start_pos);
-      draw_symbol_on_matrix2(&symbols->symbol_left, start_pos);
-      start_pos += symbols_meta[symbols->symbol_left.symbol_code].width +
-                   GAP_BETWEEN_SYMBOLS;
-
-      // Центральный символ
-      // add_symbol_bitmap(&symbols->symbol_center, start_pos);
-      draw_symbol_on_matrix2(&symbols->symbol_center, start_pos);
-      start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
-                   GAP_BETWEEN_SYMBOLS;
-
-      // Правый символ
-      // add_symbol_bitmap(&symbols->symbol_right, start_pos);
-      draw_symbol_on_matrix2(&symbols->symbol_right, start_pos);
-    }
-  } // Если 1-ый символ не SYMBOL_EMPTY
-}
-#else
-static void combine_symbols(symbols_display_t *symbols) {
-  // Очистка буфера
-  // memset(combined_bitmap, 0, sizeof(combined_bitmap));
-  memset(combined_bitmap_copy, 0, sizeof(combined_bitmap_copy));
-
-  bool is_symbol_left_empty =
-      (symbols->symbol_left.symbol_code == SYMBOL_EMPTY);
-  bool is_symbol_right_empty =
-      (symbols->symbol_right.symbol_code == SYMBOL_EMPTY);
-  bool is_symbol_left_arrow =
-      (symbols->symbol_left.symbol_code == SYMBOL_ARROW_UP ||
-       symbols->symbol_left.symbol_code == SYMBOL_ARROW_DOWN);
-
-  uint8_t start_pos = 0;
-  // Левый и правый символы пустые
-  // c1c..c9c, cFc и др.
-  if (is_symbol_left_empty && is_symbol_right_empty) {
-
-    /* Завершение анимации (отрисовка стрелки) при symbol_left.symbol_code ==
-     * SYMBOL_EMPTY */
-    // if (symbols->symbol_prev_left.is_anim_running) {
-    //   add_symbol_bitmap(&symbols->symbol_prev_left, 0);
-    // }
-
-    // Центральный символ
-    add_symbol_bitmap(&symbols->symbol_center, 6);
-
-  } else if (is_symbol_left_empty && !is_symbol_right_empty) {
-
-    /* Завершение анимации (отрисовка стрелки) при symbol_left.symbol_code ==
-     * SYMBOL_EMPTY */
-    // if (symbols->symbol_prev_left.is_anim_running) {
-    //   add_symbol_bitmap(&symbols->symbol_prev_left, 0);
-    //   start_pos += 6;
-    //   add_symbol_bitmap(&symbols->symbol_center, start_pos);
-    // } else {
-
-    // c10..c99, cКГ и др.
-
-    // Центральный символ
-    start_pos += 3 + GAP_BETWEEN_SYMBOLS;
-    add_symbol_bitmap(&symbols->symbol_center, start_pos);
-    // }
-
-    // Правый символ
+    add_symbol_to_row_buff(row_data, &symbols->symbol_center, row, start_pos);
     start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
                  GAP_BETWEEN_SYMBOLS;
-    add_symbol_bitmap(&symbols->symbol_right, start_pos);
 
-  } else { // Если 1-ый символ не SYMBOL_EMPTY
-
-    if (is_symbol_left_arrow) {
-
-      // Левый символ
-      add_symbol_bitmap(&symbols->symbol_left, 0);
-
-      // Центральный символ
-      add_symbol_bitmap(symbols->symbol_prev_center.is_anim_running
-                            ? &symbols->symbol_prev_center
-                            : &symbols->symbol_center,
-                        7);
-
-      // Правый символ
-      add_symbol_bitmap(symbols->symbol_prev_right.is_anim_running
-                            ? &symbols->symbol_prev_right
-                            : &symbols->symbol_right,
-                        12);
-    } else { // Все три символа обычные
-
-      start_pos = calculate_centered_start_position();
-
-      // Левый символ
-      // add_symbol_bitmap(&symbols->symbol_left, start_pos);
-      add_symbol_bitmap(&symbols->symbol_left, start_pos);
-      start_pos += symbols_meta[symbols->symbol_left.symbol_code].width +
-                   GAP_BETWEEN_SYMBOLS;
-
-      // Центральный символ
-      // add_symbol_bitmap(&symbols->symbol_center, start_pos);
-      add_symbol_bitmap(&symbols->symbol_center, start_pos);
-      start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
-                   GAP_BETWEEN_SYMBOLS;
-
-      // Правый символ
-      // add_symbol_bitmap(&symbols->symbol_right, start_pos);
-      add_symbol_bitmap(&symbols->symbol_right, start_pos);
-    }
-  } // Если 1-ый символ не SYMBOL_EMPTY
+    add_symbol_to_row_buff(row_data, &symbols->symbol_right, row, start_pos);
+  }
 }
 #endif
-#endif
 
-// Для хранения текущей строки матрицы
-static uint8_t current_row = 0;
 extern volatile bool is_tim4_period_elapsed;
 /**
  * @brief Отображение символов на матрице
  *
  */
+#if DINAMIC_ARROW
 static void draw_combined_bitmap() {
 
   // Включаем текущую строку
@@ -1032,9 +910,42 @@ static void draw_combined_bitmap() {
     }
   }
 }
+#else
+static void driver_draw_row_buff(uint16_t *row_data) {
+
+  // Включаем текущую строку
+  set_row_state(current_row, TURN_ON);
+
+  // Включаем нужные коллонки
+  for (uint8_t col = 0; col < DISPLAY_WIDTH; col++) {
+    if (row_data[col]) {
+      set_col_state(col, TURN_ON);
+    }
+  }
+
+  /**
+   * Держим состояние строки с колонками, пока таймер не завершит
+   * отсчет (1000 мкс)
+   */
+  if (is_tim4_period_elapsed) {
+    is_tim4_period_elapsed = false;
+
+    // Выключаем текущую строку и все колонки
+    set_row_state(current_row, TURN_OFF);
+    set_all_cols_state(TURN_OFF);
+
+    // Переходим к следующей строке
+    current_row++;
+
+    // Завершаем проход по строкам дисплея
+    if (current_row >= ROWS)
+      current_row = 0;
+  }
+}
+#endif
 
 //================================= OLD CODE =======================
-#if 1
+#if 0
 static void draw_symbol_on_matrix2(animated_symbol_t *sym, uint8_t start_pos) {
 
   static uint8_t current_row = 0;
