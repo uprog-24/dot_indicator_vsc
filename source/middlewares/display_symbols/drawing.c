@@ -287,9 +287,10 @@ void draw_symbols() {
     update_symbols();
   }
 
-  uint16_t row_data[DISPLAY_WIDTH] = {0}; // Буфер для строки дисплея
-  prepare_row_for_display(&symbols, current_row, row_data); // Заполняем буфер
-  driver_draw_row_buff(row_data); // Отображаем строку
+  // uint16_t row_data[DISPLAY_WIDTH] = {0}; // Буфер для строки дисплея
+  uint16_t row_data = 0;
+  prepare_row_for_display(&symbols, current_row, &row_data); // Заполняем буфер
+  driver_draw_row_buff(&row_data); // Отображаем строку
 }
 #endif
 
@@ -722,7 +723,8 @@ static void add_symbol_to_row_buff(uint16_t *row_data, animated_symbol_t *sym,
 
   for (uint8_t bit = 0; bit < START_INDEX_SYMBOL_ROW; bit++) {
     if (row_bits & (1 << (START_INDEX_SYMBOL_ROW - bit))) {
-      row_data[position + bit] = 1;
+      // row_data[position + bit] = 1;
+      *row_data |= (1 << (position + bit));
     }
   }
 }
@@ -918,10 +920,15 @@ static void driver_draw_row_buff(uint16_t *row_data) {
 
   // Включаем нужные коллонки
   for (uint8_t col = 0; col < DISPLAY_WIDTH; col++) {
-    if (row_data[col]) {
+    if (*row_data & (1 << col)) {
       set_col_state(col, TURN_ON);
     }
   }
+  // for (uint8_t col = 0; col < DISPLAY_WIDTH; col++) {
+  //   if (row_data[col]) {
+  //     set_col_state(col, TURN_ON);
+  //   }
+  // }
 
   /**
    * Держим состояние строки с колонками, пока таймер не завершит
