@@ -72,7 +72,7 @@ void draw_symbols();
  * @brief Отображение строки
  * @param matrix_string: Указатель на строку, которая будет отображаться
  */
-void draw_string(char *matrix_string);
+void set_string(char *matrix_string);
 
 /**
  * @brief  Отображение строки на матрице в течение

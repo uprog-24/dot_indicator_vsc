@@ -175,7 +175,9 @@ void set_direction_symbol(symbol_code_e direction_code) {
 }
 #else
 void set_direction_symbol(symbol_code_e direction_code) {
-  set_symbol(&symbols.symbol_left, direction_code);
+  if (symbols.symbol_left.symbol_code != direction_code) {
+    set_symbol(&symbols.symbol_left, direction_code);
+  }
 }
 #endif
 
@@ -298,12 +300,11 @@ void draw_symbols() {
  * @brief Отображение строки
  * @param matrix_string: Указатель на строку, которая будет отображаться
  */
-void draw_string(char *matrix_string) {
+void set_string(char *matrix_string) {
   // Преобразуем символ char в код symbol_code_e
   set_symbols(char_to_symbol(matrix_string[0]),
               char_to_symbol(matrix_string[1]),
               char_to_symbol(matrix_string[2]));
-  draw_symbols();
 }
 
 extern volatile bool is_time_ms_for_display_str_elapsed;
@@ -316,8 +317,10 @@ extern volatile bool is_time_ms_for_display_str_elapsed;
 void display_string_during_ms(char *matrix_string) {
   is_time_ms_for_display_str_elapsed = false;
 
+  set_string(matrix_string);
+
   while (!is_time_ms_for_display_str_elapsed) {
-    draw_string(matrix_string);
+    draw_symbols();
   }
 
   // Очищаем поля структуры с символами
@@ -830,25 +833,31 @@ static void prepare_row_for_display(symbols_display_t *symbols, uint8_t row,
        symbols->symbol_left.symbol_code == SYMBOL_ARROW_DOWN);
 
   if (is_symbol_left_empty && is_symbol_right_empty) {
+    // Центральный символ
     add_symbol_to_row_buff(row_data, &symbols->symbol_center, row, 6);
 
   } else if (is_symbol_left_empty && !is_symbol_right_empty) {
+    // Центральный символ
     start_pos = 3 + GAP_BETWEEN_SYMBOLS;
     add_symbol_to_row_buff(row_data, &symbols->symbol_center, row, start_pos);
 
+    // Правый символ
     start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
                  GAP_BETWEEN_SYMBOLS;
     add_symbol_to_row_buff(row_data, &symbols->symbol_right, row, start_pos);
 
   } else if (is_symbol_left_arrow) {
+    // Левый символ
     add_symbol_to_row_buff(row_data, &symbols->symbol_left, row, 0);
 
+    // Центральный символ
     add_symbol_to_row_buff(row_data,
                            symbols->symbol_prev_center.is_anim_running
                                ? &symbols->symbol_prev_center
                                : &symbols->symbol_center,
                            row, 7);
 
+    // Правый символ
     add_symbol_to_row_buff(row_data,
                            symbols->symbol_prev_right.is_anim_running
                                ? &symbols->symbol_prev_right
@@ -856,16 +865,18 @@ static void prepare_row_for_display(symbols_display_t *symbols, uint8_t row,
                            row, 12);
 
   } else {
+    // Левый символ
     start_pos = calculate_centered_start_position();
-
     add_symbol_to_row_buff(row_data, &symbols->symbol_left, row, start_pos);
+
+    // Центральный символ
     start_pos += symbols_meta[symbols->symbol_left.symbol_code].width +
                  GAP_BETWEEN_SYMBOLS;
-
     add_symbol_to_row_buff(row_data, &symbols->symbol_center, row, start_pos);
+
+    // Правый символ
     start_pos += symbols_meta[symbols->symbol_center.symbol_code].width +
                  GAP_BETWEEN_SYMBOLS;
-
     add_symbol_to_row_buff(row_data, &symbols->symbol_right, row, start_pos);
   }
 }

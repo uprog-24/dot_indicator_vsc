@@ -680,9 +680,9 @@ void process_data_nku_sd7() {
   }
 
   // Отображение полученных данных на индикаторе
-  while (is_read_data_completed == false && is_interface_connected == true) {
-    draw_symbols();
-  }
+  // while (is_read_data_completed == false && is_interface_connected == true) {
+  //   draw_symbols();
+  // }
 }
 
 /**

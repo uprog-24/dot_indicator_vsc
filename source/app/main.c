@@ -169,7 +169,7 @@ int main(void) {
         break;
 
       case MENU_STATE_WORKING:
-        press_button();
+        handle_menu();
         break;
 
       case MENU_STATE_CLOSE:
@@ -182,7 +182,7 @@ int main(void) {
       break;
     }
 
-    // draw_symbols();
+    draw_symbols();
   }
 
 #endif

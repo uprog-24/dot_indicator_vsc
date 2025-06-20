@@ -18,6 +18,6 @@
  * @param  None
  * @retval None
  */
-void press_button();
+void handle_menu();
 
 #endif /*__ BUTTON_H__ */

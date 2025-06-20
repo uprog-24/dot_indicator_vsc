@@ -24,6 +24,7 @@
     "drawing.h": "c",
     "stdbool.h": "c",
     "dot.h": "c",
-    "protocol_selection.h": "c"
+    "protocol_selection.h": "c",
+    "main.h": "c"
   }
 }

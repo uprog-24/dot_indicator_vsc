@@ -79,7 +79,7 @@ void protocol_process_data() {
     process_data_pin();
 #endif
   } else {
-    draw_string("c--");
+    set_string("c--");
   }
 }
 
